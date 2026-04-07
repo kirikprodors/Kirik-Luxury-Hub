@@ -3,13 +3,13 @@ ScreenGui.Name = "KirikLuxuryHub"
 ScreenGui.Parent = game:GetService("CoreGui")
 ScreenGui.ResetOnSpawn = false
 
--- МИКРО-ОКНО (Оставил компактным для Samsung A26)
+-- МИКРО-ОКНО
 local MainFrame = Instance.new("Frame")
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 MainFrame.BorderSizePixel = 0
 MainFrame.Position = UDim2.new(0.5, -70, 0.5, -110)
-MainFrame.Size = UDim2.new(0, 140, 0, 220) -- Немного уменьшил высоту, раз кнопок меньше
+MainFrame.Size = UDim2.new(0, 140, 0, 220)
 MainFrame.Active = true
 MainFrame.ClipsDescendants = true
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 8)
@@ -43,7 +43,7 @@ Content.BackgroundTransparency = 1
 Content.Parent = MainFrame
 
 local Title = Instance.new("TextLabel")
-Title.Text = "KIRIK HUB V7"
+Title.Text = "KIRIK HUB V8"
 Title.TextColor3 = Color3.fromRGB(255, 215, 0)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 10
@@ -82,9 +82,9 @@ ModeBtn.TextSize = 9
 ModeBtn.Parent = Content
 Instance.new("UICorner", ModeBtn)
 
--- PLAYER LIST
+-- PLAYER LIST (Увеличен)
 local PlayerList = Instance.new("ScrollingFrame")
-PlayerList.Size = UDim2.new(0.9, 0, 0, 70)
+PlayerList.Size = UDim2.new(0.9, 0, 0, 92)
 PlayerList.Position = UDim2.new(0.05, 0, 0, 76)
 PlayerList.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
 PlayerList.AutomaticCanvasSize = Enum.AutomaticSize.Y
@@ -92,19 +92,9 @@ PlayerList.ScrollBarThickness = 2
 PlayerList.Parent = Content
 Instance.new("UIListLayout", PlayerList).Padding = UDim.new(0, 3)
 
-local RefreshBtn = Instance.new("TextButton")
-RefreshBtn.Size = UDim2.new(0.9, 0, 0, 18)
-RefreshBtn.Position = UDim2.new(0.05, 0, 0, 150)
-RefreshBtn.Text = "REFRESH LIST"
-RefreshBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 0)
-RefreshBtn.TextColor3 = Color3.new(1, 1, 1)
-RefreshBtn.TextSize = 9
-RefreshBtn.Parent = Content
-Instance.new("UICorner", RefreshBtn)
-
 -- ГЛАВНЫЕ ФУНКЦИИ
 local AntiFlingBtn = Instance.new("TextButton")
-AntiFlingBtn.Size = UDim2.new(0.9, 0, 0, 25) -- Сделал широкой и удобной
+AntiFlingBtn.Size = UDim2.new(0.9, 0, 0, 25)
 AntiFlingBtn.Position = UDim2.new(0.05, 0, 0, 172)
 AntiFlingBtn.Text = "STABILIZE (STAB)"
 AntiFlingBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
@@ -154,6 +144,10 @@ local function updateList()
     end
 end
 
+-- АВТО-ОБНОВЛЕНИЕ СПИСКА ИГРОКОВ
+game.Players.PlayerAdded:Connect(updateList)
+game.Players.PlayerRemoving:Connect(updateList)
+
 local espActive = false
 EspBtn.MouseButton1Click:Connect(function()
     espActive = not espActive
@@ -175,7 +169,6 @@ AntiFlingBtn.MouseButton1Click:Connect(function()
     local hrp = game.Players.LocalPlayer.Character.HumanoidRootPart
     hrp.Velocity = Vector3.new(0,0,0)
     hrp.RotVelocity = Vector3.new(0,0,0)
-    -- Небольшая заморозка на месте для полной остановки
     hrp.Anchored = true
     task.wait(0.2)
     hrp.Anchored = false
@@ -185,6 +178,5 @@ UnviewBtn.MouseButton1Click:Connect(function()
     workspace.CurrentCamera.CameraSubject = game.Players.LocalPlayer.Character.Humanoid
 end)
 
-RefreshBtn.MouseButton1Click:Connect(updateList)
 CloseBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
 updateList()
