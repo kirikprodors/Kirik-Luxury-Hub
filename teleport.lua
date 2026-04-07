@@ -3,13 +3,13 @@ ScreenGui.Name = "KirikLuxuryHub"
 ScreenGui.Parent = game:GetService("CoreGui")
 ScreenGui.ResetOnSpawn = false
 
--- МИКРО-ОКНО (Уменьшено почти в 3 раза по сравнению с прошлым)
+-- МИКРО-ОКНО
 local MainFrame = Instance.new("Frame")
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 MainFrame.BorderSizePixel = 0
-MainFrame.Position = UDim2.new(0.5, -60, 0.5, -100) -- Центрирование маленького окна
-MainFrame.Size = UDim2.new(0, 140, 0, 240) -- Ширина всего 140 пикселей
+MainFrame.Position = UDim2.new(0.5, -70, 0.5, -125)
+MainFrame.Size = UDim2.new(0, 140, 0, 250)
 MainFrame.Active = true
 MainFrame.ClipsDescendants = true
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 8)
@@ -71,7 +71,7 @@ MinimizeBtn.Parent = MainFrame
 Instance.new("UICorner", MinimizeBtn)
 
 local Title = Instance.new("TextLabel")
-Title.Text = "KIRIK HUB V5"
+Title.Text = "KIRIK HUB V6"
 Title.TextColor3 = Color3.fromRGB(255, 215, 0)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 10
@@ -79,10 +79,10 @@ Title.Size = UDim2.new(1, -50, 0, 25)
 Title.BackgroundTransparency = 1
 Title.Parent = Content
 
--- VISUALS (ESP)
+-- VISUALS & MODE
 local EspBtn = Instance.new("TextButton")
-EspBtn.Size = UDim2.new(0.9, 0, 0, 22)
-EspBtn.Position = UDim2.new(0.05, 0, 0, 30)
+EspBtn.Size = UDim2.new(0.9, 0, 0, 20)
+EspBtn.Position = UDim2.new(0.05, 0, 0, 28)
 EspBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 EspBtn.Text = "ESP: OFF"
 EspBtn.TextColor3 = Color3.new(1, 1, 1)
@@ -91,10 +91,21 @@ EspBtn.TextSize = 9
 EspBtn.Parent = Content
 Instance.new("UICorner", EspBtn)
 
--- TELEPORT LIST (Микро-список)
+local ModeBtn = Instance.new("TextButton")
+ModeBtn.Size = UDim2.new(0.9, 0, 0, 20)
+ModeBtn.Position = UDim2.new(0.05, 0, 0, 52)
+ModeBtn.BackgroundColor3 = Color3.fromRGB(80, 0, 80)
+ModeBtn.Text = "LIST: TP"
+ModeBtn.TextColor3 = Color3.new(1, 1, 1)
+ModeBtn.Font = Enum.Font.GothamBold
+ModeBtn.TextSize = 9
+ModeBtn.Parent = Content
+Instance.new("UICorner", ModeBtn)
+
+-- TELEPORT / VIEW LIST
 local PlayerList = Instance.new("ScrollingFrame")
-PlayerList.Size = UDim2.new(0.9, 0, 0, 90)
-PlayerList.Position = UDim2.new(0.05, 0, 0, 58)
+PlayerList.Size = UDim2.new(0.9, 0, 0, 75)
+PlayerList.Position = UDim2.new(0.05, 0, 0, 75)
 PlayerList.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
 PlayerList.CanvasSize = UDim2.new(0, 0, 0, 0)
 PlayerList.AutomaticCanvasSize = Enum.AutomaticSize.Y
@@ -105,19 +116,19 @@ ListLayout.Padding = UDim.new(0, 3)
 
 local RefreshBtn = Instance.new("TextButton")
 RefreshBtn.Size = UDim2.new(0.9, 0, 0, 18)
-RefreshBtn.Position = UDim2.new(0.05, 0, 0, 152)
+RefreshBtn.Position = UDim2.new(0.05, 0, 0, 154)
 RefreshBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 0)
-RefreshBtn.Text = "REFRESH"
+RefreshBtn.Text = "REFRESH LIST"
 RefreshBtn.TextColor3 = Color3.new(1, 1, 1)
-RefreshBtn.Font = Enum.Font.SourceSans
+RefreshBtn.Font = Enum.Font.SourceSansBold
 RefreshBtn.TextSize = 10
 RefreshBtn.Parent = Content
 Instance.new("UICorner", RefreshBtn)
 
--- SAFETY (STABILIZE & FREEZE)
+-- ACTION BUTTONS
 local AntiFlingBtn = Instance.new("TextButton")
 AntiFlingBtn.Size = UDim2.new(0.42, 0, 0, 30)
-AntiFlingBtn.Position = UDim2.new(0.05, 0, 0, 175)
+AntiFlingBtn.Position = UDim2.new(0.05, 0, 0, 176)
 AntiFlingBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
 AntiFlingBtn.Text = "STAB"
 AntiFlingBtn.TextColor3 = Color3.new(1, 1, 1)
@@ -126,27 +137,43 @@ AntiFlingBtn.TextSize = 9
 AntiFlingBtn.Parent = Content
 Instance.new("UICorner", AntiFlingBtn)
 
-local FreezeBtn = Instance.new("TextButton")
-FreezeBtn.Size = UDim2.new(0.42, 0, 0, 30)
-FreezeBtn.Position = UDim2.new(0.53, 0, 0, 175)
-FreezeBtn.BackgroundColor3 = Color3.fromRGB(0, 80, 150)
-FreezeBtn.Text = "FREEZE"
-FreezeBtn.TextColor3 = Color3.new(1, 1, 1)
-FreezeBtn.Font = Enum.Font.GothamBold
-FreezeBtn.TextSize = 9
-FreezeBtn.Parent = Content
-Instance.new("UICorner", FreezeBtn)
+local FlingBtn = Instance.new("TextButton")
+FlingBtn.Size = UDim2.new(0.42, 0, 0, 30)
+FlingBtn.Position = UDim2.new(0.53, 0, 0, 176)
+FlingBtn.BackgroundColor3 = Color3.fromRGB(200, 80, 0)
+FlingBtn.Text = "FLING"
+FlingBtn.TextColor3 = Color3.new(1, 1, 1)
+FlingBtn.Font = Enum.Font.GothamBold
+FlingBtn.TextSize = 9
+FlingBtn.Parent = Content
+Instance.new("UICorner", FlingBtn)
 
-local SafeLabel = Instance.new("TextLabel")
-SafeLabel.Text = "--- SAFETY ---"
-SafeLabel.TextColor3 = Color3.fromRGB(0, 255, 255)
-SafeLabel.Size = UDim2.new(1, 0, 0, 15)
-SafeLabel.Position = UDim2.new(0, 0, 0, 210)
-SafeLabel.TextSize = 8
-SafeLabel.BackgroundTransparency = 1
-SafeLabel.Parent = Content
+local UnviewBtn = Instance.new("TextButton")
+UnviewBtn.Size = UDim2.new(0.9, 0, 0, 20)
+UnviewBtn.Position = UDim2.new(0.05, 0, 0, 210)
+UnviewBtn.BackgroundColor3 = Color3.fromRGB(0, 80, 150)
+UnviewBtn.Text = "UNVIEW (BACK TO ME)"
+UnviewBtn.TextColor3 = Color3.new(1, 1, 1)
+UnviewBtn.Font = Enum.Font.GothamBold
+UnviewBtn.TextSize = 9
+UnviewBtn.Parent = Content
+Instance.new("UICorner", UnviewBtn)
 
 -- ЛОГИКА
+local listMode = "TP"
+
+ModeBtn.MouseButton1Click:Connect(function()
+    if listMode == "TP" then
+        listMode = "VIEW"
+        ModeBtn.Text = "LIST: VIEW 👀"
+        ModeBtn.BackgroundColor3 = Color3.fromRGB(0, 80, 150)
+    else
+        listMode = "TP"
+        ModeBtn.Text = "LIST: TP ⚡"
+        ModeBtn.BackgroundColor3 = Color3.fromRGB(80, 0, 80)
+    end
+end)
+
 local function updateList()
     for _, child in pairs(PlayerList:GetChildren()) do if child:IsA("TextButton") then child:Destroy() end end
     for _, player in pairs(game.Players:GetPlayers()) do
@@ -159,14 +186,28 @@ local function updateList()
             btn.TextSize = 9
             btn.Parent = PlayerList
             Instance.new("UICorner", btn)
+            
             btn.MouseButton1Click:Connect(function()
-                if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                    game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = player.Character.HumanoidRootPart.CFrame
+                if listMode == "TP" then
+                    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                        game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = player.Character.HumanoidRootPart.CFrame
+                    end
+                elseif listMode == "VIEW" then
+                    if player.Character and player.Character:FindFirstChild("Humanoid") then
+                        workspace.CurrentCamera.CameraSubject = player.Character.Humanoid
+                    end
                 end
             end)
         end
     end
 end
+
+UnviewBtn.MouseButton1Click:Connect(function()
+    local lp = game.Players.LocalPlayer
+    if lp.Character and lp.Character:FindFirstChild("Humanoid") then
+        workspace.CurrentCamera.CameraSubject = lp.Character.Humanoid
+    end
+end)
 
 local espActive = false
 EspBtn.MouseButton1Click:Connect(function()
@@ -198,21 +239,28 @@ AntiFlingBtn.MouseButton1Click:Connect(function()
     end
 end)
 
-local isFrozen = false
-FreezeBtn.MouseButton1Click:Connect(function()
-    isFrozen = not isFrozen
-    local hrp = game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-    if hrp then
-        hrp.Anchored = isFrozen
-        hrp.Velocity = Vector3.new(0,0,0)
-        FreezeBtn.Text = isFrozen and "FROZEN" or "FREEZE"
+local isFlinging = false
+local flingConn
+FlingBtn.MouseButton1Click:Connect(function()
+    isFlinging = not isFlinging
+    if isFlinging then
+        FlingBtn.Text = "FLING: ON"
+        FlingBtn.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+        flingConn = game:GetService("RunService").Heartbeat:Connect(function()
+            local hrp = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if hrp then hrp.RotVelocity = Vector3.new(0, 50000, 0) end
+        end)
+    else
+        FlingBtn.Text = "FLING"
+        FlingBtn.BackgroundColor3 = Color3.fromRGB(200, 80, 0)
+        if flingConn then flingConn:Disconnect() end
     end
 end)
 
 MinimizeBtn.MouseButton1Click:Connect(function()
     local min = MinimizeBtn.Text == "-"
     Content.Visible = not min
-    MainFrame:TweenSize(min and UDim2.new(0, 70, 0, 25) or UDim2.new(0, 140, 0, 240), "Out", "Quad", 0.3, true)
+    MainFrame:TweenSize(min and UDim2.new(0, 70, 0, 25) or UDim2.new(0, 140, 0, 250), "Out", "Quad", 0.3, true)
     MinimizeBtn.Text = min and "+" or "-"
     MinimizeBtn.Position = min and UDim2.new(0, 25, 0, 2) or UDim2.new(1, -44, 0, 3)
     CloseBtn.Position = min and UDim2.new(0, 3, 0, 2) or UDim2.new(1, -22, 0, 3)
