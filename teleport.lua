@@ -1,3 +1,25 @@
+local LuxuryDictionary = {
+    "apple", "banana", "cat", "dog", "elephant", "fling", "games", "hub", "internet",
+    "jungle", "kirik", "luxury", "mango", "noclip", "orange", "people", "quest", "roblox",
+    "stab", "tractor", "umbrella", "velocity", "world", "xylophone", "yacht", "zombie",
+    "a26", "poco", "samsung", "ukraine", "zaporizhzhia", "lyokha", "timur", "minecraft",
+    "brawlstars", "phonk", "dreamfunk", "hardcore", "redstone", "lua", "script",
+    "delta", "exploit", "bypass", "anti-cheat", "ban", "kick", "server", "client",
+    "physics", "anchored", "bodyvelocity", "linearvelocity", "cframe", "vector3",
+    "udim2", "gui", "screen", "frame", "button", "label", "text", "color", "rgb",
+    "transparency", "size", "position", "anchorpoint", "corner", "stroke", "scroll",
+    "layout", "padding", "list", "esp", "highlight", "fill", "outline", "depth",
+    "mode", "view", "tp", "teleport", "camera", "subject", "humanoid", "root", "part",
+    "character", "player", "local", "game", "workspace", "coregui", "service", "input",
+    "touch", "mouse", "keyboard", "mobile", "android", "ios", "windows", "mac",
+    "linux", "chrome", "edge", "safari", "firefox", "opera", "brave", "vivaldi",
+    "duckduckgo", "google", "bing", "yahoo", "yandex", "mailru", "rambler", "duck",
+    "go", "search", "engine", "optimization", "seo", "web", "html", "css", "js",
+    "crash", "smash", "destroy", "chaos", "lag", "ping", "fps", "hz", "network",
+    "ownership", "replicate", "remote", "event", "function", "bindable", "async",
+    "math", "random", "string", "table", "insert", "remove", "sort", "concat"
+}
+
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "KirikLuxuryHub"
 ScreenGui.Parent = game:GetService("CoreGui")
@@ -9,7 +31,7 @@ MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 MainFrame.BorderSizePixel = 0
 MainFrame.Position = UDim2.new(0.5, -70, 0.5, -115)
-MainFrame.Size = UDim2.new(0, 140, 0, 260) -- Увеличил под новую кнопку
+MainFrame.Size = UDim2.new(0, 140, 0, 260)
 MainFrame.Active = true
 MainFrame.ClipsDescendants = true
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 8)
@@ -42,7 +64,7 @@ Content.BackgroundTransparency = 1
 Content.Parent = MainFrame
 
 local Title = Instance.new("TextLabel")
-Title.Text = "KIRIK HUB V12"
+Title.Text = "KIRIK HUB V13"
 Title.TextColor3 = Color3.fromRGB(255, 215, 0)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 10
@@ -109,15 +131,15 @@ InfStabBtn.TextSize = 8
 InfStabBtn.Parent = Content
 Instance.new("UICorner", InfStabBtn)
 
-local ForceSitBtn = Instance.new("TextButton")
-ForceSitBtn.Size = UDim2.new(0.9, 0, 0, 25)
-ForceSitBtn.Position = UDim2.new(0.05, 0, 0, 185)
-ForceSitBtn.Text = "FORCE SIT (SELECT FIRST)"
-ForceSitBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 0)
-ForceSitBtn.TextColor3 = Color3.new(1, 1, 1)
-ForceSitBtn.TextSize = 8
-ForceSitBtn.Parent = Content
-Instance.new("UICorner", ForceSitBtn)
+local CrushBtn = Instance.new("TextButton")
+CrushBtn.Size = UDim2.new(0.9, 0, 0, 25)
+CrushBtn.Position = UDim2.new(0.05, 0, 0, 185)
+CrushBtn.Text = "CRUSH (SELECT FIRST)"
+CrushBtn.BackgroundColor3 = Color3.fromRGB(120, 0, 0)
+CrushBtn.TextColor3 = Color3.new(1, 1, 1)
+CrushBtn.TextSize = 8
+CrushBtn.Parent = Content
+Instance.new("UICorner", CrushBtn)
 
 local UnviewBtn = Instance.new("TextButton")
 UnviewBtn.Size = UDim2.new(0.9, 0, 0, 18)
@@ -152,7 +174,7 @@ local function updateList()
             Instance.new("UICorner", btn)
             btn.MouseButton1Click:Connect(function()
                 selectedPlayer = player
-                ForceSitBtn.Text = "SIT: " .. player.DisplayName
+                CrushBtn.Text = "CRUSH: " .. player.DisplayName
                 if listMode == "TP" then
                     game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = player.Character.HumanoidRootPart.CFrame
                 else
@@ -163,8 +185,8 @@ local function updateList()
     end
 end
 
--- FORCE SIT LOGIC
-ForceSitBtn.MouseButton1Click:Connect(function()
+-- CRUSH LOGIC (Скинуть трактор на голову)
+CrushBtn.MouseButton1Click:Connect(function()
     if not selectedPlayer or not selectedPlayer.Character then return end
     local targetHrp = selectedPlayer.Character:FindFirstChild("HumanoidRootPart")
     local myChar = game.Players.LocalPlayer.Character
@@ -172,7 +194,7 @@ ForceSitBtn.MouseButton1Click:Connect(function()
     
     if targetHrp and myHrp then
         local originalPos = myHrp.CFrame
-        local nearestSeat = nil
+        local nearestObj = nil
         local minDist = 500
         
         for _, v in pairs(workspace:GetDescendants()) do
@@ -180,18 +202,19 @@ ForceSitBtn.MouseButton1Click:Connect(function()
                 local dist = (myHrp.Position - v.Position).Magnitude
                 if dist < minDist then
                     minDist = dist
-                    nearestSeat = v
+                    nearestObj = v
                 end
             end
         end
         
-        if nearestSeat then
-            -- 1. ТП к стулу
-            myHrp.CFrame = nearestSeat.CFrame * CFrame.new(0, 2, 0)
+        if nearestObj then
+            -- 1. ТП к объекту для получения Network Ownership
+            myHrp.CFrame = nearestObj.CFrame * CFrame.new(0, 2, 0)
             task.wait(0.05)
-            -- 2. Стул к игроку (на мгновение)
-            local oldSeatCFrame = nearestSeat.CFrame
-            nearestSeat.CFrame = targetHrp.CFrame
+            -- 2. Кидаем объект высоко над головой врага
+            nearestObj.CFrame = targetHrp.CFrame * CFrame.new(0, 10, 0)
+            -- Ускоряем вниз, чтобы жестко ударило
+            nearestObj.AssemblyLinearVelocity = Vector3.new(0, -150, 0)
             task.wait(0.1)
             -- 3. ТП назад
             myHrp.CFrame = originalPos
