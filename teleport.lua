@@ -3,7 +3,6 @@ ScreenGui.Name = "KirikLuxuryHub"
 ScreenGui.Parent = game:GetService("CoreGui")
 ScreenGui.ResetOnSpawn = false
 
--- МИКРО-ОКНО
 local MainFrame = Instance.new("Frame")
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
@@ -13,23 +12,18 @@ MainFrame.Size = UDim2.new(0, 140, 0, 250)
 MainFrame.Active = true
 MainFrame.ClipsDescendants = true
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 8)
+Instance.new("UIStroke", MainFrame).Color = Color3.fromRGB(0, 255, 255)
 
-local UIStroke = Instance.new("UIStroke", MainFrame)
-UIStroke.Thickness = 1.5
-UIStroke.Color = Color3.fromRGB(0, 255, 255)
-
--- РУЧКА ПЕРЕТАСКИВАНИЯ
 local DragHandle = Instance.new("Frame")
 DragHandle.Size = UDim2.new(1, 0, 0, 25)
 DragHandle.BackgroundTransparency = 1
 DragHandle.Parent = MainFrame
 
+-- ЛОГИКА ПЕРЕМЕЩЕНИЯ (ДЛЯ ТЕЛЕФОНА)
 local dragging, dragStart, startPos
 DragHandle.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true
-        dragStart = input.Position
-        startPos = MainFrame.Position
+        dragging = true dragStart = input.Position startPos = MainFrame.Position
     end
 end)
 DragHandle.InputChanged:Connect(function(input)
@@ -47,31 +41,8 @@ Content.Size = UDim2.new(1, 0, 1, 0)
 Content.BackgroundTransparency = 1
 Content.Parent = MainFrame
 
--- МИНИ-КНОПКИ УПРАВЛЕНИЯ
-local CloseBtn = Instance.new("TextButton")
-CloseBtn.Text = "X"
-CloseBtn.Size = UDim2.new(0, 20, 0, 20)
-CloseBtn.Position = UDim2.new(1, -22, 0, 3)
-CloseBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
-CloseBtn.TextColor3 = Color3.new(1, 1, 1)
-CloseBtn.Font = Enum.Font.GothamBold
-CloseBtn.TextSize = 10
-CloseBtn.Parent = MainFrame
-Instance.new("UICorner", CloseBtn)
-
-local MinimizeBtn = Instance.new("TextButton")
-MinimizeBtn.Text = "-"
-MinimizeBtn.Size = UDim2.new(0, 20, 0, 20)
-MinimizeBtn.Position = UDim2.new(1, -44, 0, 3)
-MinimizeBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-MinimizeBtn.TextColor3 = Color3.new(1, 1, 1)
-MinimizeBtn.Font = Enum.Font.GothamBold
-MinimizeBtn.TextSize = 10
-MinimizeBtn.Parent = MainFrame
-Instance.new("UICorner", MinimizeBtn)
-
 local Title = Instance.new("TextLabel")
-Title.Text = "KIRIK HUB V6"
+Title.Text = "KIRIK HUB V6.1"
 Title.TextColor3 = Color3.fromRGB(255, 215, 0)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 10
@@ -79,14 +50,21 @@ Title.Size = UDim2.new(1, -50, 0, 25)
 Title.BackgroundTransparency = 1
 Title.Parent = Content
 
--- VISUALS & MODE
+-- КНОПКИ
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Text = "X"
+CloseBtn.Size = UDim2.new(0, 20, 0, 20)
+CloseBtn.Position = UDim2.new(1, -22, 0, 3)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+CloseBtn.Parent = MainFrame
+Instance.new("UICorner", CloseBtn)
+
 local EspBtn = Instance.new("TextButton")
 EspBtn.Size = UDim2.new(0.9, 0, 0, 20)
 EspBtn.Position = UDim2.new(0.05, 0, 0, 28)
-EspBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 EspBtn.Text = "ESP: OFF"
+EspBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 EspBtn.TextColor3 = Color3.new(1, 1, 1)
-EspBtn.Font = Enum.Font.GothamBold
 EspBtn.TextSize = 9
 EspBtn.Parent = Content
 Instance.new("UICorner", EspBtn)
@@ -94,45 +72,38 @@ Instance.new("UICorner", EspBtn)
 local ModeBtn = Instance.new("TextButton")
 ModeBtn.Size = UDim2.new(0.9, 0, 0, 20)
 ModeBtn.Position = UDim2.new(0.05, 0, 0, 52)
-ModeBtn.BackgroundColor3 = Color3.fromRGB(80, 0, 80)
 ModeBtn.Text = "LIST: TP"
+ModeBtn.BackgroundColor3 = Color3.fromRGB(80, 0, 80)
 ModeBtn.TextColor3 = Color3.new(1, 1, 1)
-ModeBtn.Font = Enum.Font.GothamBold
 ModeBtn.TextSize = 9
 ModeBtn.Parent = Content
 Instance.new("UICorner", ModeBtn)
 
--- TELEPORT / VIEW LIST
 local PlayerList = Instance.new("ScrollingFrame")
 PlayerList.Size = UDim2.new(0.9, 0, 0, 75)
 PlayerList.Position = UDim2.new(0.05, 0, 0, 75)
 PlayerList.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
-PlayerList.CanvasSize = UDim2.new(0, 0, 0, 0)
 PlayerList.AutomaticCanvasSize = Enum.AutomaticSize.Y
 PlayerList.ScrollBarThickness = 2
 PlayerList.Parent = Content
-local ListLayout = Instance.new("UIListLayout", PlayerList)
-ListLayout.Padding = UDim.new(0, 3)
+Instance.new("UIListLayout", PlayerList).Padding = UDim.new(0, 3)
 
 local RefreshBtn = Instance.new("TextButton")
 RefreshBtn.Size = UDim2.new(0.9, 0, 0, 18)
 RefreshBtn.Position = UDim2.new(0.05, 0, 0, 154)
-RefreshBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 0)
 RefreshBtn.Text = "REFRESH LIST"
+RefreshBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 0)
 RefreshBtn.TextColor3 = Color3.new(1, 1, 1)
-RefreshBtn.Font = Enum.Font.SourceSansBold
-RefreshBtn.TextSize = 10
+RefreshBtn.TextSize = 9
 RefreshBtn.Parent = Content
 Instance.new("UICorner", RefreshBtn)
 
--- ACTION BUTTONS
 local AntiFlingBtn = Instance.new("TextButton")
 AntiFlingBtn.Size = UDim2.new(0.42, 0, 0, 30)
 AntiFlingBtn.Position = UDim2.new(0.05, 0, 0, 176)
-AntiFlingBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
 AntiFlingBtn.Text = "STAB"
+AntiFlingBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
 AntiFlingBtn.TextColor3 = Color3.new(1, 1, 1)
-AntiFlingBtn.Font = Enum.Font.GothamBold
 AntiFlingBtn.TextSize = 9
 AntiFlingBtn.Parent = Content
 Instance.new("UICorner", AntiFlingBtn)
@@ -140,10 +111,9 @@ Instance.new("UICorner", AntiFlingBtn)
 local FlingBtn = Instance.new("TextButton")
 FlingBtn.Size = UDim2.new(0.42, 0, 0, 30)
 FlingBtn.Position = UDim2.new(0.53, 0, 0, 176)
-FlingBtn.BackgroundColor3 = Color3.fromRGB(200, 80, 0)
 FlingBtn.Text = "FLING"
+FlingBtn.BackgroundColor3 = Color3.fromRGB(200, 80, 0)
 FlingBtn.TextColor3 = Color3.new(1, 1, 1)
-FlingBtn.Font = Enum.Font.GothamBold
 FlingBtn.TextSize = 9
 FlingBtn.Parent = Content
 Instance.new("UICorner", FlingBtn)
@@ -151,27 +121,18 @@ Instance.new("UICorner", FlingBtn)
 local UnviewBtn = Instance.new("TextButton")
 UnviewBtn.Size = UDim2.new(0.9, 0, 0, 20)
 UnviewBtn.Position = UDim2.new(0.05, 0, 0, 210)
+UnviewBtn.Text = "UNVIEW"
 UnviewBtn.BackgroundColor3 = Color3.fromRGB(0, 80, 150)
-UnviewBtn.Text = "UNVIEW (BACK TO ME)"
 UnviewBtn.TextColor3 = Color3.new(1, 1, 1)
-UnviewBtn.Font = Enum.Font.GothamBold
 UnviewBtn.TextSize = 9
 UnviewBtn.Parent = Content
 Instance.new("UICorner", UnviewBtn)
 
--- ЛОГИКА
+-- ЛОГИКА ФУНКЦИЙ
 local listMode = "TP"
-
 ModeBtn.MouseButton1Click:Connect(function()
-    if listMode == "TP" then
-        listMode = "VIEW"
-        ModeBtn.Text = "LIST: VIEW 👀"
-        ModeBtn.BackgroundColor3 = Color3.fromRGB(0, 80, 150)
-    else
-        listMode = "TP"
-        ModeBtn.Text = "LIST: TP ⚡"
-        ModeBtn.BackgroundColor3 = Color3.fromRGB(80, 0, 80)
-    end
+    listMode = (listMode == "TP") and "VIEW" or "TP"
+    ModeBtn.Text = "LIST: " .. listMode
 end)
 
 local function updateList()
@@ -180,92 +141,70 @@ local function updateList()
         if player ~= game.Players.LocalPlayer then
             local btn = Instance.new("TextButton")
             btn.Size = UDim2.new(1, -5, 0, 20)
-            btn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
             btn.Text = player.DisplayName
-            btn.TextColor3 = Color3.new(1, 1, 1)
-            btn.TextSize = 9
             btn.Parent = PlayerList
             Instance.new("UICorner", btn)
-            
             btn.MouseButton1Click:Connect(function()
                 if listMode == "TP" then
-                    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                        game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = player.Character.HumanoidRootPart.CFrame
-                    end
-                elseif listMode == "VIEW" then
-                    if player.Character and player.Character:FindFirstChild("Humanoid") then
-                        workspace.CurrentCamera.CameraSubject = player.Character.Humanoid
-                    end
+                    game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = player.Character.HumanoidRootPart.CFrame
+                else
+                    workspace.CurrentCamera.CameraSubject = player.Character.Humanoid
                 end
             end)
         end
     end
 end
 
-UnviewBtn.MouseButton1Click:Connect(function()
-    local lp = game.Players.LocalPlayer
-    if lp.Character and lp.Character:FindFirstChild("Humanoid") then
-        workspace.CurrentCamera.CameraSubject = lp.Character.Humanoid
-    end
-end)
-
 local espActive = false
 EspBtn.MouseButton1Click:Connect(function()
     espActive = not espActive
-    if espActive then
-        for _, p in pairs(game.Players:GetPlayers()) do
-            if p ~= game.Players.LocalPlayer and p.Character then
-                local hl = Instance.new("Highlight", p.Character)
-                hl.Name = "LuxuryESP"
-                hl.FillColor = Color3.fromRGB(0, 255, 255)
-            end
+    EspBtn.Text = "ESP: " .. (espActive and "ON" or "OFF")
+    for _, p in pairs(game.Players:GetPlayers()) do
+        if p ~= game.Players.LocalPlayer and p.Character then
+            if espActive then Instance.new("Highlight", p.Character).Name = "LuxuryESP"
+            elseif p.Character:FindFirstChild("LuxuryESP") then p.Character.LuxuryESP:Destroy() end
         end
-        EspBtn.Text = "ESP: ON"
-    else
-        for _, p in pairs(game.Players:GetPlayers()) do
-            if p.Character and p.Character:FindFirstChild("LuxuryESP") then p.Character.LuxuryESP:Destroy() end
-        end
-        EspBtn.Text = "ESP: OFF"
     end
 end)
 
 AntiFlingBtn.MouseButton1Click:Connect(function()
-    local hrp = game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-    if hrp then
-        hrp.Velocity, hrp.RotVelocity = Vector3.new(0,0,0), Vector3.new(0,0,0)
-        hrp.Anchored = true
-        task.wait(0.5)
-        hrp.Anchored = false
-    end
+    local hrp = game.Players.LocalPlayer.Character.HumanoidRootPart
+    hrp.Velocity = Vector3.new(0,0,0) hrp.RotVelocity = Vector3.new(0,0,0)
 end)
 
+-- УЛУЧШЕННЫЙ БЕЗОПАСНЫЙ ФЛИНГ
 local isFlinging = false
 local flingConn
 FlingBtn.MouseButton1Click:Connect(function()
     isFlinging = not isFlinging
+    FlingBtn.Text = isFlinging and "FLING: ON" or "FLING"
+    FlingBtn.BackgroundColor3 = isFlinging and Color3.fromRGB(255, 0, 0) or Color3.fromRGB(200, 80, 0)
+    
+    local char = game.Players.LocalPlayer.Character
     if isFlinging then
-        FlingBtn.Text = "FLING: ON"
-        FlingBtn.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
         flingConn = game:GetService("RunService").Heartbeat:Connect(function()
-            local hrp = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-            if hrp then hrp.RotVelocity = Vector3.new(0, 50000, 0) end
+            local hrp = char:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                -- Отключаем коллизии, чтобы не отлетать от пола
+                for _, part in pairs(char:GetChildren()) do
+                    if part:IsA("BasePart") then part.CanCollide = false end
+                end
+                hrp.RotVelocity = Vector3.new(0, 50000, 0)
+                hrp.Velocity = Vector3.new(0, 0, 0) -- Держимся на месте
+            end
         end)
     else
-        FlingBtn.Text = "FLING"
-        FlingBtn.BackgroundColor3 = Color3.fromRGB(200, 80, 0)
         if flingConn then flingConn:Disconnect() end
+        for _, part in pairs(char:GetChildren()) do
+            if part:IsA("BasePart") then part.CanCollide = true end
+        end
     end
 end)
 
-MinimizeBtn.MouseButton1Click:Connect(function()
-    local min = MinimizeBtn.Text == "-"
-    Content.Visible = not min
-    MainFrame:TweenSize(min and UDim2.new(0, 70, 0, 25) or UDim2.new(0, 140, 0, 250), "Out", "Quad", 0.3, true)
-    MinimizeBtn.Text = min and "+" or "-"
-    MinimizeBtn.Position = min and UDim2.new(0, 25, 0, 2) or UDim2.new(1, -44, 0, 3)
-    CloseBtn.Position = min and UDim2.new(0, 3, 0, 2) or UDim2.new(1, -22, 0, 3)
+UnviewBtn.MouseButton1Click:Connect(function()
+    workspace.CurrentCamera.CameraSubject = game.Players.LocalPlayer.Character.Humanoid
 end)
 
-CloseBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
 RefreshBtn.MouseButton1Click:Connect(updateList)
+CloseBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
 updateList()
