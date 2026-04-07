@@ -1,31 +1,9 @@
-local LuxuryDictionary = {
-    "apple", "banana", "cat", "dog", "elephant", "fling", "games", "hub", "internet",
-    "jungle", "kirik", "luxury", "mango", "noclip", "orange", "people", "quest", "roblox",
-    "stab", "tractor", "umbrella", "velocity", "world", "xylophone", "yacht", "zombie",
-    "a26", "poco", "samsung", "ukraine", "zaporizhzhia", "lyokha", "timur", "minecraft",
-    "brawlstars", "phonk", "dreamfunk", "hardcore", "redstone", "lua", "script",
-    "delta", "exploit", "bypass", "anti-cheat", "ban", "kick", "server", "client",
-    "physics", "anchored", "bodyvelocity", "linearvelocity", "cframe", "vector3",
-    "udim2", "gui", "screen", "frame", "button", "label", "text", "color", "rgb",
-    "transparency", "size", "position", "anchorpoint", "corner", "stroke", "scroll",
-    "layout", "padding", "list", "esp", "highlight", "fill", "outline", "depth",
-    "mode", "view", "tp", "teleport", "camera", "subject", "humanoid", "root", "part",
-    "character", "player", "local", "game", "workspace", "coregui", "service", "input",
-    "touch", "mouse", "keyboard", "mobile", "android", "ios", "windows", "mac",
-    "linux", "chrome", "edge", "safari", "firefox", "opera", "brave", "vivaldi",
-    "duckduckgo", "google", "bing", "yahoo", "yandex", "mailru", "rambler", "duck",
-    "go", "search", "engine", "optimization", "seo", "web", "html", "css", "js",
-    "crash", "smash", "destroy", "chaos", "lag", "ping", "fps", "hz", "network",
-    "ownership", "replicate", "remote", "event", "function", "bindable", "async",
-    "math", "random", "string", "table", "insert", "remove", "sort", "concat"
-}
-
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "KirikLuxuryHub"
 ScreenGui.Parent = game:GetService("CoreGui")
 ScreenGui.ResetOnSpawn = false
 
--- МИКРО-ОКНО (Оптимизировано под Samsung A26)
+-- МИКРО-ОКНО
 local MainFrame = Instance.new("Frame")
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
@@ -64,7 +42,7 @@ Content.BackgroundTransparency = 1
 Content.Parent = MainFrame
 
 local Title = Instance.new("TextLabel")
-Title.Text = "KIRIK HUB V13"
+Title.Text = "KIRIK HUB V13.1"
 Title.TextColor3 = Color3.fromRGB(255, 215, 0)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 10
@@ -185,7 +163,7 @@ local function updateList()
     end
 end
 
--- CRUSH LOGIC (Скинуть трактор на голову)
+-- CRUSH LOGIC (Скинуть тяжелое на голову, игнорируя поезд)
 CrushBtn.MouseButton1Click:Connect(function()
     if not selectedPlayer or not selectedPlayer.Character then return end
     local targetHrp = selectedPlayer.Character:FindFirstChild("HumanoidRootPart")
@@ -199,10 +177,14 @@ CrushBtn.MouseButton1Click:Connect(function()
         
         for _, v in pairs(workspace:GetDescendants()) do
             if (v:IsA("Seat") or v:IsA("VehicleSeat")) and not v:FindFirstChild("Occupant") then
-                local dist = (myHrp.Position - v.Position).Magnitude
-                if dist < minDist then
-                    minDist = dist
-                    nearestObj = v
+                -- Фильтр: исключаем поезд по названию
+                local fullName = string.lower(v:GetFullName())
+                if not string.find(fullName, "train") then
+                    local dist = (myHrp.Position - v.Position).Magnitude
+                    if dist < minDist then
+                        minDist = dist
+                        nearestObj = v
+                    end
                 end
             end
         end
@@ -211,12 +193,12 @@ CrushBtn.MouseButton1Click:Connect(function()
             -- 1. ТП к объекту для получения Network Ownership
             myHrp.CFrame = nearestObj.CFrame * CFrame.new(0, 2, 0)
             task.wait(0.05)
-            -- 2. Кидаем объект высоко над головой врага
-            nearestObj.CFrame = targetHrp.CFrame * CFrame.new(0, 10, 0)
-            -- Ускоряем вниз, чтобы жестко ударило
-            nearestObj.AssemblyLinearVelocity = Vector3.new(0, -150, 0)
+            -- 2. Кидаем объект высоко над головой врага (15 блоков вверх)
+            nearestObj.CFrame = targetHrp.CFrame * CFrame.new(0, 15, 0)
+            -- 3. Придаем мощное ускорение вниз
+            nearestObj.AssemblyLinearVelocity = Vector3.new(0, -200, 0)
             task.wait(0.1)
-            -- 3. ТП назад
+            -- 4. ТП назад
             myHrp.CFrame = originalPos
         end
     end
