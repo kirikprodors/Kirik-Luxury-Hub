@@ -3,7 +3,7 @@ ScreenGui.Name = "KirikLuxuryHub"
 ScreenGui.Parent = game:GetService("CoreGui")
 ScreenGui.ResetOnSpawn = false
 
--- МИКРО-ОКНО
+-- МИКРО-ОКНО (Оптимизация под Samsung A26)
 local MainFrame = Instance.new("Frame")
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
@@ -42,7 +42,7 @@ Content.BackgroundTransparency = 1
 Content.Parent = MainFrame
 
 local Title = Instance.new("TextLabel")
-Title.Text = "KIRIK HUB V13.1"
+Title.Text = "KIRIK HUB V14"
 Title.TextColor3 = Color3.fromRGB(255, 215, 0)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 10
@@ -112,7 +112,7 @@ Instance.new("UICorner", InfStabBtn)
 local CrushBtn = Instance.new("TextButton")
 CrushBtn.Size = UDim2.new(0.9, 0, 0, 25)
 CrushBtn.Position = UDim2.new(0.05, 0, 0, 185)
-CrushBtn.Text = "CRUSH (SELECT FIRST)"
+CrushBtn.Text = "CAR RAIN (SELECT)"
 CrushBtn.BackgroundColor3 = Color3.fromRGB(120, 0, 0)
 CrushBtn.TextColor3 = Color3.new(1, 1, 1)
 CrushBtn.TextSize = 8
@@ -152,7 +152,7 @@ local function updateList()
             Instance.new("UICorner", btn)
             btn.MouseButton1Click:Connect(function()
                 selectedPlayer = player
-                CrushBtn.Text = "CRUSH: " .. player.DisplayName
+                CrushBtn.Text = "RAIN ON: " .. player.DisplayName
                 if listMode == "TP" then
                     game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = player.Character.HumanoidRootPart.CFrame
                 else
@@ -163,44 +163,44 @@ local function updateList()
     end
 end
 
--- CRUSH LOGIC (Скинуть тяжелое на голову, игнорируя поезд)
+-- CAR RAIN LOGIC (Обрушить ВСЕ машины в округе)
 CrushBtn.MouseButton1Click:Connect(function()
     if not selectedPlayer or not selectedPlayer.Character then return end
     local targetHrp = selectedPlayer.Character:FindFirstChild("HumanoidRootPart")
-    local myChar = game.Players.LocalPlayer.Character
-    local myHrp = myChar:FindFirstChild("HumanoidRootPart")
+    local myHrp = game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     
     if targetHrp and myHrp then
         local originalPos = myHrp.CFrame
-        local nearestObj = nil
-        local minDist = 500
+        local objectsToDrop = {}
         
+        -- Собираем список подходящих объектов
         for _, v in pairs(workspace:GetDescendants()) do
             if (v:IsA("Seat") or v:IsA("VehicleSeat")) and not v:FindFirstChild("Occupant") then
-                -- Фильтр: исключаем поезд по названию
                 local fullName = string.lower(v:GetFullName())
                 if not string.find(fullName, "train") then
                     local dist = (myHrp.Position - v.Position).Magnitude
-                    if dist < minDist then
-                        minDist = dist
-                        nearestObj = v
+                    if dist < 500 then
+                        table.insert(objectsToDrop, v)
                     end
                 end
             end
+            if #objectsToDrop >= 10 then break end -- Ограничение 10 объектов, чтобы не крашнуть Samsung
         end
         
-        if nearestObj then
-            -- 1. ТП к объекту для получения Network Ownership
-            myHrp.CFrame = nearestObj.CFrame * CFrame.new(0, 2, 0)
-            task.wait(0.05)
-            -- 2. Кидаем объект высоко над головой врага (15 блоков вверх)
-            nearestObj.CFrame = targetHrp.CFrame * CFrame.new(0, 15, 0)
-            -- 3. Придаем мощное ускорение вниз
-            nearestObj.AssemblyLinearVelocity = Vector3.new(0, -200, 0)
-            task.wait(0.1)
-            -- 4. ТП назад
-            myHrp.CFrame = originalPos
+        -- Процесс "Бомбардировки"
+        for _, obj in pairs(objectsToDrop) do
+            -- ТП к объекту для Network Ownership
+            myHrp.CFrame = obj.CFrame * CFrame.new(0, 2, 0)
+            task.wait(0.03) -- Микро-задержка для синхронизации
+            
+            -- Рандомный разброс над целью
+            local offset = Vector3.new(math.random(-5, 5), math.random(15, 25), math.random(-5, 5))
+            obj.CFrame = targetHrp.CFrame * CFrame.new(offset)
+            obj.AssemblyLinearVelocity = Vector3.new(0, -250, 0) -- Очень быстрый удар вниз
         end
+        
+        -- ТП назад
+        myHrp.CFrame = originalPos
     end
 end)
 
