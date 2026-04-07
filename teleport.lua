@@ -3,13 +3,13 @@ ScreenGui.Name = "KirikLuxuryHub"
 ScreenGui.Parent = game:GetService("CoreGui")
 ScreenGui.ResetOnSpawn = false
 
--- МИКРО-ОКНО
+-- МИКРО-ОКНО (Оптимизировано под Samsung A26)
 local MainFrame = Instance.new("Frame")
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 MainFrame.BorderSizePixel = 0
-MainFrame.Position = UDim2.new(0.5, -70, 0.5, -110)
-MainFrame.Size = UDim2.new(0, 140, 0, 220)
+MainFrame.Position = UDim2.new(0.5, -70, 0.5, -115)
+MainFrame.Size = UDim2.new(0, 140, 0, 235) -- Чуть увеличил высоту под новую кнопку
 MainFrame.Active = true
 MainFrame.ClipsDescendants = true
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 8)
@@ -43,7 +43,7 @@ Content.BackgroundTransparency = 1
 Content.Parent = MainFrame
 
 local Title = Instance.new("TextLabel")
-Title.Text = "KIRIK HUB V8"
+Title.Text = "KIRIK HUB V9"
 Title.TextColor3 = Color3.fromRGB(255, 215, 0)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 10
@@ -51,7 +51,6 @@ Title.Size = UDim2.new(1, -30, 0, 25)
 Title.BackgroundTransparency = 1
 Title.Parent = Content
 
--- КНОПКИ УПРАВЛЕНИЯ
 local CloseBtn = Instance.new("TextButton")
 CloseBtn.Text = "X"
 CloseBtn.Size = UDim2.new(0, 20, 0, 20)
@@ -82,9 +81,9 @@ ModeBtn.TextSize = 9
 ModeBtn.Parent = Content
 Instance.new("UICorner", ModeBtn)
 
--- PLAYER LIST (Увеличен)
+-- PLAYER LIST
 local PlayerList = Instance.new("ScrollingFrame")
-PlayerList.Size = UDim2.new(0.9, 0, 0, 92)
+PlayerList.Size = UDim2.new(0.9, 0, 0, 75)
 PlayerList.Position = UDim2.new(0.05, 0, 0, 76)
 PlayerList.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
 PlayerList.AutomaticCanvasSize = Enum.AutomaticSize.Y
@@ -94,19 +93,28 @@ Instance.new("UIListLayout", PlayerList).Padding = UDim.new(0, 3)
 
 -- ГЛАВНЫЕ ФУНКЦИИ
 local AntiFlingBtn = Instance.new("TextButton")
-AntiFlingBtn.Size = UDim2.new(0.9, 0, 0, 25)
-AntiFlingBtn.Position = UDim2.new(0.05, 0, 0, 172)
-AntiFlingBtn.Text = "STABILIZE (STAB)"
+AntiFlingBtn.Size = UDim2.new(0.43, 0, 0, 25)
+AntiFlingBtn.Position = UDim2.new(0.05, 0, 0, 155)
+AntiFlingBtn.Text = "STAB"
 AntiFlingBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
 AntiFlingBtn.TextColor3 = Color3.new(1, 1, 1)
-AntiFlingBtn.Font = Enum.Font.GothamBold
 AntiFlingBtn.TextSize = 9
 AntiFlingBtn.Parent = Content
 Instance.new("UICorner", AntiFlingBtn)
 
+local InfStabBtn = Instance.new("TextButton")
+InfStabBtn.Size = UDim2.new(0.43, 0, 0, 25)
+InfStabBtn.Position = UDim2.new(0.52, 0, 0, 155)
+InfStabBtn.Text = "INF STAB"
+InfStabBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+InfStabBtn.TextColor3 = Color3.new(1, 1, 1)
+InfStabBtn.TextSize = 8
+InfStabBtn.Parent = Content
+Instance.new("UICorner", InfStabBtn)
+
 local UnviewBtn = Instance.new("TextButton")
 UnviewBtn.Size = UDim2.new(0.9, 0, 0, 18)
-UnviewBtn.Position = UDim2.new(0.05, 0, 0, 200)
+UnviewBtn.Position = UDim2.new(0.05, 0, 0, 185)
 UnviewBtn.Text = "RESET CAMERA (UNVIEW)"
 UnviewBtn.BackgroundColor3 = Color3.fromRGB(0, 80, 150)
 UnviewBtn.TextColor3 = Color3.new(1, 1, 1)
@@ -144,34 +152,74 @@ local function updateList()
     end
 end
 
--- АВТО-ОБНОВЛЕНИЕ СПИСКА ИГРОКОВ
-game.Players.PlayerAdded:Connect(updateList)
-game.Players.PlayerRemoving:Connect(updateList)
-
+-- ИСПРАВЛЕННЫЙ ESP (Работает после респавна)
 local espActive = false
+local function applyESP(char)
+    if espActive then
+        task.wait(0.5) -- Ждем загрузки тела
+        if not char:FindFirstChild("LuxuryESP") then
+            local hl = Instance.new("Highlight", char)
+            hl.Name = "LuxuryESP"
+            hl.FillColor = Color3.fromRGB(0, 255, 255)
+            hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+        end
+    end
+end
+
 EspBtn.MouseButton1Click:Connect(function()
     espActive = not espActive
     EspBtn.Text = "ESP: " .. (espActive and "ON" or "OFF")
+    EspBtn.BackgroundColor3 = espActive and Color3.fromRGB(0, 100, 100) or Color3.fromRGB(30, 30, 30)
+    
     for _, p in pairs(game.Players:GetPlayers()) do
         if p ~= game.Players.LocalPlayer and p.Character then
-            if espActive then
-                local hl = Instance.new("Highlight", p.Character)
-                hl.Name = "LuxuryESP"
-                hl.FillColor = Color3.fromRGB(0, 255, 255)
-            elseif p.Character:FindFirstChild("LuxuryESP") then
-                p.Character.LuxuryESP:Destroy()
-            end
+            if espActive then applyESP(p.Character)
+            elseif p.Character:FindFirstChild("LuxuryESP") then p.Character.LuxuryESP:Destroy() end
         end
     end
 end)
 
+-- Слежка за новыми игроками и респавном
+game.Players.PlayerAdded:Connect(function(p)
+    p.CharacterAdded:Connect(applyESP)
+    updateList()
+end)
+game.Players.PlayerRemoving:Connect(updateList)
+for _, p in pairs(game.Players:GetPlayers()) do p.CharacterAdded:Connect(applyESP) end
+
+-- ОБЫЧНЫЙ STAB
 AntiFlingBtn.MouseButton1Click:Connect(function()
     local hrp = game.Players.LocalPlayer.Character.HumanoidRootPart
     hrp.Velocity = Vector3.new(0,0,0)
     hrp.RotVelocity = Vector3.new(0,0,0)
     hrp.Anchored = true
-    task.wait(0.2)
+    task.wait(0.5)
     hrp.Anchored = false
+end)
+
+-- INFINITY STABILIZE
+local infStabActive = false
+InfStabBtn.MouseButton1Click:Connect(function()
+    infStabActive = not infStabActive
+    InfStabBtn.Text = infStabActive and "INF: ON" or "INF STAB"
+    InfStabBtn.BackgroundColor3 = infStabActive and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(50, 50, 50)
+end)
+
+task.spawn(function()
+    while true do
+        if infStabActive then
+            local char = game.Players.LocalPlayer.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                hrp.Velocity = Vector3.new(0,0,0)
+                hrp.RotVelocity = Vector3.new(0,0,0)
+                hrp.Anchored = true
+                task.wait(0.5)
+                hrp.Anchored = false
+            end
+        end
+        task.wait(0.15) -- Пауза между циклами
+    end
 end)
 
 UnviewBtn.MouseButton1Click:Connect(function()
