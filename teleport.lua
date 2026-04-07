@@ -3,7 +3,9 @@ ScreenGui.Name = "KirikLuxuryHub"
 ScreenGui.Parent = game:GetService("CoreGui")
 ScreenGui.ResetOnSpawn = false
 
--- МИКРО-ОКНО (Оптимизация под Samsung A26)
+local TweenService = game:GetService("TweenService")
+
+-- МИКРО-ОКНО (Luxury Style)
 local MainFrame = Instance.new("Frame")
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
@@ -42,7 +44,7 @@ Content.BackgroundTransparency = 1
 Content.Parent = MainFrame
 
 local Title = Instance.new("TextLabel")
-Title.Text = "KIRIK HUB V17"
+Title.Text = "KIRIK HUB V18"
 Title.TextColor3 = Color3.fromRGB(255, 215, 0)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 10
@@ -112,7 +114,7 @@ Instance.new("UICorner", InfStabBtn)
 local CrushBtn = Instance.new("TextButton")
 CrushBtn.Size = UDim2.new(0.9, 0, 0, 25)
 CrushBtn.Position = UDim2.new(0.05, 0, 0, 185)
-CrushBtn.Text = "ULTRA CRUSH (SELECT)"
+CrushBtn.Text = "SMOOTH CRUSH (SELECT)"
 CrushBtn.BackgroundColor3 = Color3.fromRGB(120, 0, 0)
 CrushBtn.TextColor3 = Color3.new(1, 1, 1)
 CrushBtn.TextSize = 8
@@ -163,7 +165,7 @@ local function updateList()
     end
 end
 
--- ULTRA CRUSH V17 (Bypass + Счетчик)
+-- АНТИ-ТАРЕЛКА И ПООЧЕРЕДНАЯ АТАКА (V18)
 CrushBtn.MouseButton1Click:Connect(function()
     if not selectedPlayer or not selectedPlayer.Character then return end
     local targetHrp = selectedPlayer.Character:FindFirstChild("HumanoidRootPart")
@@ -171,57 +173,40 @@ CrushBtn.MouseButton1Click:Connect(function()
     local myHrp = myChar:FindFirstChild("HumanoidRootPart")
     
     if targetHrp and myHrp then
-        local originalPos = myHrp.CFrame
+        local originalCFrame = myHrp.CFrame
         local objectsToDrop = {}
-        local usedNames = {} -- Для контроля "разных" предметов
-        local foundCount = 0
         
-        -- Сбор предметов (ищем разные)
+        -- Поиск предметов с фильтром
         for _, v in pairs(workspace:GetDescendants()) do
-            if v:IsA("BasePart") and not v.Anchored and v.Size.Magnitude > 7 then
-                if not v:IsDescendantOf(myChar) and not usedNames[v.Name] then
-                    table.insert(objectsToDrop, v)
-                    usedNames[v.Name] = true
-                    foundCount = foundCount + 1
-                end
-            end
-            if foundCount >= 8 then break end
-        end
-        
-        -- Если предметов одного типа много, а уникальных мало - добираем любые
-        if foundCount < 4 then
-            for _, v in pairs(workspace:GetDescendants()) do
-                if v:IsA("BasePart") and not v.Anchored and v.Size.Magnitude > 4 then
-                    if not v:IsDescendantOf(myChar) and not table.find(objectsToDrop, v) then
+            if v:IsA("BasePart") and not v.Anchored and v.Size.Magnitude > 6 then
+                local name = v.Name:lower()
+                -- Игнорируем тарелки, НЛО и декор
+                if not name:find("ufo") and not name:find("saucer") and not name:find("tarelka") and not name:find("plate") then
+                    if not v:IsDescendantOf(myChar) then
                         table.insert(objectsToDrop, v)
-                        foundCount = foundCount + 1
                     end
                 end
-                if foundCount >= 8 then break end
             end
-        end
-
-        -- АТАКА (Имитация касания без ТП внутрь)
-        for _, obj in pairs(objectsToDrop) do
-            -- Безопасный подлет (рядом с объектом, но не внутри)
-            myHrp.CFrame = obj.CFrame * CFrame.new(0, 5, 0)
-            
-            -- Симуляция касания (Bypass)
-            if firetouchinterest then
-                firetouchinterest(myHrp, obj, 0)
-                task.wait(0.05)
-                firetouchinterest(myHrp, obj, 1)
-            end
-            
-            task.wait(0.1) -- Даем серверу время
-            
-            -- Бросок
-            obj.CFrame = targetHrp.CFrame * CFrame.new(math.random(-5, 5), 25, math.random(-5, 5))
-            obj.AssemblyLinearVelocity = Vector3.new(0, -400, 0)
-            task.wait(0.05)
+            if #objectsToDrop >= 5 then break end -- 5 предметов по очереди - это мощно
         end
         
-        myHrp.CFrame = originalPos
+        for _, obj in pairs(objectsToDrop) do
+            -- 1. ТП К ПРЕДМЕТУ (Мгновенно для захвата)
+            myHrp.CFrame = obj.CFrame * CFrame.new(0, 2, 0)
+            task.wait(0.12) -- Ждем, чтобы сервер "отдал" предмет
+            
+            -- 2. КИДАЕМ ПРЕДМЕТ
+            if targetHrp.Parent then
+                obj.CFrame = targetHrp.CFrame * CFrame.new(0, 30, 0)
+                obj.AssemblyLinearVelocity = Vector3.new(0, -600, 0)
+            end
+            
+            -- 3. ПЛАВНЫЙ ВОЗВРАТ (Чтобы античит не ругался)
+            local tween = TweenService:Create(myHrp, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CFrame = originalCFrame})
+            tween:Play()
+            tween.Completed:Wait() -- Ждем завершения возврата перед следующим предметом
+            task.wait(0.1)
+        end
     end
 end)
 
@@ -273,10 +258,9 @@ task.spawn(function()
             local char = game.Players.LocalPlayer.Character
             local hrp = char and char:FindFirstChild("HumanoidRootPart")
             if hrp then
-                local freezeTime = (math.random(1, 100) <= 15) and (math.random(2, 3)/10) or (math.random(4, 6)/10)
                 hrp.Velocity = Vector3.zero hrp.RotVelocity = Vector3.zero
-                hrp.Anchored = true task.wait(freezeTime) hrp.Anchored = false
-                task.wait(math.random(15, 25) / 100)
+                hrp.Anchored = true task.wait(0.3) hrp.Anchored = false
+                task.wait(0.2)
             else task.wait(0.2) end
         else task.wait(0.2) end
     end
