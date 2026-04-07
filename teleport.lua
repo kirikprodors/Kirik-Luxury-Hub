@@ -9,7 +9,7 @@ MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 MainFrame.BorderSizePixel = 0
 MainFrame.Position = UDim2.new(0.5, -70, 0.5, -115)
-MainFrame.Size = UDim2.new(0, 140, 0, 235) -- Чуть увеличил высоту под новую кнопку
+MainFrame.Size = UDim2.new(0, 140, 0, 235)
 MainFrame.Active = true
 MainFrame.ClipsDescendants = true
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 8)
@@ -43,7 +43,7 @@ Content.BackgroundTransparency = 1
 Content.Parent = MainFrame
 
 local Title = Instance.new("TextLabel")
-Title.Text = "KIRIK HUB V9"
+Title.Text = "KIRIK HUB V10"
 Title.TextColor3 = Color3.fromRGB(255, 215, 0)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 10
@@ -105,7 +105,7 @@ Instance.new("UICorner", AntiFlingBtn)
 local InfStabBtn = Instance.new("TextButton")
 InfStabBtn.Size = UDim2.new(0.43, 0, 0, 25)
 InfStabBtn.Position = UDim2.new(0.52, 0, 0, 155)
-InfStabBtn.Text = "INF STAB"
+InfStabBtn.Text = "LAG STAB"
 InfStabBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 InfStabBtn.TextColor3 = Color3.new(1, 1, 1)
 InfStabBtn.TextSize = 8
@@ -152,16 +152,15 @@ local function updateList()
     end
 end
 
--- ИСПРАВЛЕННЫЙ ESP (Работает после респавна)
+-- ESP (Авто-подхват после смерти)
 local espActive = false
 local function applyESP(char)
     if espActive then
-        task.wait(0.5) -- Ждем загрузки тела
+        task.wait(0.5)
         if not char:FindFirstChild("LuxuryESP") then
             local hl = Instance.new("Highlight", char)
             hl.Name = "LuxuryESP"
             hl.FillColor = Color3.fromRGB(0, 255, 255)
-            hl.OutlineColor = Color3.fromRGB(255, 255, 255)
         end
     end
 end
@@ -169,8 +168,6 @@ end
 EspBtn.MouseButton1Click:Connect(function()
     espActive = not espActive
     EspBtn.Text = "ESP: " .. (espActive and "ON" or "OFF")
-    EspBtn.BackgroundColor3 = espActive and Color3.fromRGB(0, 100, 100) or Color3.fromRGB(30, 30, 30)
-    
     for _, p in pairs(game.Players:GetPlayers()) do
         if p ~= game.Players.LocalPlayer and p.Character then
             if espActive then applyESP(p.Character)
@@ -179,46 +176,58 @@ EspBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- Слежка за новыми игроками и респавном
-game.Players.PlayerAdded:Connect(function(p)
-    p.CharacterAdded:Connect(applyESP)
-    updateList()
-end)
+game.Players.PlayerAdded:Connect(function(p) p.CharacterAdded:Connect(applyESP) updateList() end)
 game.Players.PlayerRemoving:Connect(updateList)
 for _, p in pairs(game.Players:GetPlayers()) do p.CharacterAdded:Connect(applyESP) end
 
 -- ОБЫЧНЫЙ STAB
 AntiFlingBtn.MouseButton1Click:Connect(function()
     local hrp = game.Players.LocalPlayer.Character.HumanoidRootPart
-    hrp.Velocity = Vector3.new(0,0,0)
-    hrp.RotVelocity = Vector3.new(0,0,0)
-    hrp.Anchored = true
-    task.wait(0.5)
-    hrp.Anchored = false
+    hrp.Velocity = Vector3.zero hrp.RotVelocity = Vector3.zero
+    hrp.Anchored = true task.wait(0.5) hrp.Anchored = false
 end)
 
--- INFINITY STABILIZE
+-- SMART LAG STABILIZE (V10)
 local infStabActive = false
 InfStabBtn.MouseButton1Click:Connect(function()
     infStabActive = not infStabActive
-    InfStabBtn.Text = infStabActive and "INF: ON" or "INF STAB"
+    InfStabBtn.Text = infStabActive and "LAG: ON" or "LAG STAB"
     InfStabBtn.BackgroundColor3 = infStabActive and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(50, 50, 50)
 end)
 
 task.spawn(function()
+    -- Таблица: {длительность заморозки, пауза до следующей}
+    local lagSequence = {
+        {0.6, 0.3},
+        {0.5, 0.2},
+        {0.4, 0.2}
+    }
+    local step = 1
+    
     while true do
         if infStabActive then
             local char = game.Players.LocalPlayer.Character
             local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            
             if hrp then
-                hrp.Velocity = Vector3.new(0,0,0)
-                hrp.RotVelocity = Vector3.new(0,0,0)
+                local current = lagSequence[step]
+                
+                hrp.Velocity = Vector3.zero
+                hrp.RotVelocity = Vector3.zero
                 hrp.Anchored = true
-                task.wait(0.5)
+                task.wait(current[1]) -- Заморозка
                 hrp.Anchored = false
+                task.wait(current[2]) -- Пауза ("лаг")
+                
+                step = step + 1
+                if step > #lagSequence then step = 1 end
+            else
+                task.wait(0.2)
             end
+        else
+            step = 1
+            task.wait(0.2)
         end
-        task.wait(0.15) -- Пауза между циклами
     end
 end)
 
