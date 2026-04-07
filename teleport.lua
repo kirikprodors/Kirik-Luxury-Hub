@@ -3,7 +3,7 @@ ScreenGui.Name = "KirikLuxuryHub"
 ScreenGui.Parent = game:GetService("CoreGui")
 ScreenGui.ResetOnSpawn = false
 
--- МИКРО-ОКНО (Оптимизировано под Samsung A26)
+-- МИКРО-ОКНО (Luxury дизайн под Samsung A26)
 local MainFrame = Instance.new("Frame")
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
@@ -43,7 +43,7 @@ Content.BackgroundTransparency = 1
 Content.Parent = MainFrame
 
 local Title = Instance.new("TextLabel")
-Title.Text = "KIRIK HUB V10"
+Title.Text = "KIRIK HUB V11"
 Title.TextColor3 = Color3.fromRGB(255, 215, 0)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 10
@@ -105,7 +105,7 @@ Instance.new("UICorner", AntiFlingBtn)
 local InfStabBtn = Instance.new("TextButton")
 InfStabBtn.Size = UDim2.new(0.43, 0, 0, 25)
 InfStabBtn.Position = UDim2.new(0.52, 0, 0, 155)
-InfStabBtn.Text = "LAG STAB"
+InfStabBtn.Text = "CHAOS LAG"
 InfStabBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 InfStabBtn.TextColor3 = Color3.new(1, 1, 1)
 InfStabBtn.TextSize = 8
@@ -152,7 +152,7 @@ local function updateList()
     end
 end
 
--- ESP (Авто-подхват после смерти)
+-- ESP (Слежка за респавном)
 local espActive = false
 local function applyESP(char)
     if espActive then
@@ -187,45 +187,43 @@ AntiFlingBtn.MouseButton1Click:Connect(function()
     hrp.Anchored = true task.wait(0.5) hrp.Anchored = false
 end)
 
--- SMART LAG STABILIZE (V10)
+-- RANDOMIZED LAG STABILIZE (V11)
 local infStabActive = false
 InfStabBtn.MouseButton1Click:Connect(function()
     infStabActive = not infStabActive
-    InfStabBtn.Text = infStabActive and "LAG: ON" or "LAG STAB"
+    InfStabBtn.Text = infStabActive and "LAG: ON" or "CHAOS LAG"
     InfStabBtn.BackgroundColor3 = infStabActive and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(50, 50, 50)
 end)
 
 task.spawn(function()
-    -- Таблица: {длительность заморозки, пауза до следующей}
-    local lagSequence = {
-        {0.6, 0.3},
-        {0.5, 0.2},
-        {0.4, 0.2}
-    }
-    local step = 1
-    
     while true do
         if infStabActive then
             local char = game.Players.LocalPlayer.Character
             local hrp = char and char:FindFirstChild("HumanoidRootPart")
-            
             if hrp then
-                local current = lagSequence[step]
+                -- Рандомизация длительности заморозки
+                local freezeTime
+                local chance = math.random(1, 100)
+                
+                if chance <= 15 then -- 15% шанс на "редкий" сильный лаг
+                    freezeTime = math.random(2, 3) / 10 -- 0.2 или 0.3
+                else -- 85% шанс на обычный лаг
+                    freezeTime = math.random(4, 6) / 10 -- 0.4, 0.5 или 0.6
+                end
+                
+                -- Рандомизация паузы между лагами (0.15 - 0.25 сек)
+                local pauseTime = math.random(15, 25) / 100
                 
                 hrp.Velocity = Vector3.zero
                 hrp.RotVelocity = Vector3.zero
                 hrp.Anchored = true
-                task.wait(current[1]) -- Заморозка
+                task.wait(freezeTime)
                 hrp.Anchored = false
-                task.wait(current[2]) -- Пауза ("лаг")
-                
-                step = step + 1
-                if step > #lagSequence then step = 1 end
+                task.wait(pauseTime)
             else
                 task.wait(0.2)
             end
         else
-            step = 1
             task.wait(0.2)
         end
     end
