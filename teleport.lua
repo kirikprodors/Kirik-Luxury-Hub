@@ -3,7 +3,7 @@ ScreenGui.Name = "KirikLuxuryHub"
 ScreenGui.Parent = game:GetService("CoreGui")
 ScreenGui.ResetOnSpawn = false
 
--- МИКРО-ОКНО (Оптимизация под Samsung A26)
+-- МИКРО-ОКНО (Samsung A26 Edit)
 local MainFrame = Instance.new("Frame")
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
@@ -42,7 +42,7 @@ Content.BackgroundTransparency = 1
 Content.Parent = MainFrame
 
 local Title = Instance.new("TextLabel")
-Title.Text = "KIRIK HUB V14"
+Title.Text = "KIRIK HUB V15"
 Title.TextColor3 = Color3.fromRGB(255, 215, 0)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 10
@@ -112,7 +112,7 @@ Instance.new("UICorner", InfStabBtn)
 local CrushBtn = Instance.new("TextButton")
 CrushBtn.Size = UDim2.new(0.9, 0, 0, 25)
 CrushBtn.Position = UDim2.new(0.05, 0, 0, 185)
-CrushBtn.Text = "CAR RAIN (SELECT)"
+CrushBtn.Text = "MASS CRUSH (SELECT)"
 CrushBtn.BackgroundColor3 = Color3.fromRGB(120, 0, 0)
 CrushBtn.TextColor3 = Color3.new(1, 1, 1)
 CrushBtn.TextSize = 8
@@ -152,7 +152,7 @@ local function updateList()
             Instance.new("UICorner", btn)
             btn.MouseButton1Click:Connect(function()
                 selectedPlayer = player
-                CrushBtn.Text = "RAIN ON: " .. player.DisplayName
+                CrushBtn.Text = "MASS CRUSH: " .. player.DisplayName
                 if listMode == "TP" then
                     game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = player.Character.HumanoidRootPart.CFrame
                 else
@@ -163,7 +163,7 @@ local function updateList()
     end
 end
 
--- CAR RAIN LOGIC (Обрушить ВСЕ машины в округе)
+-- MASS CRUSH V15 (Любые тяжелые предметы)
 CrushBtn.MouseButton1Click:Connect(function()
     if not selectedPlayer or not selectedPlayer.Character then return end
     local targetHrp = selectedPlayer.Character:FindFirstChild("HumanoidRootPart")
@@ -172,34 +172,50 @@ CrushBtn.MouseButton1Click:Connect(function()
     if targetHrp and myHrp then
         local originalPos = myHrp.CFrame
         local objectsToDrop = {}
+        local foundCount = 0
         
-        -- Собираем список подходящих объектов
+        -- Поиск ЛЮБЫХ тяжелых и незакрепленных предметов
         for _, v in pairs(workspace:GetDescendants()) do
-            if (v:IsA("Seat") or v:IsA("VehicleSeat")) and not v:FindFirstChild("Occupant") then
-                local fullName = string.lower(v:GetFullName())
-                if not string.find(fullName, "train") then
-                    local dist = (myHrp.Position - v.Position).Magnitude
-                    if dist < 500 then
+            if v:IsA("BasePart") and not v.Anchored then
+                -- Условие: размер больше среднего и это не часть игрока
+                if v.Size.Magnitude > 12 and not v:IsDescendantOf(game.Players.LocalPlayer.Character) then
+                    local nameLower = string.lower(v.Name)
+                    -- Игнорируем поезда и рельсы
+                    if not string.find(nameLower, "train") and not string.find(nameLower, "rail") then
                         table.insert(objectsToDrop, v)
+                        foundCount = foundCount + 1
                     end
                 end
             end
-            if #objectsToDrop >= 10 then break end -- Ограничение 10 объектов, чтобы не крашнуть Samsung
+            if foundCount >= 12 then break end -- Берем максимум 12 предметов
         end
         
-        -- Процесс "Бомбардировки"
+        -- Если предметов мало, ищем еще раз без жесткого фильтра по размеру
+        if foundCount < 5 then
+            for _, v in pairs(workspace:GetDescendants()) do
+                if v:IsA("BasePart") and not v.Anchored and v.Size.Magnitude > 6 then
+                   if not v:IsDescendantOf(game.Players.LocalPlayer.Character) and not string.find(string.lower(v.Name), "train") then
+                       table.insert(objectsToDrop, v)
+                       foundCount = foundCount + 1
+                   end
+                end
+                if foundCount >= 12 then break end
+            end
+        end
+
+        -- Выполнение атаки
         for _, obj in pairs(objectsToDrop) do
-            -- ТП к объекту для Network Ownership
-            myHrp.CFrame = obj.CFrame * CFrame.new(0, 2, 0)
-            task.wait(0.03) -- Микро-задержка для синхронизации
+            -- Захват Network Ownership
+            myHrp.CFrame = obj.CFrame * CFrame.new(0, 3, 0)
+            task.wait(0.07) -- Стабильная задержка для Samsung
             
-            -- Рандомный разброс над целью
-            local offset = Vector3.new(math.random(-5, 5), math.random(15, 25), math.random(-5, 5))
+            -- Скидываем на голову
+            local offset = Vector3.new(math.random(-6, 6), math.random(20, 30), math.random(-6, 6))
             obj.CFrame = targetHrp.CFrame * CFrame.new(offset)
-            obj.AssemblyLinearVelocity = Vector3.new(0, -250, 0) -- Очень быстрый удар вниз
+            obj.AssemblyLinearVelocity = Vector3.new(0, -300, 0)
         end
         
-        -- ТП назад
+        -- Возвращаемся
         myHrp.CFrame = originalPos
     end
 end)
