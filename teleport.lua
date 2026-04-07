@@ -3,13 +3,13 @@ ScreenGui.Name = "KirikLuxuryHub"
 ScreenGui.Parent = game:GetService("CoreGui")
 ScreenGui.ResetOnSpawn = false
 
--- МИКРО-ОКНО (Luxury дизайн под Samsung A26)
+-- МИКРО-ОКНО (Оптимизировано под Samsung A26)
 local MainFrame = Instance.new("Frame")
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 MainFrame.BorderSizePixel = 0
 MainFrame.Position = UDim2.new(0.5, -70, 0.5, -115)
-MainFrame.Size = UDim2.new(0, 140, 0, 235)
+MainFrame.Size = UDim2.new(0, 140, 0, 260) -- Увеличил под новую кнопку
 MainFrame.Active = true
 MainFrame.ClipsDescendants = true
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 8)
@@ -20,7 +20,6 @@ DragHandle.Size = UDim2.new(1, 0, 0, 25)
 DragHandle.BackgroundTransparency = 1
 DragHandle.Parent = MainFrame
 
--- ЛОГИКА ПЕРЕМЕЩЕНИЯ
 local dragging, dragStart, startPos
 DragHandle.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -43,7 +42,7 @@ Content.BackgroundTransparency = 1
 Content.Parent = MainFrame
 
 local Title = Instance.new("TextLabel")
-Title.Text = "KIRIK HUB V11"
+Title.Text = "KIRIK HUB V12"
 Title.TextColor3 = Color3.fromRGB(255, 215, 0)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 10
@@ -81,7 +80,6 @@ ModeBtn.TextSize = 9
 ModeBtn.Parent = Content
 Instance.new("UICorner", ModeBtn)
 
--- PLAYER LIST
 local PlayerList = Instance.new("ScrollingFrame")
 PlayerList.Size = UDim2.new(0.9, 0, 0, 75)
 PlayerList.Position = UDim2.new(0.05, 0, 0, 76)
@@ -91,7 +89,6 @@ PlayerList.ScrollBarThickness = 2
 PlayerList.Parent = Content
 Instance.new("UIListLayout", PlayerList).Padding = UDim.new(0, 3)
 
--- ГЛАВНЫЕ ФУНКЦИИ
 local AntiFlingBtn = Instance.new("TextButton")
 AntiFlingBtn.Size = UDim2.new(0.43, 0, 0, 25)
 AntiFlingBtn.Position = UDim2.new(0.05, 0, 0, 155)
@@ -112,9 +109,19 @@ InfStabBtn.TextSize = 8
 InfStabBtn.Parent = Content
 Instance.new("UICorner", InfStabBtn)
 
+local ForceSitBtn = Instance.new("TextButton")
+ForceSitBtn.Size = UDim2.new(0.9, 0, 0, 25)
+ForceSitBtn.Position = UDim2.new(0.05, 0, 0, 185)
+ForceSitBtn.Text = "FORCE SIT (SELECT FIRST)"
+ForceSitBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 0)
+ForceSitBtn.TextColor3 = Color3.new(1, 1, 1)
+ForceSitBtn.TextSize = 8
+ForceSitBtn.Parent = Content
+Instance.new("UICorner", ForceSitBtn)
+
 local UnviewBtn = Instance.new("TextButton")
 UnviewBtn.Size = UDim2.new(0.9, 0, 0, 18)
-UnviewBtn.Position = UDim2.new(0.05, 0, 0, 185)
+UnviewBtn.Position = UDim2.new(0.05, 0, 0, 215)
 UnviewBtn.Text = "RESET CAMERA (UNVIEW)"
 UnviewBtn.BackgroundColor3 = Color3.fromRGB(0, 80, 150)
 UnviewBtn.TextColor3 = Color3.new(1, 1, 1)
@@ -124,6 +131,8 @@ Instance.new("UICorner", UnviewBtn)
 
 -- ЛОГИКА
 local listMode = "TP"
+local selectedPlayer = nil
+
 ModeBtn.MouseButton1Click:Connect(function()
     listMode = (listMode == "TP") and "VIEW" or "TP"
     ModeBtn.Text = "LIST MODE: " .. listMode
@@ -142,6 +151,8 @@ local function updateList()
             btn.Parent = PlayerList
             Instance.new("UICorner", btn)
             btn.MouseButton1Click:Connect(function()
+                selectedPlayer = player
+                ForceSitBtn.Text = "SIT: " .. player.DisplayName
                 if listMode == "TP" then
                     game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = player.Character.HumanoidRootPart.CFrame
                 else
@@ -152,7 +163,43 @@ local function updateList()
     end
 end
 
--- ESP (Слежка за респавном)
+-- FORCE SIT LOGIC
+ForceSitBtn.MouseButton1Click:Connect(function()
+    if not selectedPlayer or not selectedPlayer.Character then return end
+    local targetHrp = selectedPlayer.Character:FindFirstChild("HumanoidRootPart")
+    local myChar = game.Players.LocalPlayer.Character
+    local myHrp = myChar:FindFirstChild("HumanoidRootPart")
+    
+    if targetHrp and myHrp then
+        local originalPos = myHrp.CFrame
+        local nearestSeat = nil
+        local minDist = 500
+        
+        for _, v in pairs(workspace:GetDescendants()) do
+            if (v:IsA("Seat") or v:IsA("VehicleSeat")) and not v:FindFirstChild("Occupant") then
+                local dist = (myHrp.Position - v.Position).Magnitude
+                if dist < minDist then
+                    minDist = dist
+                    nearestSeat = v
+                end
+            end
+        end
+        
+        if nearestSeat then
+            -- 1. ТП к стулу
+            myHrp.CFrame = nearestSeat.CFrame * CFrame.new(0, 2, 0)
+            task.wait(0.05)
+            -- 2. Стул к игроку (на мгновение)
+            local oldSeatCFrame = nearestSeat.CFrame
+            nearestSeat.CFrame = targetHrp.CFrame
+            task.wait(0.1)
+            -- 3. ТП назад
+            myHrp.CFrame = originalPos
+        end
+    end
+end)
+
+-- ESP
 local espActive = false
 local function applyESP(char)
     if espActive then
@@ -180,14 +227,13 @@ game.Players.PlayerAdded:Connect(function(p) p.CharacterAdded:Connect(applyESP) 
 game.Players.PlayerRemoving:Connect(updateList)
 for _, p in pairs(game.Players:GetPlayers()) do p.CharacterAdded:Connect(applyESP) end
 
--- ОБЫЧНЫЙ STAB
+-- STAB & LAG
 AntiFlingBtn.MouseButton1Click:Connect(function()
     local hrp = game.Players.LocalPlayer.Character.HumanoidRootPart
     hrp.Velocity = Vector3.zero hrp.RotVelocity = Vector3.zero
     hrp.Anchored = true task.wait(0.5) hrp.Anchored = false
 end)
 
--- RANDOMIZED LAG STABILIZE (V11)
 local infStabActive = false
 InfStabBtn.MouseButton1Click:Connect(function()
     infStabActive = not infStabActive
@@ -201,37 +247,15 @@ task.spawn(function()
             local char = game.Players.LocalPlayer.Character
             local hrp = char and char:FindFirstChild("HumanoidRootPart")
             if hrp then
-                -- Рандомизация длительности заморозки
-                local freezeTime
-                local chance = math.random(1, 100)
-                
-                if chance <= 15 then -- 15% шанс на "редкий" сильный лаг
-                    freezeTime = math.random(2, 3) / 10 -- 0.2 или 0.3
-                else -- 85% шанс на обычный лаг
-                    freezeTime = math.random(4, 6) / 10 -- 0.4, 0.5 или 0.6
-                end
-                
-                -- Рандомизация паузы между лагами (0.15 - 0.25 сек)
-                local pauseTime = math.random(15, 25) / 100
-                
-                hrp.Velocity = Vector3.zero
-                hrp.RotVelocity = Vector3.zero
-                hrp.Anchored = true
-                task.wait(freezeTime)
-                hrp.Anchored = false
-                task.wait(pauseTime)
-            else
-                task.wait(0.2)
-            end
-        else
-            task.wait(0.2)
-        end
+                local freezeTime = (math.random(1, 100) <= 15) and (math.random(2, 3)/10) or (math.random(4, 6)/10)
+                hrp.Velocity = Vector3.zero hrp.RotVelocity = Vector3.zero
+                hrp.Anchored = true task.wait(freezeTime) hrp.Anchored = false
+                task.wait(math.random(15, 25) / 100)
+            else task.wait(0.2) end
+        else task.wait(0.2) end
     end
 end)
 
-UnviewBtn.MouseButton1Click:Connect(function()
-    workspace.CurrentCamera.CameraSubject = game.Players.LocalPlayer.Character.Humanoid
-end)
-
+UnviewBtn.MouseButton1Click:Connect(function() workspace.CurrentCamera.CameraSubject = game.Players.LocalPlayer.Character.Humanoid end)
 CloseBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
 updateList()
