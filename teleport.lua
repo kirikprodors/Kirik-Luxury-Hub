@@ -3,7 +3,7 @@ ScreenGui.Name = "KirikLuxuryHub"
 ScreenGui.Parent = game:GetService("CoreGui")
 ScreenGui.ResetOnSpawn = false
 
--- МИКРО-ОКНО (Samsung A26 Edit)
+-- МИКРО-ОКНО
 local MainFrame = Instance.new("Frame")
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
@@ -42,7 +42,7 @@ Content.BackgroundTransparency = 1
 Content.Parent = MainFrame
 
 local Title = Instance.new("TextLabel")
-Title.Text = "KIRIK HUB V15"
+Title.Text = "KIRIK HUB V16"
 Title.TextColor3 = Color3.fromRGB(255, 215, 0)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 10
@@ -112,7 +112,7 @@ Instance.new("UICorner", InfStabBtn)
 local CrushBtn = Instance.new("TextButton")
 CrushBtn.Size = UDim2.new(0.9, 0, 0, 25)
 CrushBtn.Position = UDim2.new(0.05, 0, 0, 185)
-CrushBtn.Text = "MASS CRUSH (SELECT)"
+CrushBtn.Text = "BYPASS CRUSH (SELECT)"
 CrushBtn.BackgroundColor3 = Color3.fromRGB(120, 0, 0)
 CrushBtn.TextColor3 = Color3.new(1, 1, 1)
 CrushBtn.TextSize = 8
@@ -152,7 +152,7 @@ local function updateList()
             Instance.new("UICorner", btn)
             btn.MouseButton1Click:Connect(function()
                 selectedPlayer = player
-                CrushBtn.Text = "MASS CRUSH: " .. player.DisplayName
+                CrushBtn.Text = "CRUSH: " .. player.DisplayName
                 if listMode == "TP" then
                     game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = player.Character.HumanoidRootPart.CFrame
                 else
@@ -163,56 +163,40 @@ local function updateList()
     end
 end
 
--- MASS CRUSH V15 (Любые тяжелые предметы)
+-- BYPASS CRUSH V16
 CrushBtn.MouseButton1Click:Connect(function()
     if not selectedPlayer or not selectedPlayer.Character then return end
     local targetHrp = selectedPlayer.Character:FindFirstChild("HumanoidRootPart")
-    local myHrp = game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    local myChar = game.Players.LocalPlayer.Character
+    local myHrp = myChar:FindFirstChild("HumanoidRootPart")
     
     if targetHrp and myHrp then
         local originalPos = myHrp.CFrame
         local objectsToDrop = {}
-        local foundCount = 0
         
-        -- Поиск ЛЮБЫХ тяжелых и незакрепленных предметов
+        -- Поиск предметов (берем чуть меньше, но более точечно)
         for _, v in pairs(workspace:GetDescendants()) do
-            if v:IsA("BasePart") and not v.Anchored then
-                -- Условие: размер больше среднего и это не часть игрока
-                if v.Size.Magnitude > 12 and not v:IsDescendantOf(game.Players.LocalPlayer.Character) then
-                    local nameLower = string.lower(v.Name)
-                    -- Игнорируем поезда и рельсы
-                    if not string.find(nameLower, "train") and not string.find(nameLower, "rail") then
-                        table.insert(objectsToDrop, v)
-                        foundCount = foundCount + 1
-                    end
+            if v:IsA("BasePart") and not v.Anchored and v.Size.Magnitude > 5 then
+                if not v:IsDescendantOf(myChar) and not string.find(string.lower(v.Name), "train") then
+                    table.insert(objectsToDrop, v)
                 end
             end
-            if foundCount >= 12 then break end -- Берем максимум 12 предметов
+            if #objectsToDrop >= 6 then break end -- 6 тяжелых предметов хватит
         end
         
-        -- Если предметов мало, ищем еще раз без жесткого фильтра по размеру
-        if foundCount < 5 then
-            for _, v in pairs(workspace:GetDescendants()) do
-                if v:IsA("BasePart") and not v.Anchored and v.Size.Magnitude > 6 then
-                   if not v:IsDescendantOf(game.Players.LocalPlayer.Character) and not string.find(string.lower(v.Name), "train") then
-                       table.insert(objectsToDrop, v)
-                       foundCount = foundCount + 1
-                   end
-                end
-                if foundCount >= 12 then break end
-            end
-        end
-
-        -- Выполнение атаки
         for _, obj in pairs(objectsToDrop) do
-            -- Захват Network Ownership
-            myHrp.CFrame = obj.CFrame * CFrame.new(0, 3, 0)
-            task.wait(0.07) -- Стабильная задержка для Samsung
+            -- ШАГ 1: Летим ПРЯМО ВНУТРЬ предмета (чтобы коснуться его)
+            myHrp.CFrame = obj.CFrame
+            -- ШАГ 2: Ждем чуть дольше (0.15с), чтобы сервер "поверил"
+            task.wait(0.15)
             
-            -- Скидываем на голову
-            local offset = Vector3.new(math.random(-6, 6), math.random(20, 30), math.random(-6, 6))
-            obj.CFrame = targetHrp.CFrame * CFrame.new(offset)
-            obj.AssemblyLinearVelocity = Vector3.new(0, -300, 0)
+            -- ШАГ 3: Если предмет все еще не наш, пробуем придать ему импульс прямо от себя
+            if targetHrp.Parent then
+                obj.CFrame = targetHrp.CFrame * CFrame.new(0, 20, 0)
+                obj.AssemblyLinearVelocity = Vector3.new(0, -500, 0)
+                obj.AssemblyAngularVelocity = Vector3.new(math.random(-10,10), 0, math.random(-10,10))
+            end
+            task.wait(0.05)
         end
         
         -- Возвращаемся
