@@ -3,7 +3,7 @@ ScreenGui.Name = "KirikLuxuryHub"
 ScreenGui.Parent = game:GetService("CoreGui")
 ScreenGui.ResetOnSpawn = false
 
--- МИКРО-ОКНО
+-- МИКРО-ОКНО (Оптимизация под Samsung A26)
 local MainFrame = Instance.new("Frame")
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
@@ -42,7 +42,7 @@ Content.BackgroundTransparency = 1
 Content.Parent = MainFrame
 
 local Title = Instance.new("TextLabel")
-Title.Text = "KIRIK HUB V16"
+Title.Text = "KIRIK HUB V17"
 Title.TextColor3 = Color3.fromRGB(255, 215, 0)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 10
@@ -112,7 +112,7 @@ Instance.new("UICorner", InfStabBtn)
 local CrushBtn = Instance.new("TextButton")
 CrushBtn.Size = UDim2.new(0.9, 0, 0, 25)
 CrushBtn.Position = UDim2.new(0.05, 0, 0, 185)
-CrushBtn.Text = "BYPASS CRUSH (SELECT)"
+CrushBtn.Text = "ULTRA CRUSH (SELECT)"
 CrushBtn.BackgroundColor3 = Color3.fromRGB(120, 0, 0)
 CrushBtn.TextColor3 = Color3.new(1, 1, 1)
 CrushBtn.TextSize = 8
@@ -163,7 +163,7 @@ local function updateList()
     end
 end
 
--- BYPASS CRUSH V16
+-- ULTRA CRUSH V17 (Bypass + Счетчик)
 CrushBtn.MouseButton1Click:Connect(function()
     if not selectedPlayer or not selectedPlayer.Character then return end
     local targetHrp = selectedPlayer.Character:FindFirstChild("HumanoidRootPart")
@@ -173,33 +173,54 @@ CrushBtn.MouseButton1Click:Connect(function()
     if targetHrp and myHrp then
         local originalPos = myHrp.CFrame
         local objectsToDrop = {}
+        local usedNames = {} -- Для контроля "разных" предметов
+        local foundCount = 0
         
-        -- Поиск предметов (берем чуть меньше, но более точечно)
+        -- Сбор предметов (ищем разные)
         for _, v in pairs(workspace:GetDescendants()) do
-            if v:IsA("BasePart") and not v.Anchored and v.Size.Magnitude > 5 then
-                if not v:IsDescendantOf(myChar) and not string.find(string.lower(v.Name), "train") then
+            if v:IsA("BasePart") and not v.Anchored and v.Size.Magnitude > 7 then
+                if not v:IsDescendantOf(myChar) and not usedNames[v.Name] then
                     table.insert(objectsToDrop, v)
+                    usedNames[v.Name] = true
+                    foundCount = foundCount + 1
                 end
             end
-            if #objectsToDrop >= 6 then break end -- 6 тяжелых предметов хватит
+            if foundCount >= 8 then break end
         end
         
-        for _, obj in pairs(objectsToDrop) do
-            -- ШАГ 1: Летим ПРЯМО ВНУТРЬ предмета (чтобы коснуться его)
-            myHrp.CFrame = obj.CFrame
-            -- ШАГ 2: Ждем чуть дольше (0.15с), чтобы сервер "поверил"
-            task.wait(0.15)
-            
-            -- ШАГ 3: Если предмет все еще не наш, пробуем придать ему импульс прямо от себя
-            if targetHrp.Parent then
-                obj.CFrame = targetHrp.CFrame * CFrame.new(0, 20, 0)
-                obj.AssemblyLinearVelocity = Vector3.new(0, -500, 0)
-                obj.AssemblyAngularVelocity = Vector3.new(math.random(-10,10), 0, math.random(-10,10))
+        -- Если предметов одного типа много, а уникальных мало - добираем любые
+        if foundCount < 4 then
+            for _, v in pairs(workspace:GetDescendants()) do
+                if v:IsA("BasePart") and not v.Anchored and v.Size.Magnitude > 4 then
+                    if not v:IsDescendantOf(myChar) and not table.find(objectsToDrop, v) then
+                        table.insert(objectsToDrop, v)
+                        foundCount = foundCount + 1
+                    end
+                end
+                if foundCount >= 8 then break end
             end
+        end
+
+        -- АТАКА (Имитация касания без ТП внутрь)
+        for _, obj in pairs(objectsToDrop) do
+            -- Безопасный подлет (рядом с объектом, но не внутри)
+            myHrp.CFrame = obj.CFrame * CFrame.new(0, 5, 0)
+            
+            -- Симуляция касания (Bypass)
+            if firetouchinterest then
+                firetouchinterest(myHrp, obj, 0)
+                task.wait(0.05)
+                firetouchinterest(myHrp, obj, 1)
+            end
+            
+            task.wait(0.1) -- Даем серверу время
+            
+            -- Бросок
+            obj.CFrame = targetHrp.CFrame * CFrame.new(math.random(-5, 5), 25, math.random(-5, 5))
+            obj.AssemblyLinearVelocity = Vector3.new(0, -400, 0)
             task.wait(0.05)
         end
         
-        -- Возвращаемся
         myHrp.CFrame = originalPos
     end
 end)
