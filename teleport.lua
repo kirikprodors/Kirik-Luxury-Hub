@@ -22,7 +22,39 @@ local Stroke = Instance.new("UIStroke", MainFrame)
 Stroke.Color = Color3.fromRGB(0, 255, 255)
 Stroke.Thickness = 2
 
--- ИСПРАВЛЕННЫЙ DRAG (без багов при ходьбе)
+-- ПЕРЕМЕННЫЕ СОСТОЯНИЙ
+local espActive = false
+local ultraRunActive = false
+local noclipActive = false
+local infStabActive = false
+
+-- ФУНКЦИЯ ПОЛНОГО СБРОСА (Очистка перед выходом)
+local function disableAll()
+    espActive = false
+    ultraRunActive = false
+    noclipActive = false
+    infStabActive = false
+    
+    -- Удаление ESP
+    for _, p in pairs(Players:GetPlayers()) do
+        if p.Character and p.Character:FindFirstChild("LuxuryESP") then
+            p.Character.LuxuryESP:Destroy()
+        end
+    end
+    
+    -- Сброс скорости и анимаций
+    local char = LocalPlayer.Character
+    local hum = char and char:FindFirstChild("Humanoid")
+    if hum then
+        hum.WalkSpeed = 16
+        for _, track in pairs(hum:GetPlayingAnimationTracks()) do
+            track:AdjustSpeed(1)
+        end
+        workspace.CurrentCamera.CameraSubject = hum
+    end
+end
+
+-- ИСПРАВЛЕННЫЙ DRAG
 local DragHandle = Instance.new("Frame")
 DragHandle.Size = UDim2.new(1, -40, 0, 25)
 DragHandle.BackgroundTransparency = 1
@@ -31,21 +63,12 @@ DragHandle.Parent = MainFrame
 local dragging, dragInput, dragStart, startPos
 DragHandle.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true
-        dragStart = input.Position
-        startPos = MainFrame.Position
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then dragging = false end
-        end)
-    end
-end)
-DragHandle.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-        dragInput = input
+        dragging = true dragStart = input.Position startPos = MainFrame.Position
+        input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end)
     end
 end)
 UIS.InputChanged:Connect(function(input)
-    if input == dragInput and dragging then
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
         local delta = input.Position - dragStart
         MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
     end
@@ -63,7 +86,7 @@ Title.Font = Enum.Font.GothamBold
 Title.TextSize = 10
 Title.Size = UDim2.new(1, -45, 0, 25)
 Title.BackgroundTransparency = 1
-Title.Parent = MainFrame -- В MainFrame, чтобы не скрывалось
+Title.Parent = MainFrame
 
 local MinBtn = Instance.new("TextButton")
 MinBtn.Text = "-"
@@ -93,7 +116,7 @@ MinBtn.MouseButton1Click:Connect(function()
     MainFrame.Size = minimized and UDim2.new(0, 125, 0, 25) or UDim2.new(0, 125, 0, 240)
 end)
 
--- ESP & MODE
+-- КНОПКИ ФУНКЦИЙ
 local EspBtn = Instance.new("TextButton")
 EspBtn.Size = UDim2.new(0.9, 0, 0, 16)
 EspBtn.Position = UDim2.new(0.05, 0, 0, 28)
@@ -123,7 +146,6 @@ PlayerList.ScrollBarThickness = 2
 PlayerList.Parent = Content
 Instance.new("UIListLayout", PlayerList).Padding = UDim.new(0, 2)
 
--- CUSTOM TP (НОВОЕ)
 local AddTpBtn = Instance.new("TextButton")
 AddTpBtn.Size = UDim2.new(0.9, 0, 0, 16)
 AddTpBtn.Position = UDim2.new(0.05, 0, 0, 126)
@@ -134,7 +156,6 @@ AddTpBtn.TextSize = 8
 AddTpBtn.Parent = Content
 Instance.new("UICorner", AddTpBtn)
 
--- STAB & LAG
 local AntiFlingBtn = Instance.new("TextButton")
 AntiFlingBtn.Size = UDim2.new(0.43, 0, 0, 18)
 AntiFlingBtn.Position = UDim2.new(0.05, 0, 0, 144)
@@ -155,7 +176,6 @@ InfStabBtn.TextSize = 8
 InfStabBtn.Parent = Content
 Instance.new("UICorner", InfStabBtn)
 
--- ULTRA RUN & NOCLIP
 local UltraRunBtn = Instance.new("TextButton")
 UltraRunBtn.Size = UDim2.new(0.9, 0, 0, 18)
 UltraRunBtn.Position = UDim2.new(0.05, 0, 0, 164)
@@ -186,7 +206,7 @@ UnviewBtn.TextSize = 8
 UnviewBtn.Parent = Content
 Instance.new("UICorner", UnviewBtn)
 
--- ЛОГИКА СПИСКОВ & TP PART
+-- ЛОГИКА TP & СПИСКА
 local listMode = "TP"
 local savedSpots = {}
 local spotCount = 0
@@ -198,8 +218,6 @@ end)
 
 local function updateList()
     for _, child in pairs(PlayerList:GetChildren()) do if child:IsA("Frame") or child:IsA("TextButton") then child:Destroy() end end
-    
-    -- Игроки
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= LocalPlayer then
             local btn = Instance.new("TextButton")
@@ -213,25 +231,18 @@ local function updateList()
             btn.MouseButton1Click:Connect(function()
                 if listMode == "TP" then
                     local pChar = player.Character
-                    if pChar and pChar:FindFirstChild("HumanoidRootPart") then
-                        LocalPlayer.Character.HumanoidRootPart.CFrame = pChar.HumanoidRootPart.CFrame
-                    end
+                    if pChar and pChar:FindFirstChild("HumanoidRootPart") then LocalPlayer.Character.HumanoidRootPart.CFrame = pChar.HumanoidRootPart.CFrame end
                 else
-                    if player.Character and player.Character:FindFirstChild("Humanoid") then
-                        workspace.CurrentCamera.CameraSubject = player.Character.Humanoid
-                    end
+                    if player.Character and player.Character:FindFirstChild("Humanoid") then workspace.CurrentCamera.CameraSubject = player.Character.Humanoid end
                 end
             end)
         end
     end
-    
-    -- Сохраненные точки TP
     for i, spot in ipairs(savedSpots) do
         local spotFrame = Instance.new("Frame")
         spotFrame.Size = UDim2.new(1, -5, 0, 16)
         spotFrame.BackgroundTransparency = 1
         spotFrame.Parent = PlayerList
-        
         local tpBtn = Instance.new("TextButton")
         tpBtn.Size = UDim2.new(0.75, 0, 1, 0)
         tpBtn.Text = spot.name
@@ -240,7 +251,6 @@ local function updateList()
         tpBtn.TextSize = 8
         tpBtn.Parent = spotFrame
         Instance.new("UICorner", tpBtn)
-        
         local delBtn = Instance.new("TextButton")
         delBtn.Size = UDim2.new(0.2, 0, 1, 0)
         delBtn.Position = UDim2.new(0.8, 0, 0, 0)
@@ -250,42 +260,29 @@ local function updateList()
         delBtn.TextSize = 8
         delBtn.Parent = spotFrame
         Instance.new("UICorner", delBtn)
-        
         tpBtn.MouseButton1Click:Connect(function()
             local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
             if hrp then hrp.CFrame = CFrame.new(spot.pos + Vector3.new(0, 3, 0)) end
         end)
-        
-        delBtn.MouseButton1Click:Connect(function()
-            table.remove(savedSpots, i)
-            updateList()
-        end)
+        delBtn.MouseButton1Click:Connect(function() table.remove(savedSpots, i) updateList() end)
     end
 end
 
--- ЛОГИКА КЛИКА ДЛЯ TP
+-- TP PART CLICK
 local waitingForClick = false
 local mouse = LocalPlayer:GetMouse()
-
 AddTpBtn.MouseButton1Click:Connect(function()
-    waitingForClick = true
-    AddTpBtn.Text = "CLICK SCREEN..."
-    AddTpBtn.BackgroundColor3 = Color3.fromRGB(150, 150, 0)
+    waitingForClick = true AddTpBtn.Text = "CLICK SCREEN..." AddTpBtn.BackgroundColor3 = Color3.fromRGB(150, 150, 0)
 end)
-
 mouse.Button1Down:Connect(function()
     if waitingForClick then
-        waitingForClick = false
-        AddTpBtn.Text = "ADD TP PART"
-        AddTpBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 150)
-        spotCount = spotCount + 1
-        table.insert(savedSpots, {name = "SPOT " .. spotCount, pos = mouse.Hit.Position})
+        waitingForClick = false AddTpBtn.Text = "ADD TP PART" AddTpBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 150)
+        spotCount = spotCount + 1 table.insert(savedSpots, {name = "SPOT " .. spotCount, pos = mouse.Hit.Position})
         updateList()
     end
 end)
 
--- ESP
-local espActive = false
+-- ESP LOGIC
 local function applyESP(char)
     if espActive then
         task.wait(0.5)
@@ -308,63 +305,11 @@ EspBtn.MouseButton1Click:Connect(function()
     end
 end)
 
-Players.PlayerAdded:Connect(function(p) p.CharacterAdded:Connect(applyESP) updateList() end)
-Players.PlayerRemoving:Connect(updateList)
-for _, p in pairs(Players:GetPlayers()) do p.CharacterAdded:Connect(applyESP) end
-
--- STAB & LAG
-AntiFlingBtn.MouseButton1Click:Connect(function()
-    local hrp = LocalPlayer.Character.HumanoidRootPart
-    hrp.Velocity = Vector3.zero hrp.RotVelocity = Vector3.zero
-    hrp.Anchored = true task.wait(0.5) hrp.Anchored = false
-end)
-
-local infStabActive = false
-InfStabBtn.MouseButton1Click:Connect(function()
-    infStabActive = not infStabActive
-    InfStabBtn.Text = infStabActive and "LAG: ON" or "CHAOS LAG"
-    InfStabBtn.BackgroundColor3 = infStabActive and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(50, 50, 50)
-end)
-
-task.spawn(function()
-    while true do
-        if infStabActive then
-            local char = LocalPlayer.Character
-            local hrp = char and char:FindFirstChild("HumanoidRootPart")
-            if hrp then
-                hrp.Velocity = Vector3.zero hrp.RotVelocity = Vector3.zero
-                hrp.Anchored = true task.wait(0.2) hrp.Anchored = false
-                task.wait(0.1)
-            else task.wait(0.2) end
-        else task.wait(0.2) end
-    end
-end)
-
--- ULTRA RUN & NOCLIP
-local ultraRunActive = false
-UltraRunBtn.MouseButton1Click:Connect(function()
-    ultraRunActive = not ultraRunActive
-    UltraRunBtn.Text = ultraRunActive and "ULTRA RUN: ON" or "ULTRA RUN: OFF"
-    UltraRunBtn.BackgroundColor3 = ultraRunActive and Color3.fromRGB(255, 120, 0) or Color3.fromRGB(180, 80, 0)
-    local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
-    if hum and not ultraRunActive then for _, track in pairs(hum:GetPlayingAnimationTracks()) do track:AdjustSpeed(1) end end
-end)
-
-local noclipActive = false
-NoclipBtn.MouseButton1Click:Connect(function()
-    noclipActive = not noclipActive
-    NoclipBtn.Text = noclipActive and "NOCLIP: ON" or "NOCLIP: OFF"
-    NoclipBtn.BackgroundColor3 = noclipActive and Color3.fromRGB(0, 180, 180) or Color3.fromRGB(0, 100, 100)
-end)
-
+-- CHEAT LOOPS
 RunService.Stepped:Connect(function()
     if noclipActive then
         local char = LocalPlayer.Character
-        if char then
-            for _, part in pairs(char:GetDescendants()) do
-                if part:IsA("BasePart") and part.CanCollide then part.CanCollide = false end
-            end
-        end
+        if char then for _, part in pairs(char:GetDescendants()) do if part:IsA("BasePart") then part.CanCollide = false end end end
     end
     if ultraRunActive then
         local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
@@ -377,28 +322,39 @@ RunService.Stepped:Connect(function()
     end
 end)
 
--- AFK ЗАЩИТА (30 СЕКУНД)
+-- BUTTON CONNECTS
+AntiFlingBtn.MouseButton1Click:Connect(function()
+    local hrp = LocalPlayer.Character.HumanoidRootPart
+    hrp.Velocity = Vector3.zero hrp.RotVelocity = Vector3.zero hrp.Anchored = true task.wait(0.5) hrp.Anchored = false
+end)
+
+InfStabBtn.MouseButton1Click:Connect(function()
+    infStabActive = not infStabActive
+    InfStabBtn.Text = infStabActive and "LAG: ON" or "CHAOS LAG"
+    InfStabBtn.BackgroundColor3 = infStabActive and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(50, 50, 50)
+end)
+
+UltraRunBtn.MouseButton1Click:Connect(function()
+    ultraRunActive = not ultraRunActive
+    UltraRunBtn.Text = ultraRunActive and "ULTRA RUN: ON" or "ULTRA RUN: OFF"
+    UltraRunBtn.BackgroundColor3 = ultraRunActive and Color3.fromRGB(255, 120, 0) or Color3.fromRGB(180, 80, 0)
+end)
+
+NoclipBtn.MouseButton1Click:Connect(function()
+    noclipActive = not noclipActive
+    NoclipBtn.Text = noclipActive and "NOCLIP: ON" or "NOCLIP: OFF"
+    NoclipBtn.BackgroundColor3 = noclipActive and Color3.fromRGB(0, 180, 180) or Color3.fromRGB(0, 100, 100)
+end)
+
+-- AFK & CLOSE LOGIC
 local lastActive = tick()
 UIS.InputBegan:Connect(function() lastActive = tick() end)
-UIS.InputChanged:Connect(function() lastActive = tick() end)
 
 task.spawn(function()
     while task.wait(1) do
         if not ScreenGui.Parent then break end
         if tick() - lastActive > 30 then
-            -- Отключаем всё
-            espActive = false
-            ultraRunActive = false
-            noclipActive = false
-            infStabActive = false
-            -- Чистим ESP
-            for _, p in pairs(Players:GetPlayers()) do
-                if p.Character and p.Character:FindFirstChild("LuxuryESP") then p.Character.LuxuryESP:Destroy() end
-            end
-            -- Чистим скорость
-            local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
-            if hum then hum.WalkSpeed = 16; for _, track in pairs(hum:GetPlayingAnimationTracks()) do track:AdjustSpeed(1) end end
-            -- Самоуничтожение
+            disableAll()
             ScreenGui:Destroy()
             break
         end
@@ -406,5 +362,13 @@ task.spawn(function()
 end)
 
 UnviewBtn.MouseButton1Click:Connect(function() workspace.CurrentCamera.CameraSubject = LocalPlayer.Character.Humanoid end)
-CloseBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
+
+-- ЗАКРЫТИЕ С ОЧИСТКОЙ
+CloseBtn.MouseButton1Click:Connect(function()
+    disableAll()
+    ScreenGui:Destroy()
+end)
+
+Players.PlayerAdded:Connect(function(p) p.CharacterAdded:Connect(applyESP) updateList() end)
+Players.PlayerRemoving:Connect(updateList)
 updateList()
