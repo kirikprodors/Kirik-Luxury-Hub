@@ -4,18 +4,21 @@ ScreenGui.Parent = game:GetService("CoreGui")
 ScreenGui.ResetOnSpawn = false
 
 local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
 
 -- МИКРО-ОКНО (Luxury Style)
 local MainFrame = Instance.new("Frame")
 MainFrame.Parent = ScreenGui
-MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
 MainFrame.BorderSizePixel = 0
 MainFrame.Position = UDim2.new(0.5, -70, 0.5, -115)
 MainFrame.Size = UDim2.new(0, 140, 0, 260)
 MainFrame.Active = true
 MainFrame.ClipsDescendants = true
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 8)
-Instance.new("UIStroke", MainFrame).Color = Color3.fromRGB(0, 255, 255)
+local Stroke = Instance.new("UIStroke", MainFrame)
+Stroke.Color = Color3.fromRGB(0, 255, 255)
+Stroke.Thickness = 2
 
 local DragHandle = Instance.new("Frame")
 DragHandle.Size = UDim2.new(1, 0, 0, 25)
@@ -44,10 +47,10 @@ Content.BackgroundTransparency = 1
 Content.Parent = MainFrame
 
 local Title = Instance.new("TextLabel")
-Title.Text = "KIRIK HUB V25"
+Title.Text = "KIRIK HUB V26"
 Title.TextColor3 = Color3.fromRGB(255, 215, 0)
 Title.Font = Enum.Font.GothamBold
-Title.TextSize = 10
+Title.TextSize = 11
 Title.Size = UDim2.new(1, -30, 0, 25)
 Title.BackgroundTransparency = 1
 Title.Parent = Content
@@ -64,7 +67,7 @@ Instance.new("UICorner", CloseBtn)
 -- ESP & MODE
 local EspBtn = Instance.new("TextButton")
 EspBtn.Size = UDim2.new(0.9, 0, 0, 20)
-EspBtn.Position = UDim2.new(0.05, 0, 0, 28)
+EspBtn.Position = UDim2.new(0.05, 0, 0, 30)
 EspBtn.Text = "ESP: OFF"
 EspBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 EspBtn.TextColor3 = Color3.new(1, 1, 1)
@@ -74,7 +77,7 @@ Instance.new("UICorner", EspBtn)
 
 local ModeBtn = Instance.new("TextButton")
 ModeBtn.Size = UDim2.new(0.9, 0, 0, 20)
-ModeBtn.Position = UDim2.new(0.05, 0, 0, 52)
+ModeBtn.Position = UDim2.new(0.05, 0, 0, 55)
 ModeBtn.Text = "LIST MODE: TP"
 ModeBtn.BackgroundColor3 = Color3.fromRGB(80, 0, 80)
 ModeBtn.TextColor3 = Color3.new(1, 1, 1)
@@ -84,7 +87,7 @@ Instance.new("UICorner", ModeBtn)
 
 local PlayerList = Instance.new("ScrollingFrame")
 PlayerList.Size = UDim2.new(0.9, 0, 0, 75)
-PlayerList.Position = UDim2.new(0.05, 0, 0, 76)
+PlayerList.Position = UDim2.new(0.05, 0, 0, 80)
 PlayerList.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
 PlayerList.AutomaticCanvasSize = Enum.AutomaticSize.Y
 PlayerList.ScrollBarThickness = 2
@@ -93,7 +96,7 @@ Instance.new("UIListLayout", PlayerList).Padding = UDim.new(0, 3)
 
 local AntiFlingBtn = Instance.new("TextButton")
 AntiFlingBtn.Size = UDim2.new(0.43, 0, 0, 25)
-AntiFlingBtn.Position = UDim2.new(0.05, 0, 0, 155)
+AntiFlingBtn.Position = UDim2.new(0.05, 0, 0, 160)
 AntiFlingBtn.Text = "STAB"
 AntiFlingBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
 AntiFlingBtn.TextColor3 = Color3.new(1, 1, 1)
@@ -103,7 +106,7 @@ Instance.new("UICorner", AntiFlingBtn)
 
 local InfStabBtn = Instance.new("TextButton")
 InfStabBtn.Size = UDim2.new(0.43, 0, 0, 25)
-InfStabBtn.Position = UDim2.new(0.52, 0, 0, 155)
+InfStabBtn.Position = UDim2.new(0.52, 0, 0, 160)
 InfStabBtn.Text = "CHAOS LAG"
 InfStabBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 InfStabBtn.TextColor3 = Color3.new(1, 1, 1)
@@ -113,8 +116,8 @@ Instance.new("UICorner", InfStabBtn)
 
 local CrushBtn = Instance.new("TextButton")
 CrushBtn.Size = UDim2.new(0.9, 0, 0, 25)
-CrushBtn.Position = UDim2.new(0.05, 0, 0, 185)
-CrushBtn.Text = "SMOOTH CRUSH (SELECT)"
+CrushBtn.Position = UDim2.new(0.05, 0, 0, 190)
+CrushBtn.Text = "FORCE CRUSH (SELECT)"
 CrushBtn.BackgroundColor3 = Color3.fromRGB(120, 0, 0)
 CrushBtn.TextColor3 = Color3.new(1, 1, 1)
 CrushBtn.TextSize = 8
@@ -123,7 +126,7 @@ Instance.new("UICorner", CrushBtn)
 
 local UnviewBtn = Instance.new("TextButton")
 UnviewBtn.Size = UDim2.new(0.9, 0, 0, 18)
-UnviewBtn.Position = UDim2.new(0.05, 0, 0, 215)
+UnviewBtn.Position = UDim2.new(0.05, 0, 0, 220)
 UnviewBtn.Text = "RESET CAMERA (UNVIEW)"
 UnviewBtn.BackgroundColor3 = Color3.fromRGB(0, 80, 150)
 UnviewBtn.TextColor3 = Color3.new(1, 1, 1)
@@ -131,7 +134,7 @@ UnviewBtn.TextSize = 8
 UnviewBtn.Parent = Content
 Instance.new("UICorner", UnviewBtn)
 
--- ЛОГИКА
+-- ЛОГИКА V26
 local listMode = "TP"
 local selectedPlayer = nil
 
@@ -154,7 +157,7 @@ local function updateList()
             Instance.new("UICorner", btn)
             btn.MouseButton1Click:Connect(function()
                 selectedPlayer = player
-                CrushBtn.Text = "CRUSH: " .. player.DisplayName
+                CrushBtn.Text = "FORCE: " .. player.DisplayName
                 if listMode == "TP" then
                     local pChar = player.Character
                     if pChar and pChar:FindFirstChild("HumanoidRootPart") then
@@ -170,7 +173,7 @@ local function updateList()
     end
 end
 
--- КИРИК ЧИТ V25: ОБХОД ВОЗВРАТА ПРЕДМЕТОВ (FLING THINGS FIX)
+-- КИРИК ЧИТ V26: FORCE GLUE (Борьба с анти-захватом)
 CrushBtn.MouseButton1Click:Connect(function()
     if not selectedPlayer or not selectedPlayer.Character then return end
     local targetHrp = selectedPlayer.Character:FindFirstChild("HumanoidRootPart")
@@ -181,15 +184,9 @@ CrushBtn.MouseButton1Click:Connect(function()
         local originalCFrame = myHrp.CFrame
         local foundObjects = {}
         
-        -- Поиск предметов (игнорируем части игроков и заанкеренные объекты)
         for _, v in pairs(workspace:GetDescendants()) do
             if v:IsA("BasePart") and not v.Anchored and v.Size.Magnitude > 1 and v.Size.Magnitude < 50 then
-                local isPlayerPart = false
-                if v:IsDescendantOf(game.Players.LocalPlayer.Character) or v.Parent:FindFirstChild("Humanoid") then
-                    isPlayerPart = true
-                end
-                
-                if not isPlayerPart then
+                if not v:IsDescendantOf(myChar) and not v.Parent:FindFirstChild("Humanoid") then
                     if v:GetRootPart() == v then
                         local dist = (v.Position - myHrp.Position).Magnitude
                         if dist <= 250 then table.insert(foundObjects, {part = v, distance = dist}) end
@@ -200,35 +197,32 @@ CrushBtn.MouseButton1Click:Connect(function()
         
         table.sort(foundObjects, function(a, b) return a.distance < b.distance end)
         
-        for i = 1, math.min(2, #foundObjects) do -- По 2 предмета за раз для точности
+        for i = 1, math.min(2, #foundObjects) do
             local obj = foundObjects[i].part
             
-            -- ШАГ 1: Агрессивный захват
-            myHrp.CFrame = obj.CFrame * CFrame.new(0, 2, 0)
-            obj.Velocity = Vector3.new(0, 5, 0) -- "Будим" предмет
+            -- ШАГ 1: Прыжок к объекту для Network Ownership
+            myHrp.CFrame = obj.CFrame * CFrame.new(0, 3, 0)
+            obj.Velocity = Vector3.new(0, 10, 0)
             task.wait(0.1)
             
-            if targetHrp.Parent then
-                -- ШАГ 2: Совместный перелет (Sync Move)
-                -- Мы летим ВМЕСТЕ с предметом к цели, чтобы сервер не считал это читерским ТП предмета
-                local targetPos = targetHrp.CFrame * CFrame.new(0, 10, 0)
-                
-                obj.CFrame = targetPos
-                myHrp.CFrame = targetPos * CFrame.new(0, 2, 0)
-                
-                -- Удерживаем предмет в этой точке 0.2 сек, чтобы физика обновилась
-                local startTime = tick()
-                while tick() - startTime < 0.2 do
-                    obj.Velocity = Vector3.new(0, -100, 0)
-                    obj.CFrame = targetHrp.CFrame * CFrame.new(0, 10, 0)
-                    task.wait()
+            -- ШАГ 2: FORCE GLUE LOOP (Удерживаем предмет на цели 1.5 сек)
+            local glueStartTime = tick()
+            local connection
+            connection = RunService.Heartbeat:Connect(function()
+                if tick() - glueStartTime > 1.5 or not targetHrp or not obj then
+                    connection:Disconnect()
+                    return
                 end
-                
-                -- Резкий пинок вниз
-                obj.Velocity = Vector3.new(0, -200, 0)
-            end
+                -- Форсируем позицию предмета ПРЯМО ВНУТРЬ цели
+                obj.CFrame = targetHrp.CFrame * CFrame.new(0, 2, 0)
+                obj.Velocity = Vector3.new(0, -500, 0) -- Сильный удар вниз
+            end)
             
-            -- ШАГ 3: Возвращаемся
+            -- Мы летим вместе с предметом, чтобы сервер не разорвал связь
+            myHrp.CFrame = targetHrp.CFrame * CFrame.new(0, 10, 0)
+            task.wait(1.6)
+            
+            -- ШАГ 3: Возврат
             myHrp.CFrame = originalCFrame
             task.wait(0.2)
         end
@@ -263,7 +257,7 @@ game.Players.PlayerAdded:Connect(function(p) p.CharacterAdded:Connect(applyESP) 
 game.Players.PlayerRemoving:Connect(updateList)
 for _, p in pairs(game.Players:GetPlayers()) do p.CharacterAdded:Connect(applyESP) end
 
--- STAB & LAG (Для защиты от флинга)
+-- STAB & LAG
 AntiFlingBtn.MouseButton1Click:Connect(function()
     local hrp = game.Players.LocalPlayer.Character.HumanoidRootPart
     hrp.Velocity = Vector3.zero hrp.RotVelocity = Vector3.zero
