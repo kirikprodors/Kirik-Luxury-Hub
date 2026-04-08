@@ -44,7 +44,7 @@ Content.BackgroundTransparency = 1
 Content.Parent = MainFrame
 
 local Title = Instance.new("TextLabel")
-Title.Text = "KIRIK HUB V22"
+Title.Text = "KIRIK HUB V23"
 Title.TextColor3 = Color3.fromRGB(255, 215, 0)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 10
@@ -165,7 +165,7 @@ local function updateList()
     end
 end
 
--- ИСПРАВЛЕННЫЙ ЗАХВАТ ТЯЖЕЛЫХ ПРЕДМЕТОВ (V22)
+-- ИСПРАВЛЕННЫЙ ЗАХВАТ: МИНИМАЛЬНЫЙ ВЕС (V23)
 CrushBtn.MouseButton1Click:Connect(function()
     if not selectedPlayer or not selectedPlayer.Character then return end
     local targetHrp = selectedPlayer.Character:FindFirstChild("HumanoidRootPart")
@@ -175,71 +175,56 @@ CrushBtn.MouseButton1Click:Connect(function()
     if targetHrp and myHrp then
         local originalCFrame = myHrp.CFrame
         local foundObjects = {}
-        local maxDistance = 100 
         
         for _, v in pairs(workspace:GetDescendants()) do
-            -- Уменьшен максимальный размер до 20, чтобы избегать гигантских структур
-            if v:IsA("BasePart") and not v.Anchored and v.Size.Magnitude > 2 and v.Size.Magnitude < 20 then
-                
+            if v:IsA("BasePart") and not v.Anchored and v.Size.Magnitude > 1 and v.Size.Magnitude < 35 then
                 local isPlayerPart = false
                 local current = v
                 while current and current ~= workspace do
-                    if current:FindFirstChild("Humanoid") then
-                        isPlayerPart = true
-                        break
-                    end
+                    if current:FindFirstChild("Humanoid") then isPlayerPart = true break end
                     current = current.Parent
                 end
                 
                 if not isPlayerPart then
                     local name = v.Name:lower()
-                    if not name:find("ufo") and not name:find("saucer") and not name:find("wall") and not name:find("floor") and not name:find("base") and not name:find("house") then
+                    if not name:find("wall") and not name:find("floor") and not name:find("base") then
                         if v:GetRootPart() == v then
                             local dist = (v.Position - myHrp.Position).Magnitude
-                            if dist <= maxDistance then
-                                table.insert(foundObjects, {part = v, distance = dist})
-                            end
+                            if dist <= 120 then table.insert(foundObjects, {part = v, distance = dist}) end
                         end
                     end
                 end
             end
         end
         
-        table.sort(foundObjects, function(a, b)
-            return a.distance < b.distance
-        end)
+        table.sort(foundObjects, function(a, b) return a.distance < b.distance end)
         
-        local objectsToDrop = {}
         for i = 1, math.min(5, #foundObjects) do
-            table.insert(objectsToDrop, foundObjects[i].part)
-        end
-        
-        for _, obj in pairs(objectsToDrop) do
-            -- 1. ТП К ПРЕДМЕТУ И СТАБИЛИЗАЦИЯ
-            myHrp.CFrame = obj.CFrame * CFrame.new(0, 2, 0)
+            local obj = foundObjects[i].part
+            myHrp.CFrame = obj.CFrame * CFrame.new(0, 3, 0)
             obj.AssemblyLinearVelocity = Vector3.zero 
-            obj.AssemblyAngularVelocity = Vector3.zero
-            task.wait(0.25) -- Увеличенное время для Network Ownership тяжелых объектов
+            task.wait(0.2) 
             
-            -- 2. КИДАЕМ ПРЕДМЕТ (обход массы)
             if targetHrp.Parent then
-                local oldMassless = obj.Massless
-                obj.Massless = true -- Делаем предмет невесомым на время броска
+                -- УЛЬТРА-ЛЕГКИЙ ВЕС: Плотность на минимум
+                local oldProps = obj.CustomPhysicalProperties
+                obj.CustomPhysicalProperties = PhysicalProperties.new(0.01, 0.3, 0.5) -- Плотность 0.01
+                obj.Massless = true 
                 
                 obj.CFrame = targetHrp.CFrame * CFrame.new(0, 15, 0)
-                obj.AssemblyLinearVelocity = Vector3.new(0, -120, 0) 
+                obj.AssemblyLinearVelocity = Vector3.new(0, -150, 0) 
                 
-                -- Возвращаем физику через полсекунды
-                task.delay(0.5, function()
-                    if obj then obj.Massless = oldMassless end
+                task.delay(0.6, function()
+                    if obj then 
+                        obj.Massless = false
+                        obj.CustomPhysicalProperties = oldProps 
+                    end
                 end)
             end
             
-            -- 3. ПЛАВНЫЙ ВОЗВРАТ
-            local tween = TweenService:Create(myHrp, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CFrame = originalCFrame})
+            local tween = TweenService:Create(myHrp, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CFrame = originalCFrame})
             tween:Play()
-            tween.Completed:Wait() 
-            task.wait(0.1)
+            tween.Completed:Wait()
         end
     end
 end)
