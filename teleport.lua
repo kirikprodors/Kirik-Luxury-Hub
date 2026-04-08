@@ -1,45 +1,54 @@
-
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "KirikLuxuryHub"
 ScreenGui.Parent = game:GetService("CoreGui")
 ScreenGui.ResetOnSpawn = false
 
-local TweenService = game:GetService("TweenService")
+local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
 
--- МИКРО-ОКНО (Luxury Style)
+-- МИКРО-ОКНО (Luxury Compact)
 local MainFrame = Instance.new("Frame")
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
 MainFrame.BorderSizePixel = 0
-MainFrame.Position = UDim2.new(0.5, -70, 0.5, -130)
-MainFrame.Size = UDim2.new(0, 140, 0, 290)
+MainFrame.Position = UDim2.new(0.5, -62, 0.5, -120)
+MainFrame.Size = UDim2.new(0, 125, 0, 240)
 MainFrame.Active = true
 MainFrame.ClipsDescendants = true
-Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 8)
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 6)
 local Stroke = Instance.new("UIStroke", MainFrame)
 Stroke.Color = Color3.fromRGB(0, 255, 255)
 Stroke.Thickness = 2
 
+-- ИСПРАВЛЕННЫЙ DRAG (без багов при ходьбе)
 local DragHandle = Instance.new("Frame")
-DragHandle.Size = UDim2.new(1, 0, 0, 25)
+DragHandle.Size = UDim2.new(1, -40, 0, 25)
 DragHandle.BackgroundTransparency = 1
 DragHandle.Parent = MainFrame
 
-local dragging, dragStart, startPos
+local dragging, dragInput, dragStart, startPos
 DragHandle.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true dragStart = input.Position startPos = MainFrame.Position
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then dragging = false end
+        end)
     end
 end)
 DragHandle.InputChanged:Connect(function(input)
-    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+UIS.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
         local delta = input.Position - dragStart
         MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
     end
-end)
-game:GetService("UserInputService").InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false end
 end)
 
 local Content = Instance.new("Frame")
@@ -48,66 +57,97 @@ Content.BackgroundTransparency = 1
 Content.Parent = MainFrame
 
 local Title = Instance.new("TextLabel")
-Title.Text = "KIRIK HUB V29"
+Title.Text = "KIRIK HUB V30"
 Title.TextColor3 = Color3.fromRGB(255, 215, 0)
 Title.Font = Enum.Font.GothamBold
-Title.TextSize = 11
-Title.Size = UDim2.new(1, -30, 0, 25)
+Title.TextSize = 10
+Title.Size = UDim2.new(1, -45, 0, 25)
 Title.BackgroundTransparency = 1
-Title.Parent = Content
+Title.Parent = MainFrame -- В MainFrame, чтобы не скрывалось
+
+local MinBtn = Instance.new("TextButton")
+MinBtn.Text = "-"
+MinBtn.Size = UDim2.new(0, 18, 0, 18)
+MinBtn.Position = UDim2.new(1, -42, 0, 3)
+MinBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 0)
+MinBtn.TextColor3 = Color3.new(1, 1, 1)
+MinBtn.Parent = MainFrame
+Instance.new("UICorner", MinBtn).CornerRadius = UDim.new(0, 4)
 
 local CloseBtn = Instance.new("TextButton")
 CloseBtn.Text = "X"
-CloseBtn.Size = UDim2.new(0, 20, 0, 20)
-CloseBtn.Position = UDim2.new(1, -22, 0, 3)
+CloseBtn.Size = UDim2.new(0, 18, 0, 18)
+CloseBtn.Position = UDim2.new(1, -21, 0, 3)
 CloseBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
 CloseBtn.TextColor3 = Color3.new(1, 1, 1)
 CloseBtn.Parent = MainFrame
-Instance.new("UICorner", CloseBtn)
+Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 4)
+
+-- СВОРАЧИВАНИЕ
+local minimized = false
+MinBtn.MouseButton1Click:Connect(function()
+    minimized = not minimized
+    Content.Visible = not minimized
+    MinBtn.Text = minimized and "+" or "-"
+    Title.Text = minimized and "Cheat Hub" or "KIRIK HUB V30"
+    MainFrame.Size = minimized and UDim2.new(0, 125, 0, 25) or UDim2.new(0, 125, 0, 240)
+end)
 
 -- ESP & MODE
 local EspBtn = Instance.new("TextButton")
-EspBtn.Size = UDim2.new(0.9, 0, 0, 20)
-EspBtn.Position = UDim2.new(0.05, 0, 0, 30)
+EspBtn.Size = UDim2.new(0.9, 0, 0, 16)
+EspBtn.Position = UDim2.new(0.05, 0, 0, 28)
 EspBtn.Text = "ESP: OFF"
 EspBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 EspBtn.TextColor3 = Color3.new(1, 1, 1)
-EspBtn.TextSize = 9
+EspBtn.TextSize = 8
 EspBtn.Parent = Content
 Instance.new("UICorner", EspBtn)
 
 local ModeBtn = Instance.new("TextButton")
-ModeBtn.Size = UDim2.new(0.9, 0, 0, 20)
-ModeBtn.Position = UDim2.new(0.05, 0, 0, 55)
+ModeBtn.Size = UDim2.new(0.9, 0, 0, 16)
+ModeBtn.Position = UDim2.new(0.05, 0, 0, 46)
 ModeBtn.Text = "LIST MODE: TP"
 ModeBtn.BackgroundColor3 = Color3.fromRGB(80, 0, 80)
 ModeBtn.TextColor3 = Color3.new(1, 1, 1)
-ModeBtn.TextSize = 9
+ModeBtn.TextSize = 8
 ModeBtn.Parent = Content
 Instance.new("UICorner", ModeBtn)
 
 local PlayerList = Instance.new("ScrollingFrame")
-PlayerList.Size = UDim2.new(0.9, 0, 0, 75)
-PlayerList.Position = UDim2.new(0.05, 0, 0, 80)
+PlayerList.Size = UDim2.new(0.9, 0, 0, 60)
+PlayerList.Position = UDim2.new(0.05, 0, 0, 64)
 PlayerList.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
 PlayerList.AutomaticCanvasSize = Enum.AutomaticSize.Y
 PlayerList.ScrollBarThickness = 2
 PlayerList.Parent = Content
-Instance.new("UIListLayout", PlayerList).Padding = UDim.new(0, 3)
+Instance.new("UIListLayout", PlayerList).Padding = UDim.new(0, 2)
 
+-- CUSTOM TP (НОВОЕ)
+local AddTpBtn = Instance.new("TextButton")
+AddTpBtn.Size = UDim2.new(0.9, 0, 0, 16)
+AddTpBtn.Position = UDim2.new(0.05, 0, 0, 126)
+AddTpBtn.Text = "ADD TP PART"
+AddTpBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 150)
+AddTpBtn.TextColor3 = Color3.new(1, 1, 1)
+AddTpBtn.TextSize = 8
+AddTpBtn.Parent = Content
+Instance.new("UICorner", AddTpBtn)
+
+-- STAB & LAG
 local AntiFlingBtn = Instance.new("TextButton")
-AntiFlingBtn.Size = UDim2.new(0.43, 0, 0, 25)
-AntiFlingBtn.Position = UDim2.new(0.05, 0, 0, 160)
+AntiFlingBtn.Size = UDim2.new(0.43, 0, 0, 18)
+AntiFlingBtn.Position = UDim2.new(0.05, 0, 0, 144)
 AntiFlingBtn.Text = "STAB"
 AntiFlingBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
 AntiFlingBtn.TextColor3 = Color3.new(1, 1, 1)
-AntiFlingBtn.TextSize = 9
+AntiFlingBtn.TextSize = 8
 AntiFlingBtn.Parent = Content
 Instance.new("UICorner", AntiFlingBtn)
 
 local InfStabBtn = Instance.new("TextButton")
-InfStabBtn.Size = UDim2.new(0.43, 0, 0, 25)
-InfStabBtn.Position = UDim2.new(0.52, 0, 0, 160)
+InfStabBtn.Size = UDim2.new(0.43, 0, 0, 18)
+InfStabBtn.Position = UDim2.new(0.52, 0, 0, 144)
 InfStabBtn.Text = "CHAOS LAG"
 InfStabBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 InfStabBtn.TextColor3 = Color3.new(1, 1, 1)
@@ -115,41 +155,41 @@ InfStabBtn.TextSize = 8
 InfStabBtn.Parent = Content
 Instance.new("UICorner", InfStabBtn)
 
--- ULTRA RUN
+-- ULTRA RUN & NOCLIP
 local UltraRunBtn = Instance.new("TextButton")
-UltraRunBtn.Size = UDim2.new(0.9, 0, 0, 25)
-UltraRunBtn.Position = UDim2.new(0.05, 0, 0, 190)
+UltraRunBtn.Size = UDim2.new(0.9, 0, 0, 18)
+UltraRunBtn.Position = UDim2.new(0.05, 0, 0, 164)
 UltraRunBtn.Text = "ULTRA RUN: OFF"
 UltraRunBtn.BackgroundColor3 = Color3.fromRGB(180, 80, 0)
 UltraRunBtn.TextColor3 = Color3.new(1, 1, 1)
-UltraRunBtn.TextSize = 9
+UltraRunBtn.TextSize = 8
 UltraRunBtn.Parent = Content
 Instance.new("UICorner", UltraRunBtn)
 
--- NOCLIP
 local NoclipBtn = Instance.new("TextButton")
-NoclipBtn.Size = UDim2.new(0.9, 0, 0, 25)
-NoclipBtn.Position = UDim2.new(0.05, 0, 0, 220)
+NoclipBtn.Size = UDim2.new(0.9, 0, 0, 18)
+NoclipBtn.Position = UDim2.new(0.05, 0, 0, 184)
 NoclipBtn.Text = "NOCLIP: OFF"
 NoclipBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 100)
 NoclipBtn.TextColor3 = Color3.new(1, 1, 1)
-NoclipBtn.TextSize = 9
+NoclipBtn.TextSize = 8
 NoclipBtn.Parent = Content
 Instance.new("UICorner", NoclipBtn)
 
 local UnviewBtn = Instance.new("TextButton")
-UnviewBtn.Size = UDim2.new(0.9, 0, 0, 18)
-UnviewBtn.Position = UDim2.new(0.05, 0, 0, 250)
-UnviewBtn.Text = "RESET CAMERA (UNVIEW)"
+UnviewBtn.Size = UDim2.new(0.9, 0, 0, 16)
+UnviewBtn.Position = UDim2.new(0.05, 0, 0, 204)
+UnviewBtn.Text = "RESET CAMERA"
 UnviewBtn.BackgroundColor3 = Color3.fromRGB(0, 80, 150)
 UnviewBtn.TextColor3 = Color3.new(1, 1, 1)
 UnviewBtn.TextSize = 8
 UnviewBtn.Parent = Content
 Instance.new("UICorner", UnviewBtn)
 
--- ЛОГИКА V29
+-- ЛОГИКА СПИСКОВ & TP PART
 local listMode = "TP"
-local selectedPlayer = nil
+local savedSpots = {}
+local spotCount = 0
 
 ModeBtn.MouseButton1Click:Connect(function()
     listMode = (listMode == "TP") and "VIEW" or "TP"
@@ -157,23 +197,24 @@ ModeBtn.MouseButton1Click:Connect(function()
 end)
 
 local function updateList()
-    for _, child in pairs(PlayerList:GetChildren()) do if child:IsA("TextButton") then child:Destroy() end end
-    for _, player in pairs(game.Players:GetPlayers()) do
-        if player ~= game.Players.LocalPlayer then
+    for _, child in pairs(PlayerList:GetChildren()) do if child:IsA("Frame") or child:IsA("TextButton") then child:Destroy() end end
+    
+    -- Игроки
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
             local btn = Instance.new("TextButton")
-            btn.Size = UDim2.new(1, -5, 0, 20)
+            btn.Size = UDim2.new(1, -5, 0, 16)
             btn.Text = player.DisplayName
             btn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
             btn.TextColor3 = Color3.new(1, 1, 1)
-            btn.TextSize = 9
+            btn.TextSize = 8
             btn.Parent = PlayerList
             Instance.new("UICorner", btn)
             btn.MouseButton1Click:Connect(function()
-                selectedPlayer = player
                 if listMode == "TP" then
                     local pChar = player.Character
                     if pChar and pChar:FindFirstChild("HumanoidRootPart") then
-                        game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = pChar.HumanoidRootPart.CFrame
+                        LocalPlayer.Character.HumanoidRootPart.CFrame = pChar.HumanoidRootPart.CFrame
                     end
                 else
                     if player.Character and player.Character:FindFirstChild("Humanoid") then
@@ -183,7 +224,65 @@ local function updateList()
             end)
         end
     end
+    
+    -- Сохраненные точки TP
+    for i, spot in ipairs(savedSpots) do
+        local spotFrame = Instance.new("Frame")
+        spotFrame.Size = UDim2.new(1, -5, 0, 16)
+        spotFrame.BackgroundTransparency = 1
+        spotFrame.Parent = PlayerList
+        
+        local tpBtn = Instance.new("TextButton")
+        tpBtn.Size = UDim2.new(0.75, 0, 1, 0)
+        tpBtn.Text = spot.name
+        tpBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
+        tpBtn.TextColor3 = Color3.new(1, 1, 1)
+        tpBtn.TextSize = 8
+        tpBtn.Parent = spotFrame
+        Instance.new("UICorner", tpBtn)
+        
+        local delBtn = Instance.new("TextButton")
+        delBtn.Size = UDim2.new(0.2, 0, 1, 0)
+        delBtn.Position = UDim2.new(0.8, 0, 0, 0)
+        delBtn.Text = "X"
+        delBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+        delBtn.TextColor3 = Color3.new(1, 1, 1)
+        delBtn.TextSize = 8
+        delBtn.Parent = spotFrame
+        Instance.new("UICorner", delBtn)
+        
+        tpBtn.MouseButton1Click:Connect(function()
+            local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if hrp then hrp.CFrame = CFrame.new(spot.pos + Vector3.new(0, 3, 0)) end
+        end)
+        
+        delBtn.MouseButton1Click:Connect(function()
+            table.remove(savedSpots, i)
+            updateList()
+        end)
+    end
 end
+
+-- ЛОГИКА КЛИКА ДЛЯ TP
+local waitingForClick = false
+local mouse = LocalPlayer:GetMouse()
+
+AddTpBtn.MouseButton1Click:Connect(function()
+    waitingForClick = true
+    AddTpBtn.Text = "CLICK SCREEN..."
+    AddTpBtn.BackgroundColor3 = Color3.fromRGB(150, 150, 0)
+end)
+
+mouse.Button1Down:Connect(function()
+    if waitingForClick then
+        waitingForClick = false
+        AddTpBtn.Text = "ADD TP PART"
+        AddTpBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 150)
+        spotCount = spotCount + 1
+        table.insert(savedSpots, {name = "SPOT " .. spotCount, pos = mouse.Hit.Position})
+        updateList()
+    end
+end)
 
 -- ESP
 local espActive = false
@@ -201,21 +300,21 @@ end
 EspBtn.MouseButton1Click:Connect(function()
     espActive = not espActive
     EspBtn.Text = "ESP: " .. (espActive and "ON" or "OFF")
-    for _, p in pairs(game.Players:GetPlayers()) do
-        if p ~= game.Players.LocalPlayer and p.Character then
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer and p.Character then
             if espActive then applyESP(p.Character)
             elseif p.Character:FindFirstChild("LuxuryESP") then p.Character.LuxuryESP:Destroy() end
         end
     end
 end)
 
-game.Players.PlayerAdded:Connect(function(p) p.CharacterAdded:Connect(applyESP) updateList() end)
-game.Players.PlayerRemoving:Connect(updateList)
-for _, p in pairs(game.Players:GetPlayers()) do p.CharacterAdded:Connect(applyESP) end
+Players.PlayerAdded:Connect(function(p) p.CharacterAdded:Connect(applyESP) updateList() end)
+Players.PlayerRemoving:Connect(updateList)
+for _, p in pairs(Players:GetPlayers()) do p.CharacterAdded:Connect(applyESP) end
 
 -- STAB & LAG
 AntiFlingBtn.MouseButton1Click:Connect(function()
-    local hrp = game.Players.LocalPlayer.Character.HumanoidRootPart
+    local hrp = LocalPlayer.Character.HumanoidRootPart
     hrp.Velocity = Vector3.zero hrp.RotVelocity = Vector3.zero
     hrp.Anchored = true task.wait(0.5) hrp.Anchored = false
 end)
@@ -230,7 +329,7 @@ end)
 task.spawn(function()
     while true do
         if infStabActive then
-            local char = game.Players.LocalPlayer.Character
+            local char = LocalPlayer.Character
             local hrp = char and char:FindFirstChild("HumanoidRootPart")
             if hrp then
                 hrp.Velocity = Vector3.zero hrp.RotVelocity = Vector3.zero
@@ -241,40 +340,16 @@ task.spawn(function()
     end
 end)
 
--- ULTRA RUN ЛОГИКА
+-- ULTRA RUN & NOCLIP
 local ultraRunActive = false
 UltraRunBtn.MouseButton1Click:Connect(function()
     ultraRunActive = not ultraRunActive
     UltraRunBtn.Text = ultraRunActive and "ULTRA RUN: ON" or "ULTRA RUN: OFF"
     UltraRunBtn.BackgroundColor3 = ultraRunActive and Color3.fromRGB(255, 120, 0) or Color3.fromRGB(180, 80, 0)
-    
-    local char = game.Players.LocalPlayer.Character
-    local hum = char and char:FindFirstChild("Humanoid")
-    if hum and not ultraRunActive then
-        for _, track in pairs(hum:GetPlayingAnimationTracks()) do
-            track:AdjustSpeed(1)
-        end
-    end
+    local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
+    if hum and not ultraRunActive then for _, track in pairs(hum:GetPlayingAnimationTracks()) do track:AdjustSpeed(1) end end
 end)
 
-RunService.RenderStepped:Connect(function()
-    if ultraRunActive then
-        local char = game.Players.LocalPlayer.Character
-        local hum = char and char:FindFirstChild("Humanoid")
-        if hum then
-            hum.WalkSpeed = 16
-            for _, track in pairs(hum:GetPlayingAnimationTracks()) do
-                if hum.MoveDirection.Magnitude > 0 then
-                    track:AdjustSpeed(50)
-                else
-                    track:AdjustSpeed(1)
-                end
-            end
-        end
-    end
-end)
-
--- NOCLIP ЛОГИКА
 local noclipActive = false
 NoclipBtn.MouseButton1Click:Connect(function()
     noclipActive = not noclipActive
@@ -284,17 +359,52 @@ end)
 
 RunService.Stepped:Connect(function()
     if noclipActive then
-        local char = game.Players.LocalPlayer.Character
+        local char = LocalPlayer.Character
         if char then
             for _, part in pairs(char:GetDescendants()) do
-                if part:IsA("BasePart") and part.CanCollide then
-                    part.CanCollide = false
-                end
+                if part:IsA("BasePart") and part.CanCollide then part.CanCollide = false end
+            end
+        end
+    end
+    if ultraRunActive then
+        local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
+        if hum then
+            hum.WalkSpeed = 16
+            for _, track in pairs(hum:GetPlayingAnimationTracks()) do
+                if hum.MoveDirection.Magnitude > 0 then track:AdjustSpeed(50) else track:AdjustSpeed(1) end
             end
         end
     end
 end)
 
-UnviewBtn.MouseButton1Click:Connect(function() workspace.CurrentCamera.CameraSubject = game.Players.LocalPlayer.Character.Humanoid end)
+-- AFK ЗАЩИТА (30 СЕКУНД)
+local lastActive = tick()
+UIS.InputBegan:Connect(function() lastActive = tick() end)
+UIS.InputChanged:Connect(function() lastActive = tick() end)
+
+task.spawn(function()
+    while task.wait(1) do
+        if not ScreenGui.Parent then break end
+        if tick() - lastActive > 30 then
+            -- Отключаем всё
+            espActive = false
+            ultraRunActive = false
+            noclipActive = false
+            infStabActive = false
+            -- Чистим ESP
+            for _, p in pairs(Players:GetPlayers()) do
+                if p.Character and p.Character:FindFirstChild("LuxuryESP") then p.Character.LuxuryESP:Destroy() end
+            end
+            -- Чистим скорость
+            local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
+            if hum then hum.WalkSpeed = 16; for _, track in pairs(hum:GetPlayingAnimationTracks()) do track:AdjustSpeed(1) end end
+            -- Самоуничтожение
+            ScreenGui:Destroy()
+            break
+        end
+    end
+end)
+
+UnviewBtn.MouseButton1Click:Connect(function() workspace.CurrentCamera.CameraSubject = LocalPlayer.Character.Humanoid end)
 CloseBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
 updateList()
