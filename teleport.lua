@@ -44,7 +44,7 @@ Content.BackgroundTransparency = 1
 Content.Parent = MainFrame
 
 local Title = Instance.new("TextLabel")
-Title.Text = "KIRIK HUB V18"
+Title.Text = "KIRIK HUB V19"
 Title.TextColor3 = Color3.fromRGB(255, 215, 0)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 10
@@ -165,7 +165,7 @@ local function updateList()
     end
 end
 
--- АНТИ-ТАРЕЛКА И ПООЧЕРЕДНАЯ АТАКА (V18)
+-- АНТИ-ТАРЕЛКА, АНТИ-СТЕНА И ПООЧЕРЕДНАЯ АТАКА (V19)
 CrushBtn.MouseButton1Click:Connect(function()
     if not selectedPlayer or not selectedPlayer.Character then return end
     local targetHrp = selectedPlayer.Character:FindFirstChild("HumanoidRootPart")
@@ -176,24 +176,26 @@ CrushBtn.MouseButton1Click:Connect(function()
         local originalCFrame = myHrp.CFrame
         local objectsToDrop = {}
         
-        -- Поиск предметов с фильтром
+        -- Улучшенный поиск: фильтр размера, имени и самостоятельности предмета
         for _, v in pairs(workspace:GetDescendants()) do
-            if v:IsA("BasePart") and not v.Anchored and v.Size.Magnitude > 6 then
+            -- Ограничение размера (до 30), чтобы не брать целые здания
+            if v:IsA("BasePart") and not v.Anchored and v.Size.Magnitude > 3 and v.Size.Magnitude < 30 then
                 local name = v.Name:lower()
-                -- Игнорируем тарелки, НЛО и декор
-                if not name:find("ufo") and not name:find("saucer") and not name:find("tarelka") and not name:find("plate") then
-                    if not v:IsDescendantOf(myChar) then
+                -- Игнорируем декор карты
+                if not name:find("ufo") and not name:find("saucer") and not name:find("wall") and not name:find("floor") and not name:find("base") and not name:find("house") then
+                    -- v:GetRootPart() == v проверяет, что деталь не приварена к чему-то массивному
+                    if not v:IsDescendantOf(myChar) and v:GetRootPart() == v then
                         table.insert(objectsToDrop, v)
                     end
                 end
             end
-            if #objectsToDrop >= 5 then break end -- 5 предметов по очереди - это мощно
+            if #objectsToDrop >= 5 then break end 
         end
         
         for _, obj in pairs(objectsToDrop) do
-            -- 1. ТП К ПРЕДМЕТУ (Мгновенно для захвата)
+            -- 1. ТП К ПРЕДМЕТУ
             myHrp.CFrame = obj.CFrame * CFrame.new(0, 2, 0)
-            task.wait(0.12) -- Ждем, чтобы сервер "отдал" предмет
+            task.wait(0.12)
             
             -- 2. КИДАЕМ ПРЕДМЕТ
             if targetHrp.Parent then
@@ -201,10 +203,10 @@ CrushBtn.MouseButton1Click:Connect(function()
                 obj.AssemblyLinearVelocity = Vector3.new(0, -600, 0)
             end
             
-            -- 3. ПЛАВНЫЙ ВОЗВРАТ (Чтобы античит не ругался)
+            -- 3. ПЛАВНЫЙ ВОЗВРАТ
             local tween = TweenService:Create(myHrp, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CFrame = originalCFrame})
             tween:Play()
-            tween.Completed:Wait() -- Ждем завершения возврата перед следующим предметом
+            tween.Completed:Wait() 
             task.wait(0.1)
         end
     end
