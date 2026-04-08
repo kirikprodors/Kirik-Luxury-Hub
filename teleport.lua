@@ -44,7 +44,7 @@ Content.BackgroundTransparency = 1
 Content.Parent = MainFrame
 
 local Title = Instance.new("TextLabel")
-Title.Text = "KIRIK HUB V19"
+Title.Text = "KIRIK HUB V20"
 Title.TextColor3 = Color3.fromRGB(255, 215, 0)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 10
@@ -165,7 +165,7 @@ local function updateList()
     end
 end
 
--- АНТИ-ТАРЕЛКА, АНТИ-СТЕНА И ПООЧЕРЕДНАЯ АТАКА (V19)
+-- ПРОСТРАНСТВЕННЫЙ ПОИСК БЛИЖАЙШИХ ОБЪЕКТОВ (V20)
 CrushBtn.MouseButton1Click:Connect(function()
     if not selectedPlayer or not selectedPlayer.Character then return end
     local targetHrp = selectedPlayer.Character:FindFirstChild("HumanoidRootPart")
@@ -174,24 +174,38 @@ CrushBtn.MouseButton1Click:Connect(function()
     
     if targetHrp and myHrp then
         local originalCFrame = myHrp.CFrame
-        local objectsToDrop = {}
+        local foundObjects = {}
+        local maxDistance = 100 -- Максимальный радиус поиска в стадах
         
-        -- Улучшенный поиск: фильтр размера, имени и самостоятельности предмета
+        -- Сбор всех потенциальных объектов
         for _, v in pairs(workspace:GetDescendants()) do
-            -- Ограничение размера (до 30), чтобы не брать целые здания
-            if v:IsA("BasePart") and not v.Anchored and v.Size.Magnitude > 3 and v.Size.Magnitude < 30 then
+            if v:IsA("BasePart") and not v.Anchored and v.Size.Magnitude > 2 and v.Size.Magnitude < 30 then
                 local name = v.Name:lower()
-                -- Игнорируем декор карты
+                -- Базовый фильтр декора
                 if not name:find("ufo") and not name:find("saucer") and not name:find("wall") and not name:find("floor") and not name:find("base") and not name:find("house") then
-                    -- v:GetRootPart() == v проверяет, что деталь не приварена к чему-то массивному
                     if not v:IsDescendantOf(myChar) and v:GetRootPart() == v then
-                        table.insert(objectsToDrop, v)
+                        local dist = (v.Position - myHrp.Position).Magnitude
+                        -- Запись объекта, если он находится в пределах радиуса
+                        if dist <= maxDistance then
+                            table.insert(foundObjects, {part = v, distance = dist})
+                        end
                     end
                 end
             end
-            if #objectsToDrop >= 5 then break end 
         end
         
+        -- Сортировка объектов по дистанции (ближайшие первыми)
+        table.sort(foundObjects, function(a, b)
+            return a.distance < b.distance
+        end)
+        
+        -- Выбор до 5 ближайших объектов
+        local objectsToDrop = {}
+        for i = 1, math.min(5, #foundObjects) do
+            table.insert(objectsToDrop, foundObjects[i].part)
+        end
+        
+        -- Выполнение атаки
         for _, obj in pairs(objectsToDrop) do
             -- 1. ТП К ПРЕДМЕТУ
             myHrp.CFrame = obj.CFrame * CFrame.new(0, 2, 0)
