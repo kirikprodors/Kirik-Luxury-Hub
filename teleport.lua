@@ -14,7 +14,7 @@ MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
 MainFrame.BorderSizePixel = 0
 MainFrame.Position = UDim2.new(0.5, -62, 0.5, -120)
-MainFrame.Size = UDim2.new(0, 125, 0, 240)
+MainFrame.Size = UDim2.new(0, 125, 0, 270) -- Увеличил высоту для новых кнопок
 MainFrame.Active = true
 MainFrame.ClipsDescendants = true
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 6)
@@ -90,7 +90,7 @@ MinBtn.MouseButton1Click:Connect(function()
     Content.Visible = not minimized
     MinBtn.Text = minimized and "+" or "-"
     Title.Text = minimized and "Cheat Hub" or "KIRIK HUB V30"
-    MainFrame.Size = minimized and UDim2.new(0, 125, 0, 25) or UDim2.new(0, 125, 0, 240)
+    MainFrame.Size = minimized and UDim2.new(0, 125, 0, 25) or UDim2.new(0, 125, 0, 270)
 end)
 
 -- ESP & MODE
@@ -123,7 +123,7 @@ PlayerList.ScrollBarThickness = 2
 PlayerList.Parent = Content
 Instance.new("UIListLayout", PlayerList).Padding = UDim.new(0, 2)
 
--- CUSTOM TP (НОВОЕ)
+-- CUSTOM TP
 local AddTpBtn = Instance.new("TextButton")
 AddTpBtn.Size = UDim2.new(0.9, 0, 0, 16)
 AddTpBtn.Position = UDim2.new(0.05, 0, 0, 126)
@@ -186,6 +186,39 @@ UnviewBtn.TextSize = 8
 UnviewBtn.Parent = Content
 Instance.new("UICorner", UnviewBtn)
 
+-- TRUE HEADLESS (НОВОЕ)
+local HeadlessBtn = Instance.new("TextButton")
+HeadlessBtn.Size = UDim2.new(0.9, 0, 0, 16)
+HeadlessBtn.Position = UDim2.new(0.05, 0, 0, 224)
+HeadlessBtn.Text = "TRUE HEADLESS"
+HeadlessBtn.BackgroundColor3 = Color3.fromRGB(120, 0, 0)
+HeadlessBtn.TextColor3 = Color3.new(1, 1, 1)
+HeadlessBtn.TextSize = 8
+HeadlessBtn.Parent = Content
+Instance.new("UICorner", HeadlessBtn)
+
+-- SPIN BOT & SPEED (НОВОЕ)
+local SpinBtn = Instance.new("TextButton")
+SpinBtn.Size = UDim2.new(0.55, 0, 0, 16)
+SpinBtn.Position = UDim2.new(0.05, 0, 0, 244)
+SpinBtn.Text = "SPIN: OFF"
+SpinBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 80)
+SpinBtn.TextColor3 = Color3.new(1, 1, 1)
+SpinBtn.TextSize = 8
+SpinBtn.Parent = Content
+Instance.new("UICorner", SpinBtn)
+
+local SpinBox = Instance.new("TextBox")
+SpinBox.Size = UDim2.new(0.3, 0, 0, 16)
+SpinBox.Position = UDim2.new(0.65, 0, 0, 244)
+SpinBox.Text = "50"
+SpinBox.PlaceholderText = "Spd"
+SpinBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+SpinBox.TextColor3 = Color3.new(1, 1, 1)
+SpinBox.TextSize = 8
+SpinBox.Parent = Content
+Instance.new("UICorner", SpinBox)
+
 -- ЛОГИКА СПИСКОВ & TP PART
 local listMode = "TP"
 local savedSpots = {}
@@ -199,7 +232,6 @@ end)
 local function updateList()
     for _, child in pairs(PlayerList:GetChildren()) do if child:IsA("Frame") or child:IsA("TextButton") then child:Destroy() end end
     
-    -- Игроки
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= LocalPlayer then
             local btn = Instance.new("TextButton")
@@ -225,7 +257,6 @@ local function updateList()
         end
     end
     
-    -- Сохраненные точки TP
     for i, spot in ipairs(savedSpots) do
         local spotFrame = Instance.new("Frame")
         spotFrame.Size = UDim2.new(1, -5, 0, 16)
@@ -340,6 +371,45 @@ task.spawn(function()
     end
 end)
 
+-- TRUE HEADLESS ЛОГИКА
+HeadlessBtn.MouseButton1Click:Connect(function()
+    local char = LocalPlayer.Character
+    local hum = char and char:FindFirstChild("Humanoid")
+    local head = char and char:FindFirstChild("Head")
+    if hum and head then
+        hum.RequiresNeck = false
+        head.CFrame = CFrame.new(0, 9999, 0)
+        for _, v in pairs(char:GetDescendants()) do
+            if v:IsA("Motor6D") and v.Part1 == head then
+                v:Destroy()
+            end
+        end
+        head.CanCollide = false
+        head.Anchored = true
+        HeadlessBtn.Text = "HEADLESS APPLIED"
+        HeadlessBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    end
+end)
+
+-- SPIN BOT ЛОГИКА
+local spinActive = false
+SpinBtn.MouseButton1Click:Connect(function()
+    spinActive = not spinActive
+    SpinBtn.Text = spinActive and "SPIN: ON" or "SPIN: OFF"
+    SpinBtn.BackgroundColor3 = spinActive and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(0, 150, 80)
+end)
+
+RunService.Heartbeat:Connect(function()
+    if spinActive then
+        local char = LocalPlayer.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            local speed = tonumber(SpinBox.Text) or 50
+            hrp.CFrame = hrp.CFrame * CFrame.Angles(0, math.rad(speed), 0)
+        end
+    end
+end)
+
 -- ULTRA RUN & NOCLIP
 local ultraRunActive = false
 UltraRunBtn.MouseButton1Click:Connect(function()
@@ -383,6 +453,7 @@ local function ForceCleanup()
     ultraRunActive = false
     noclipActive = false
     infStabActive = false
+    spinActive = false -- Добавлена остановка Spin Bot
     
     for _, p in pairs(Players:GetPlayers()) do
         if p.Character and p.Character:FindFirstChild("LuxuryESP") then 
