@@ -57,7 +57,7 @@ Content.BackgroundTransparency = 1
 Content.Parent = MainFrame
 
 local Title = Instance.new("TextLabel")
-Title.Text = "KIRIK HUB V30"
+Title.Text = "KIRIK HUB V31"
 Title.TextColor3 = Color3.fromRGB(255, 215, 0)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 10
@@ -89,7 +89,7 @@ MinBtn.MouseButton1Click:Connect(function()
     minimized = not minimized
     Content.Visible = not minimized
     MinBtn.Text = minimized and "+" or "-"
-    Title.Text = minimized and "Cheat Hub" or "KIRIK HUB V30"
+    Title.Text = minimized and "Cheat Hub" or "KIRIK HUB V31"
     MainFrame.Size = minimized and UDim2.new(0, 125, 0, 25) or UDim2.new(0, 125, 0, 270)
 end)
 
