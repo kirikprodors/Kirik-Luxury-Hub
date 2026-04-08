@@ -44,7 +44,7 @@ Content.BackgroundTransparency = 1
 Content.Parent = MainFrame
 
 local Title = Instance.new("TextLabel")
-Title.Text = "KIRIK HUB V24"
+Title.Text = "KIRIK HUB V25"
 Title.TextColor3 = Color3.fromRGB(255, 215, 0)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 10
@@ -156,16 +156,21 @@ local function updateList()
                 selectedPlayer = player
                 CrushBtn.Text = "CRUSH: " .. player.DisplayName
                 if listMode == "TP" then
-                    game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = player.Character.HumanoidRootPart.CFrame
+                    local pChar = player.Character
+                    if pChar and pChar:FindFirstChild("HumanoidRootPart") then
+                        game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = pChar.HumanoidRootPart.CFrame
+                    end
                 else
-                    workspace.CurrentCamera.CameraSubject = player.Character.Humanoid
+                    if player.Character and player.Character:FindFirstChild("Humanoid") then
+                        workspace.CurrentCamera.CameraSubject = player.Character.Humanoid
+                    end
                 end
             end)
         end
     end
 end
 
--- ИСПРАВЛЕННЫЙ ЗАХВАТ: ФИКС ВОЗВРАТА ПРЕДМЕТА (V24)
+-- КИРИК ЧИТ V25: ОБХОД ВОЗВРАТА ПРЕДМЕТОВ (FLING THINGS FIX)
 CrushBtn.MouseButton1Click:Connect(function()
     if not selectedPlayer or not selectedPlayer.Character then return end
     local targetHrp = selectedPlayer.Character:FindFirstChild("HumanoidRootPart")
@@ -176,19 +181,18 @@ CrushBtn.MouseButton1Click:Connect(function()
         local originalCFrame = myHrp.CFrame
         local foundObjects = {}
         
+        -- Поиск предметов (игнорируем части игроков и заанкеренные объекты)
         for _, v in pairs(workspace:GetDescendants()) do
-            if v:IsA("BasePart") and not v.Anchored and v.Size.Magnitude > 1 and v.Size.Magnitude < 40 then
+            if v:IsA("BasePart") and not v.Anchored and v.Size.Magnitude > 1 and v.Size.Magnitude < 50 then
                 local isPlayerPart = false
-                local current = v
-                while current and current ~= workspace do
-                    if current:FindFirstChild("Humanoid") then isPlayerPart = true break end
-                    current = current.Parent
+                if v:IsDescendantOf(game.Players.LocalPlayer.Character) or v.Parent:FindFirstChild("Humanoid") then
+                    isPlayerPart = true
                 end
                 
                 if not isPlayerPart then
                     if v:GetRootPart() == v then
                         local dist = (v.Position - myHrp.Position).Magnitude
-                        if dist <= 150 then table.insert(foundObjects, {part = v, distance = dist}) end
+                        if dist <= 250 then table.insert(foundObjects, {part = v, distance = dist}) end
                     end
                 end
             end
@@ -196,45 +200,37 @@ CrushBtn.MouseButton1Click:Connect(function()
         
         table.sort(foundObjects, function(a, b) return a.distance < b.distance end)
         
-        for i = 1, math.min(3, #foundObjects) do -- Снизил до 3 для стабильности сети
+        for i = 1, math.min(2, #foundObjects) do -- По 2 предмета за раз для точности
             local obj = foundObjects[i].part
             
-            -- 1. ТП И ФИЗИЧЕСКИЙ ЗАХВАТ (Claim Network Ownership)
-            myHrp.CFrame = obj.CFrame * CFrame.new(0, 3, 0)
-            
-            -- Важный цикл: "будим" предмет, чтобы сервер отдал его нам
-            for _ = 1, 5 do
-                obj.AssemblyLinearVelocity = Vector3.new(0, 0.1, 0) 
-                task.wait(0.05)
-            end
+            -- ШАГ 1: Агрессивный захват
+            myHrp.CFrame = obj.CFrame * CFrame.new(0, 2, 0)
+            obj.Velocity = Vector3.new(0, 5, 0) -- "Будим" предмет
+            task.wait(0.1)
             
             if targetHrp.Parent then
-                local oldProps = obj.CustomPhysicalProperties
-                obj.CustomPhysicalProperties = PhysicalProperties.new(0.01, 0.3, 0.5)
-                obj.Massless = true 
+                -- ШАГ 2: Совместный перелет (Sync Move)
+                -- Мы летим ВМЕСТЕ с предметом к цели, чтобы сервер не считал это читерским ТП предмета
+                local targetPos = targetHrp.CFrame * CFrame.new(0, 10, 0)
                 
-                -- 2. ТЕЛЕПОРТАЦИЯ ПРЕДМЕТА
-                obj.CFrame = targetHrp.CFrame * CFrame.new(0, 20, 0)
+                obj.CFrame = targetPos
+                myHrp.CFrame = targetPos * CFrame.new(0, 2, 0)
                 
-                -- Резкий импульс вниз, чтобы предмет "закрепился" в новом месте
-                obj.AssemblyLinearVelocity = Vector3.new(0, -250, 0) 
+                -- Удерживаем предмет в этой точке 0.2 сек, чтобы физика обновилась
+                local startTime = tick()
+                while tick() - startTime < 0.2 do
+                    obj.Velocity = Vector3.new(0, -100, 0)
+                    obj.CFrame = targetHrp.CFrame * CFrame.new(0, 10, 0)
+                    task.wait()
+                end
                 
-                -- Задержка ПЕРЕД возвращением персонажа, чтобы сервер подтвердил позицию
-                task.wait(0.15)
-                
-                task.delay(1, function()
-                    if obj then 
-                        obj.Massless = false
-                        obj.CustomPhysicalProperties = oldProps 
-                    end
-                end)
+                -- Резкий пинок вниз
+                obj.Velocity = Vector3.new(0, -200, 0)
             end
             
-            -- 3. ВОЗВРАТ
-            local tween = TweenService:Create(myHrp, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CFrame = originalCFrame})
-            tween:Play()
-            tween.Completed:Wait()
-            task.wait(0.1)
+            -- ШАГ 3: Возвращаемся
+            myHrp.CFrame = originalCFrame
+            task.wait(0.2)
         end
     end
 end)
@@ -267,7 +263,7 @@ game.Players.PlayerAdded:Connect(function(p) p.CharacterAdded:Connect(applyESP) 
 game.Players.PlayerRemoving:Connect(updateList)
 for _, p in pairs(game.Players:GetPlayers()) do p.CharacterAdded:Connect(applyESP) end
 
--- STAB & LAG
+-- STAB & LAG (Для защиты от флинга)
 AntiFlingBtn.MouseButton1Click:Connect(function()
     local hrp = game.Players.LocalPlayer.Character.HumanoidRootPart
     hrp.Velocity = Vector3.zero hrp.RotVelocity = Vector3.zero
@@ -288,8 +284,8 @@ task.spawn(function()
             local hrp = char and char:FindFirstChild("HumanoidRootPart")
             if hrp then
                 hrp.Velocity = Vector3.zero hrp.RotVelocity = Vector3.zero
-                hrp.Anchored = true task.wait(0.3) hrp.Anchored = false
-                task.wait(0.2)
+                hrp.Anchored = true task.wait(0.2) hrp.Anchored = false
+                task.wait(0.1)
             else task.wait(0.2) end
         else task.wait(0.2) end
     end
