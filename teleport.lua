@@ -44,7 +44,7 @@ Content.BackgroundTransparency = 1
 Content.Parent = MainFrame
 
 local Title = Instance.new("TextLabel")
-Title.Text = "KIRIK HUB V21"
+Title.Text = "KIRIK HUB V22"
 Title.TextColor3 = Color3.fromRGB(255, 215, 0)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 10
@@ -165,7 +165,7 @@ local function updateList()
     end
 end
 
--- ИСПРАВЛЕННЫЙ ПОИСК И ФИЗИКА (V21)
+-- ИСПРАВЛЕННЫЙ ЗАХВАТ ТЯЖЕЛЫХ ПРЕДМЕТОВ (V22)
 CrushBtn.MouseButton1Click:Connect(function()
     if not selectedPlayer or not selectedPlayer.Character then return end
     local targetHrp = selectedPlayer.Character:FindFirstChild("HumanoidRootPart")
@@ -178,9 +178,9 @@ CrushBtn.MouseButton1Click:Connect(function()
         local maxDistance = 100 
         
         for _, v in pairs(workspace:GetDescendants()) do
-            if v:IsA("BasePart") and not v.Anchored and v.Size.Magnitude > 2 and v.Size.Magnitude < 30 then
+            -- Уменьшен максимальный размер до 20, чтобы избегать гигантских структур
+            if v:IsA("BasePart") and not v.Anchored and v.Size.Magnitude > 2 and v.Size.Magnitude < 20 then
                 
-                -- Исключаем любые части других игроков
                 local isPlayerPart = false
                 local current = v
                 while current and current ~= workspace do
@@ -215,15 +215,24 @@ CrushBtn.MouseButton1Click:Connect(function()
         end
         
         for _, obj in pairs(objectsToDrop) do
-            -- 1. ТП К ПРЕДМЕТУ
+            -- 1. ТП К ПРЕДМЕТУ И СТАБИЛИЗАЦИЯ
             myHrp.CFrame = obj.CFrame * CFrame.new(0, 2, 0)
-            task.wait(0.15) -- Чуть больше времени на захват сети
+            obj.AssemblyLinearVelocity = Vector3.zero 
+            obj.AssemblyAngularVelocity = Vector3.zero
+            task.wait(0.25) -- Увеличенное время для Network Ownership тяжелых объектов
             
-            -- 2. КИДАЕМ ПРЕДМЕТ (безопасная физика)
+            -- 2. КИДАЕМ ПРЕДМЕТ (обход массы)
             if targetHrp.Parent then
-                -- Уменьшена высота сброса и скорость, чтобы предмет не исчезал под текстурами
+                local oldMassless = obj.Massless
+                obj.Massless = true -- Делаем предмет невесомым на время броска
+                
                 obj.CFrame = targetHrp.CFrame * CFrame.new(0, 15, 0)
-                obj.AssemblyLinearVelocity = Vector3.new(0, -100, 0) 
+                obj.AssemblyLinearVelocity = Vector3.new(0, -120, 0) 
+                
+                -- Возвращаем физику через полсекунды
+                task.delay(0.5, function()
+                    if obj then obj.Massless = oldMassless end
+                end)
             end
             
             -- 3. ПЛАВНЫЙ ВОЗВРАТ
