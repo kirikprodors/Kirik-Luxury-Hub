@@ -47,7 +47,7 @@ Content.BackgroundTransparency = 1
 Content.Parent = MainFrame
 
 local Title = Instance.new("TextLabel")
-Title.Text = "KIRIK HUB V26"
+Title.Text = "KIRIK HUB V27"
 Title.TextColor3 = Color3.fromRGB(255, 215, 0)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 11
@@ -114,15 +114,16 @@ InfStabBtn.TextSize = 8
 InfStabBtn.Parent = Content
 Instance.new("UICorner", InfStabBtn)
 
-local CrushBtn = Instance.new("TextButton")
-CrushBtn.Size = UDim2.new(0.9, 0, 0, 25)
-CrushBtn.Position = UDim2.new(0.05, 0, 0, 190)
-CrushBtn.Text = "FORCE CRUSH (SELECT)"
-CrushBtn.BackgroundColor3 = Color3.fromRGB(120, 0, 0)
-CrushBtn.TextColor3 = Color3.new(1, 1, 1)
-CrushBtn.TextSize = 8
-CrushBtn.Parent = Content
-Instance.new("UICorner", CrushBtn)
+-- ULTRA RUN
+local UltraRunBtn = Instance.new("TextButton")
+UltraRunBtn.Size = UDim2.new(0.9, 0, 0, 25)
+UltraRunBtn.Position = UDim2.new(0.05, 0, 0, 190)
+UltraRunBtn.Text = "ULTRA RUN: OFF"
+UltraRunBtn.BackgroundColor3 = Color3.fromRGB(180, 80, 0)
+UltraRunBtn.TextColor3 = Color3.new(1, 1, 1)
+UltraRunBtn.TextSize = 9
+UltraRunBtn.Parent = Content
+Instance.new("UICorner", UltraRunBtn)
 
 local UnviewBtn = Instance.new("TextButton")
 UnviewBtn.Size = UDim2.new(0.9, 0, 0, 18)
@@ -134,7 +135,7 @@ UnviewBtn.TextSize = 8
 UnviewBtn.Parent = Content
 Instance.new("UICorner", UnviewBtn)
 
--- ЛОГИКА V26
+-- ЛОГИКА V27
 local listMode = "TP"
 local selectedPlayer = nil
 
@@ -157,7 +158,6 @@ local function updateList()
             Instance.new("UICorner", btn)
             btn.MouseButton1Click:Connect(function()
                 selectedPlayer = player
-                CrushBtn.Text = "FORCE: " .. player.DisplayName
                 if listMode == "TP" then
                     local pChar = player.Character
                     if pChar and pChar:FindFirstChild("HumanoidRootPart") then
@@ -172,62 +172,6 @@ local function updateList()
         end
     end
 end
-
--- КИРИК ЧИТ V26: FORCE GLUE (Борьба с анти-захватом)
-CrushBtn.MouseButton1Click:Connect(function()
-    if not selectedPlayer or not selectedPlayer.Character then return end
-    local targetHrp = selectedPlayer.Character:FindFirstChild("HumanoidRootPart")
-    local myChar = game.Players.LocalPlayer.Character
-    local myHrp = myChar:FindFirstChild("HumanoidRootPart")
-    
-    if targetHrp and myHrp then
-        local originalCFrame = myHrp.CFrame
-        local foundObjects = {}
-        
-        for _, v in pairs(workspace:GetDescendants()) do
-            if v:IsA("BasePart") and not v.Anchored and v.Size.Magnitude > 1 and v.Size.Magnitude < 50 then
-                if not v:IsDescendantOf(myChar) and not v.Parent:FindFirstChild("Humanoid") then
-                    if v:GetRootPart() == v then
-                        local dist = (v.Position - myHrp.Position).Magnitude
-                        if dist <= 250 then table.insert(foundObjects, {part = v, distance = dist}) end
-                    end
-                end
-            end
-        end
-        
-        table.sort(foundObjects, function(a, b) return a.distance < b.distance end)
-        
-        for i = 1, math.min(2, #foundObjects) do
-            local obj = foundObjects[i].part
-            
-            -- ШАГ 1: Прыжок к объекту для Network Ownership
-            myHrp.CFrame = obj.CFrame * CFrame.new(0, 3, 0)
-            obj.Velocity = Vector3.new(0, 10, 0)
-            task.wait(0.1)
-            
-            -- ШАГ 2: FORCE GLUE LOOP (Удерживаем предмет на цели 1.5 сек)
-            local glueStartTime = tick()
-            local connection
-            connection = RunService.Heartbeat:Connect(function()
-                if tick() - glueStartTime > 1.5 or not targetHrp or not obj then
-                    connection:Disconnect()
-                    return
-                end
-                -- Форсируем позицию предмета ПРЯМО ВНУТРЬ цели
-                obj.CFrame = targetHrp.CFrame * CFrame.new(0, 2, 0)
-                obj.Velocity = Vector3.new(0, -500, 0) -- Сильный удар вниз
-            end)
-            
-            -- Мы летим вместе с предметом, чтобы сервер не разорвал связь
-            myHrp.CFrame = targetHrp.CFrame * CFrame.new(0, 10, 0)
-            task.wait(1.6)
-            
-            -- ШАГ 3: Возврат
-            myHrp.CFrame = originalCFrame
-            task.wait(0.2)
-        end
-    end
-end)
 
 -- ESP
 local espActive = false
@@ -282,6 +226,30 @@ task.spawn(function()
                 task.wait(0.1)
             else task.wait(0.2) end
         else task.wait(0.2) end
+    end
+end)
+
+-- ULTRA RUN ЛОГИКА
+local ultraRunActive = false
+UltraRunBtn.MouseButton1Click:Connect(function()
+    ultraRunActive = not ultraRunActive
+    UltraRunBtn.Text = ultraRunActive and "ULTRA RUN: ON" or "ULTRA RUN: OFF"
+    UltraRunBtn.BackgroundColor3 = ultraRunActive and Color3.fromRGB(255, 120, 0) or Color3.fromRGB(180, 80, 0)
+    
+    local char = game.Players.LocalPlayer.Character
+    local hum = char and char:FindFirstChild("Humanoid")
+    if hum and not ultraRunActive then
+        hum.WalkSpeed = 16 -- Сброс на стандартную скорость
+    end
+end)
+
+RunService.RenderStepped:Connect(function()
+    if ultraRunActive then
+        local char = game.Players.LocalPlayer.Character
+        local hum = char and char:FindFirstChild("Humanoid")
+        if hum then
+            hum.WalkSpeed = 250 -- Огромная скорость для эффекта "бега на месте" при упоре и ультра-скорости
+        end
     end
 end)
 
