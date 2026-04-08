@@ -47,7 +47,7 @@ Content.BackgroundTransparency = 1
 Content.Parent = MainFrame
 
 local Title = Instance.new("TextLabel")
-Title.Text = "KIRIK HUB V27"
+Title.Text = "KIRIK HUB V28"
 Title.TextColor3 = Color3.fromRGB(255, 215, 0)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 11
@@ -135,7 +135,7 @@ UnviewBtn.TextSize = 8
 UnviewBtn.Parent = Content
 Instance.new("UICorner", UnviewBtn)
 
--- ЛОГИКА V27
+-- ЛОГИКА V28
 local listMode = "TP"
 local selectedPlayer = nil
 
@@ -229,7 +229,7 @@ task.spawn(function()
     end
 end)
 
--- ULTRA RUN ЛОГИКА
+-- ULTRA RUN ЛОГИКА V28 (Анимация на максималках, скорость обычная)
 local ultraRunActive = false
 UltraRunBtn.MouseButton1Click:Connect(function()
     ultraRunActive = not ultraRunActive
@@ -239,7 +239,9 @@ UltraRunBtn.MouseButton1Click:Connect(function()
     local char = game.Players.LocalPlayer.Character
     local hum = char and char:FindFirstChild("Humanoid")
     if hum and not ultraRunActive then
-        hum.WalkSpeed = 16 -- Сброс на стандартную скорость
+        for _, track in pairs(hum:GetPlayingAnimationTracks()) do
+            track:AdjustSpeed(1) -- Сброс скорости анимаций
+        end
     end
 end)
 
@@ -248,7 +250,15 @@ RunService.RenderStepped:Connect(function()
         local char = game.Players.LocalPlayer.Character
         local hum = char and char:FindFirstChild("Humanoid")
         if hum then
-            hum.WalkSpeed = 250 -- Огромная скорость для эффекта "бега на месте" при упоре и ультра-скорости
+            hum.WalkSpeed = 16 -- Удерживаем обычную скорость перемещения
+            -- Перехватываем анимации и ускоряем их
+            for _, track in pairs(hum:GetPlayingAnimationTracks()) do
+                if hum.MoveDirection.Magnitude > 0 then
+                    track:AdjustSpeed(50) -- Безумная скорость перебирания ногами
+                else
+                    track:AdjustSpeed(1) -- Обычная анимация простоя
+                end
+            end
         end
     end
 end)
