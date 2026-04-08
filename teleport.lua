@@ -44,7 +44,7 @@ Content.BackgroundTransparency = 1
 Content.Parent = MainFrame
 
 local Title = Instance.new("TextLabel")
-Title.Text = "KIRIK HUB V23"
+Title.Text = "KIRIK HUB V24"
 Title.TextColor3 = Color3.fromRGB(255, 215, 0)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 10
@@ -165,7 +165,7 @@ local function updateList()
     end
 end
 
--- ИСПРАВЛЕННЫЙ ЗАХВАТ: МИНИМАЛЬНЫЙ ВЕС (V23)
+-- ИСПРАВЛЕННЫЙ ЗАХВАТ: ФИКС ВОЗВРАТА ПРЕДМЕТА (V24)
 CrushBtn.MouseButton1Click:Connect(function()
     if not selectedPlayer or not selectedPlayer.Character then return end
     local targetHrp = selectedPlayer.Character:FindFirstChild("HumanoidRootPart")
@@ -177,7 +177,7 @@ CrushBtn.MouseButton1Click:Connect(function()
         local foundObjects = {}
         
         for _, v in pairs(workspace:GetDescendants()) do
-            if v:IsA("BasePart") and not v.Anchored and v.Size.Magnitude > 1 and v.Size.Magnitude < 35 then
+            if v:IsA("BasePart") and not v.Anchored and v.Size.Magnitude > 1 and v.Size.Magnitude < 40 then
                 local isPlayerPart = false
                 local current = v
                 while current and current ~= workspace do
@@ -186,12 +186,9 @@ CrushBtn.MouseButton1Click:Connect(function()
                 end
                 
                 if not isPlayerPart then
-                    local name = v.Name:lower()
-                    if not name:find("wall") and not name:find("floor") and not name:find("base") then
-                        if v:GetRootPart() == v then
-                            local dist = (v.Position - myHrp.Position).Magnitude
-                            if dist <= 120 then table.insert(foundObjects, {part = v, distance = dist}) end
-                        end
+                    if v:GetRootPart() == v then
+                        local dist = (v.Position - myHrp.Position).Magnitude
+                        if dist <= 150 then table.insert(foundObjects, {part = v, distance = dist}) end
                     end
                 end
             end
@@ -199,22 +196,33 @@ CrushBtn.MouseButton1Click:Connect(function()
         
         table.sort(foundObjects, function(a, b) return a.distance < b.distance end)
         
-        for i = 1, math.min(5, #foundObjects) do
+        for i = 1, math.min(3, #foundObjects) do -- Снизил до 3 для стабильности сети
             local obj = foundObjects[i].part
+            
+            -- 1. ТП И ФИЗИЧЕСКИЙ ЗАХВАТ (Claim Network Ownership)
             myHrp.CFrame = obj.CFrame * CFrame.new(0, 3, 0)
-            obj.AssemblyLinearVelocity = Vector3.zero 
-            task.wait(0.2) 
+            
+            -- Важный цикл: "будим" предмет, чтобы сервер отдал его нам
+            for _ = 1, 5 do
+                obj.AssemblyLinearVelocity = Vector3.new(0, 0.1, 0) 
+                task.wait(0.05)
+            end
             
             if targetHrp.Parent then
-                -- УЛЬТРА-ЛЕГКИЙ ВЕС: Плотность на минимум
                 local oldProps = obj.CustomPhysicalProperties
-                obj.CustomPhysicalProperties = PhysicalProperties.new(0.01, 0.3, 0.5) -- Плотность 0.01
+                obj.CustomPhysicalProperties = PhysicalProperties.new(0.01, 0.3, 0.5)
                 obj.Massless = true 
                 
-                obj.CFrame = targetHrp.CFrame * CFrame.new(0, 15, 0)
-                obj.AssemblyLinearVelocity = Vector3.new(0, -150, 0) 
+                -- 2. ТЕЛЕПОРТАЦИЯ ПРЕДМЕТА
+                obj.CFrame = targetHrp.CFrame * CFrame.new(0, 20, 0)
                 
-                task.delay(0.6, function()
+                -- Резкий импульс вниз, чтобы предмет "закрепился" в новом месте
+                obj.AssemblyLinearVelocity = Vector3.new(0, -250, 0) 
+                
+                -- Задержка ПЕРЕД возвращением персонажа, чтобы сервер подтвердил позицию
+                task.wait(0.15)
+                
+                task.delay(1, function()
                     if obj then 
                         obj.Massless = false
                         obj.CustomPhysicalProperties = oldProps 
@@ -222,9 +230,11 @@ CrushBtn.MouseButton1Click:Connect(function()
                 end)
             end
             
-            local tween = TweenService:Create(myHrp, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CFrame = originalCFrame})
+            -- 3. ВОЗВРАТ
+            local tween = TweenService:Create(myHrp, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CFrame = originalCFrame})
             tween:Play()
             tween.Completed:Wait()
+            task.wait(0.1)
         end
     end
 end)
