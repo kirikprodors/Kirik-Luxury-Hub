@@ -44,7 +44,7 @@ Content.BackgroundTransparency = 1
 Content.Parent = MainFrame
 
 local Title = Instance.new("TextLabel")
-Title.Text = "KIRIK HUB V20"
+Title.Text = "KIRIK HUB V21"
 Title.TextColor3 = Color3.fromRGB(255, 215, 0)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 10
@@ -165,7 +165,7 @@ local function updateList()
     end
 end
 
--- ПРОСТРАНСТВЕННЫЙ ПОИСК БЛИЖАЙШИХ ОБЪЕКТОВ (V20)
+-- ИСПРАВЛЕННЫЙ ПОИСК И ФИЗИКА (V21)
 CrushBtn.MouseButton1Click:Connect(function()
     if not selectedPlayer or not selectedPlayer.Character then return end
     local targetHrp = selectedPlayer.Character:FindFirstChild("HumanoidRootPart")
@@ -175,46 +175,55 @@ CrushBtn.MouseButton1Click:Connect(function()
     if targetHrp and myHrp then
         local originalCFrame = myHrp.CFrame
         local foundObjects = {}
-        local maxDistance = 100 -- Максимальный радиус поиска в стадах
+        local maxDistance = 100 
         
-        -- Сбор всех потенциальных объектов
         for _, v in pairs(workspace:GetDescendants()) do
             if v:IsA("BasePart") and not v.Anchored and v.Size.Magnitude > 2 and v.Size.Magnitude < 30 then
-                local name = v.Name:lower()
-                -- Базовый фильтр декора
-                if not name:find("ufo") and not name:find("saucer") and not name:find("wall") and not name:find("floor") and not name:find("base") and not name:find("house") then
-                    if not v:IsDescendantOf(myChar) and v:GetRootPart() == v then
-                        local dist = (v.Position - myHrp.Position).Magnitude
-                        -- Запись объекта, если он находится в пределах радиуса
-                        if dist <= maxDistance then
-                            table.insert(foundObjects, {part = v, distance = dist})
+                
+                -- Исключаем любые части других игроков
+                local isPlayerPart = false
+                local current = v
+                while current and current ~= workspace do
+                    if current:FindFirstChild("Humanoid") then
+                        isPlayerPart = true
+                        break
+                    end
+                    current = current.Parent
+                end
+                
+                if not isPlayerPart then
+                    local name = v.Name:lower()
+                    if not name:find("ufo") and not name:find("saucer") and not name:find("wall") and not name:find("floor") and not name:find("base") and not name:find("house") then
+                        if v:GetRootPart() == v then
+                            local dist = (v.Position - myHrp.Position).Magnitude
+                            if dist <= maxDistance then
+                                table.insert(foundObjects, {part = v, distance = dist})
+                            end
                         end
                     end
                 end
             end
         end
         
-        -- Сортировка объектов по дистанции (ближайшие первыми)
         table.sort(foundObjects, function(a, b)
             return a.distance < b.distance
         end)
         
-        -- Выбор до 5 ближайших объектов
         local objectsToDrop = {}
         for i = 1, math.min(5, #foundObjects) do
             table.insert(objectsToDrop, foundObjects[i].part)
         end
         
-        -- Выполнение атаки
         for _, obj in pairs(objectsToDrop) do
             -- 1. ТП К ПРЕДМЕТУ
             myHrp.CFrame = obj.CFrame * CFrame.new(0, 2, 0)
-            task.wait(0.12)
+            task.wait(0.15) -- Чуть больше времени на захват сети
             
-            -- 2. КИДАЕМ ПРЕДМЕТ
+            -- 2. КИДАЕМ ПРЕДМЕТ (безопасная физика)
             if targetHrp.Parent then
-                obj.CFrame = targetHrp.CFrame * CFrame.new(0, 30, 0)
-                obj.AssemblyLinearVelocity = Vector3.new(0, -600, 0)
+                -- Уменьшена высота сброса и скорость, чтобы предмет не исчезал под текстурами
+                obj.CFrame = targetHrp.CFrame * CFrame.new(0, 15, 0)
+                obj.AssemblyLinearVelocity = Vector3.new(0, -100, 0) 
             end
             
             -- 3. ПЛАВНЫЙ ВОЗВРАТ
