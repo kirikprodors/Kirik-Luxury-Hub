@@ -1,3 +1,4 @@
+
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "KirikLuxuryHub"
 ScreenGui.Parent = game:GetService("CoreGui")
@@ -11,8 +12,8 @@ local MainFrame = Instance.new("Frame")
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
 MainFrame.BorderSizePixel = 0
-MainFrame.Position = UDim2.new(0.5, -70, 0.5, -115)
-MainFrame.Size = UDim2.new(0, 140, 0, 260)
+MainFrame.Position = UDim2.new(0.5, -70, 0.5, -130)
+MainFrame.Size = UDim2.new(0, 140, 0, 290)
 MainFrame.Active = true
 MainFrame.ClipsDescendants = true
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 8)
@@ -47,7 +48,7 @@ Content.BackgroundTransparency = 1
 Content.Parent = MainFrame
 
 local Title = Instance.new("TextLabel")
-Title.Text = "KIRIK HUB V28"
+Title.Text = "KIRIK HUB V29"
 Title.TextColor3 = Color3.fromRGB(255, 215, 0)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 11
@@ -125,9 +126,20 @@ UltraRunBtn.TextSize = 9
 UltraRunBtn.Parent = Content
 Instance.new("UICorner", UltraRunBtn)
 
+-- NOCLIP
+local NoclipBtn = Instance.new("TextButton")
+NoclipBtn.Size = UDim2.new(0.9, 0, 0, 25)
+NoclipBtn.Position = UDim2.new(0.05, 0, 0, 220)
+NoclipBtn.Text = "NOCLIP: OFF"
+NoclipBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 100)
+NoclipBtn.TextColor3 = Color3.new(1, 1, 1)
+NoclipBtn.TextSize = 9
+NoclipBtn.Parent = Content
+Instance.new("UICorner", NoclipBtn)
+
 local UnviewBtn = Instance.new("TextButton")
 UnviewBtn.Size = UDim2.new(0.9, 0, 0, 18)
-UnviewBtn.Position = UDim2.new(0.05, 0, 0, 220)
+UnviewBtn.Position = UDim2.new(0.05, 0, 0, 250)
 UnviewBtn.Text = "RESET CAMERA (UNVIEW)"
 UnviewBtn.BackgroundColor3 = Color3.fromRGB(0, 80, 150)
 UnviewBtn.TextColor3 = Color3.new(1, 1, 1)
@@ -135,7 +147,7 @@ UnviewBtn.TextSize = 8
 UnviewBtn.Parent = Content
 Instance.new("UICorner", UnviewBtn)
 
--- ЛОГИКА V28
+-- ЛОГИКА V29
 local listMode = "TP"
 local selectedPlayer = nil
 
@@ -229,7 +241,7 @@ task.spawn(function()
     end
 end)
 
--- ULTRA RUN ЛОГИКА V28 (Анимация на максималках, скорость обычная)
+-- ULTRA RUN ЛОГИКА
 local ultraRunActive = false
 UltraRunBtn.MouseButton1Click:Connect(function()
     ultraRunActive = not ultraRunActive
@@ -240,7 +252,7 @@ UltraRunBtn.MouseButton1Click:Connect(function()
     local hum = char and char:FindFirstChild("Humanoid")
     if hum and not ultraRunActive then
         for _, track in pairs(hum:GetPlayingAnimationTracks()) do
-            track:AdjustSpeed(1) -- Сброс скорости анимаций
+            track:AdjustSpeed(1)
         end
     end
 end)
@@ -250,13 +262,33 @@ RunService.RenderStepped:Connect(function()
         local char = game.Players.LocalPlayer.Character
         local hum = char and char:FindFirstChild("Humanoid")
         if hum then
-            hum.WalkSpeed = 16 -- Удерживаем обычную скорость перемещения
-            -- Перехватываем анимации и ускоряем их
+            hum.WalkSpeed = 16
             for _, track in pairs(hum:GetPlayingAnimationTracks()) do
                 if hum.MoveDirection.Magnitude > 0 then
-                    track:AdjustSpeed(50) -- Безумная скорость перебирания ногами
+                    track:AdjustSpeed(50)
                 else
-                    track:AdjustSpeed(1) -- Обычная анимация простоя
+                    track:AdjustSpeed(1)
+                end
+            end
+        end
+    end
+end)
+
+-- NOCLIP ЛОГИКА
+local noclipActive = false
+NoclipBtn.MouseButton1Click:Connect(function()
+    noclipActive = not noclipActive
+    NoclipBtn.Text = noclipActive and "NOCLIP: ON" or "NOCLIP: OFF"
+    NoclipBtn.BackgroundColor3 = noclipActive and Color3.fromRGB(0, 180, 180) or Color3.fromRGB(0, 100, 100)
+end)
+
+RunService.Stepped:Connect(function()
+    if noclipActive then
+        local char = game.Players.LocalPlayer.Character
+        if char then
+            for _, part in pairs(char:GetDescendants()) do
+                if part:IsA("BasePart") and part.CanCollide then
+                    part.CanCollide = false
                 end
             end
         end
