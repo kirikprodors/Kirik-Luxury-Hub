@@ -186,7 +186,7 @@ UnviewBtn.TextSize = 8
 UnviewBtn.Parent = Content
 Instance.new("UICorner", UnviewBtn)
 
--- TRUE HEADLESS ЛОГИКА (ИСПРАВЛЕНО)
+-- TRUE HEADLESS ЛОГИКА (ОБНОВЛЕНО ДЛЯ FE)
 local HeadlessBtn = Instance.new("TextButton")
 HeadlessBtn.Size = UDim2.new(0.9, 0, 0, 16)
 HeadlessBtn.Position = UDim2.new(0.05, 0, 0, 224)
@@ -371,7 +371,7 @@ task.spawn(function()
     end
 end)
 
--- TRUE HEADLESS ЛОГИКА (ОБНОВЛЕНО С ЗАДЕРЖКОЙ И MASSLESS)
+-- TRUE HEADLESS ЛОГИКА (ОБНОВЛЕНО ДЛЯ FE СНЯТИЕМ ЯКОРЯ)
 HeadlessBtn.MouseButton1Click:Connect(function()
     local char = LocalPlayer.Character
     local hum = char and char:FindFirstChild("Humanoid")
@@ -380,19 +380,25 @@ HeadlessBtn.MouseButton1Click:Connect(function()
     if hum and head then
         hum.RequiresNeck = false
         
+        -- Удаление Mesh и Face (высокий шанс серверной репликации видимости)
+        for _, v in pairs(head:GetChildren()) do
+            if v:IsA("SpecialMesh") or v:IsA("Decal") then
+                v:Destroy()
+            end
+        end
+        
         for _, v in pairs(char:GetDescendants()) do
             if v:IsA("Motor6D") and v.Part1 == head then
                 v:Destroy()
             end
         end
         
-        -- Ждем, чтобы движок успел обработать удаление крепления
         task.wait(0.1)
         
         head.Massless = true
         head.CanCollide = false
-        head.CFrame = CFrame.new(0, 9999, 0)
-        head.Anchored = true
+        head.Anchored = false -- Важно для Network Ownership
+        head.Transparency = 1
         
         HeadlessBtn.Text = "HEADLESS APPLIED"
         HeadlessBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
