@@ -14,7 +14,7 @@ MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
 MainFrame.BorderSizePixel = 0
 MainFrame.Position = UDim2.new(0.5, -62, 0.5, -120)
-MainFrame.Size = UDim2.new(0, 125, 0, 270) -- Увеличил высоту для новых кнопок
+MainFrame.Size = UDim2.new(0, 125, 0, 270)
 MainFrame.Active = true
 MainFrame.ClipsDescendants = true
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 6)
@@ -371,21 +371,29 @@ task.spawn(function()
     end
 end)
 
--- TRUE HEADLESS ЛОГИКА
+-- TRUE HEADLESS ЛОГИКА (ИСПРАВЛЕНО)
 HeadlessBtn.MouseButton1Click:Connect(function()
     local char = LocalPlayer.Character
     local hum = char and char:FindFirstChild("Humanoid")
     local head = char and char:FindFirstChild("Head")
-    if hum and head then
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    
+    if hum and head and hrp then
+        local currentPosition = hrp.CFrame
         hum.RequiresNeck = false
-        head.CFrame = CFrame.new(0, 9999, 0)
+        
         for _, v in pairs(char:GetDescendants()) do
             if v:IsA("Motor6D") and v.Part1 == head then
                 v:Destroy()
             end
         end
+        
+        head.CFrame = CFrame.new(0, 9999, 0)
         head.CanCollide = false
         head.Anchored = true
+        
+        hrp.CFrame = currentPosition
+        
         HeadlessBtn.Text = "HEADLESS APPLIED"
         HeadlessBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
     end
@@ -453,7 +461,7 @@ local function ForceCleanup()
     ultraRunActive = false
     noclipActive = false
     infStabActive = false
-    spinActive = false -- Добавлена остановка Spin Bot
+    spinActive = false
     
     for _, p in pairs(Players:GetPlayers()) do
         if p.Character and p.Character:FindFirstChild("LuxuryESP") then 
