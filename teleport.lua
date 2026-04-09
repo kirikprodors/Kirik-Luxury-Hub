@@ -186,16 +186,16 @@ UnviewBtn.TextSize = 8
 UnviewBtn.Parent = Content
 Instance.new("UICorner", UnviewBtn)
 
--- TRUE HEADLESS ЛОГИКА (ОБНОВЛЕНО ДЛЯ FE)
-local HeadlessBtn = Instance.new("TextButton")
-HeadlessBtn.Size = UDim2.new(0.9, 0, 0, 16)
-HeadlessBtn.Position = UDim2.new(0.05, 0, 0, 224)
-HeadlessBtn.Text = "TRUE HEADLESS"
-HeadlessBtn.BackgroundColor3 = Color3.fromRGB(120, 0, 0)
-HeadlessBtn.TextColor3 = Color3.new(1, 1, 1)
-HeadlessBtn.TextSize = 8
-HeadlessBtn.Parent = Content
-Instance.new("UICorner", HeadlessBtn)
+-- FLY ЛОГИКА (Вместо Headless)
+local FlyBtn = Instance.new("TextButton")
+FlyBtn.Size = UDim2.new(0.9, 0, 0, 16)
+FlyBtn.Position = UDim2.new(0.05, 0, 0, 224)
+FlyBtn.Text = "FLY: OFF"
+FlyBtn.BackgroundColor3 = Color3.fromRGB(120, 0, 120)
+FlyBtn.TextColor3 = Color3.new(1, 1, 1)
+FlyBtn.TextSize = 8
+FlyBtn.Parent = Content
+Instance.new("UICorner", FlyBtn)
 
 -- SPIN BOT & SPEED 
 local SpinBtn = Instance.new("TextButton")
@@ -371,37 +371,57 @@ task.spawn(function()
     end
 end)
 
--- TRUE HEADLESS ЛОГИКА (ОБНОВЛЕНО ДЛЯ FE СНЯТИЕМ ЯКОРЯ)
-HeadlessBtn.MouseButton1Click:Connect(function()
-    local char = LocalPlayer.Character
-    local hum = char and char:FindFirstChild("Humanoid")
-    local head = char and char:FindFirstChild("Head")
+-- ФУНКЦИОНАЛ FLY
+local flying = false
+local flySpeed = 50
+local flyConn
+
+FlyBtn.MouseButton1Click:Connect(function()
+    flying = not flying
+    FlyBtn.Text = flying and "FLY: ON" or "FLY: OFF"
+    FlyBtn.BackgroundColor3 = flying and Color3.fromRGB(180, 0, 180) or Color3.fromRGB(120, 0, 120)
     
-    if hum and head then
-        hum.RequiresNeck = false
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    local hum = char and char:FindFirstChild("Humanoid")
+    
+    if not hrp or not hum then return end
+    
+    if flying then
+        local bv = Instance.new("BodyVelocity", hrp)
+        bv.Name = "FlyBV"
+        bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
         
-        -- Удаление Mesh и Face (высокий шанс серверной репликации видимости)
-        for _, v in pairs(head:GetChildren()) do
-            if v:IsA("SpecialMesh") or v:IsA("Decal") then
-                v:Destroy()
+        local bg = Instance.new("BodyGyro", hrp)
+        bg.Name = "FlyBG"
+        bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+        bg.P = 9e4
+        
+        hum.PlatformStand = true
+        
+        flyConn = RunService.RenderStepped:Connect(function()
+            local cam = workspace.CurrentCamera
+            bg.CFrame = cam.CFrame
+            
+            local v = Vector3.zero
+            if UIS:IsKeyDown(Enum.KeyCode.W) then v = v + cam.CFrame.LookVector end
+            if UIS:IsKeyDown(Enum.KeyCode.S) then v = v - cam.CFrame.LookVector end
+            if UIS:IsKeyDown(Enum.KeyCode.A) then v = v - cam.CFrame.RightVector end
+            if UIS:IsKeyDown(Enum.KeyCode.D) then v = v + cam.CFrame.RightVector end
+            if UIS:IsKeyDown(Enum.KeyCode.Space) then v = v + Vector3.new(0, 1, 0) end
+            if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then v = v - Vector3.new(0, 1, 0) end
+            
+            if v.Magnitude > 0 then 
+                bv.Velocity = v.Unit * flySpeed 
+            else 
+                bv.Velocity = Vector3.zero 
             end
-        end
-        
-        for _, v in pairs(char:GetDescendants()) do
-            if v:IsA("Motor6D") and v.Part1 == head then
-                v:Destroy()
-            end
-        end
-        
-        task.wait(0.1)
-        
-        head.Massless = true
-        head.CanCollide = false
-        head.Anchored = false -- Важно для Network Ownership
-        head.Transparency = 1
-        
-        HeadlessBtn.Text = "HEADLESS APPLIED"
-        HeadlessBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+        end)
+    else
+        if hrp:FindFirstChild("FlyBV") then hrp.FlyBV:Destroy() end
+        if hrp:FindFirstChild("FlyBG") then hrp.FlyBG:Destroy() end
+        hum.PlatformStand = false
+        if flyConn then flyConn:Disconnect() end
     end
 end)
 
@@ -468,6 +488,7 @@ local function ForceCleanup()
     noclipActive = false
     infStabActive = false
     spinActive = false
+    flying = false
     
     for _, p in pairs(Players:GetPlayers()) do
         if p.Character and p.Character:FindFirstChild("LuxuryESP") then 
@@ -475,8 +496,19 @@ local function ForceCleanup()
         end
     end
     
-    local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
+    local char = LocalPlayer.Character
+    local hum = char and char:FindFirstChild("Humanoid")
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    
+    if hrp then
+        if hrp:FindFirstChild("FlyBV") then hrp.FlyBV:Destroy() end
+        if hrp:FindFirstChild("FlyBG") then hrp.FlyBG:Destroy() end
+    end
+    
+    if flyConn then flyConn:Disconnect() end
+    
     if hum then 
+        hum.PlatformStand = false
         hum.WalkSpeed = 16
         for _, track in pairs(hum:GetPlayingAnimationTracks()) do track:AdjustSpeed(1) end 
         workspace.CurrentCamera.CameraSubject = hum
