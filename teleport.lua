@@ -186,7 +186,7 @@ UnviewBtn.TextSize = 8
 UnviewBtn.Parent = Content
 Instance.new("UICorner", UnviewBtn)
 
--- TRUE HEADLESS (НОВОЕ)
+-- TRUE HEADLESS ЛОГИКА (ИСПРАВЛЕНО)
 local HeadlessBtn = Instance.new("TextButton")
 HeadlessBtn.Size = UDim2.new(0.9, 0, 0, 16)
 HeadlessBtn.Position = UDim2.new(0.05, 0, 0, 224)
@@ -197,7 +197,7 @@ HeadlessBtn.TextSize = 8
 HeadlessBtn.Parent = Content
 Instance.new("UICorner", HeadlessBtn)
 
--- SPIN BOT & SPEED (НОВОЕ)
+-- SPIN BOT & SPEED 
 local SpinBtn = Instance.new("TextButton")
 SpinBtn.Size = UDim2.new(0.55, 0, 0, 16)
 SpinBtn.Position = UDim2.new(0.05, 0, 0, 244)
@@ -371,15 +371,13 @@ task.spawn(function()
     end
 end)
 
--- TRUE HEADLESS ЛОГИКА (ИСПРАВЛЕНО)
+-- TRUE HEADLESS ЛОГИКА (ОБНОВЛЕНО С ЗАДЕРЖКОЙ И MASSLESS)
 HeadlessBtn.MouseButton1Click:Connect(function()
     local char = LocalPlayer.Character
     local hum = char and char:FindFirstChild("Humanoid")
     local head = char and char:FindFirstChild("Head")
-    local hrp = char and char:FindFirstChild("HumanoidRootPart")
     
-    if hum and head and hrp then
-        local currentPosition = hrp.CFrame
+    if hum and head then
         hum.RequiresNeck = false
         
         for _, v in pairs(char:GetDescendants()) do
@@ -388,11 +386,13 @@ HeadlessBtn.MouseButton1Click:Connect(function()
             end
         end
         
-        head.CFrame = CFrame.new(0, 9999, 0)
-        head.CanCollide = false
-        head.Anchored = true
+        -- Ждем, чтобы движок успел обработать удаление крепления
+        task.wait(0.1)
         
-        hrp.CFrame = currentPosition
+        head.Massless = true
+        head.CanCollide = false
+        head.CFrame = CFrame.new(0, 9999, 0)
+        head.Anchored = true
         
         HeadlessBtn.Text = "HEADLESS APPLIED"
         HeadlessBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
