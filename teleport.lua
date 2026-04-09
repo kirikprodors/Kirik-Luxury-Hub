@@ -57,7 +57,7 @@ Content.BackgroundTransparency = 1
 Content.Parent = MainFrame
 
 local Title = Instance.new("TextLabel")
-Title.Text = "KIRIK HUB V31"
+Title.Text = "KIRIK HUB V32"
 Title.TextColor3 = Color3.fromRGB(255, 215, 0)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 10
@@ -89,7 +89,7 @@ MinBtn.MouseButton1Click:Connect(function()
     minimized = not minimized
     Content.Visible = not minimized
     MinBtn.Text = minimized and "+" or "-"
-    Title.Text = minimized and "Cheat Hub" or "KIRIK HUB V31"
+    Title.Text = minimized and "Cheat Hub" or "KIRIK HUB V32"
     MainFrame.Size = minimized and UDim2.new(0, 125, 0, 25) or UDim2.new(0, 125, 0, 270)
 end)
 
@@ -186,7 +186,7 @@ UnviewBtn.TextSize = 8
 UnviewBtn.Parent = Content
 Instance.new("UICorner", UnviewBtn)
 
--- FLY ЛОГИКА (Вместо Headless)
+-- FLY ЛОГИКА
 local FlyBtn = Instance.new("TextButton")
 FlyBtn.Size = UDim2.new(0.9, 0, 0, 16)
 FlyBtn.Position = UDim2.new(0.05, 0, 0, 224)
@@ -196,6 +196,43 @@ FlyBtn.TextColor3 = Color3.new(1, 1, 1)
 FlyBtn.TextSize = 8
 FlyBtn.Parent = Content
 Instance.new("UICorner", FlyBtn)
+
+-- МОБИЛЬНЫЕ КНОПКИ ДЛЯ FLY
+local FlyUI = Instance.new("Frame")
+FlyUI.Size = UDim2.new(0, 60, 0, 130)
+FlyUI.Position = UDim2.new(1, -80, 0.5, -65)
+FlyUI.BackgroundTransparency = 1
+FlyUI.Visible = false
+FlyUI.Parent = ScreenGui
+
+local FlyUpBtn = Instance.new("TextButton")
+FlyUpBtn.Size = UDim2.new(1, 0, 0.45, 0)
+FlyUpBtn.Text = "UP"
+FlyUpBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 255)
+FlyUpBtn.BackgroundTransparency = 0.5
+FlyUpBtn.TextColor3 = Color3.new(1, 1, 1)
+FlyUpBtn.TextSize = 12
+FlyUpBtn.Font = Enum.Font.GothamBold
+FlyUpBtn.Parent = FlyUI
+Instance.new("UICorner", FlyUpBtn)
+
+local FlyDownBtn = Instance.new("TextButton")
+FlyDownBtn.Size = UDim2.new(1, 0, 0.45, 0)
+FlyDownBtn.Position = UDim2.new(0, 0, 0.55, 0)
+FlyDownBtn.Text = "DOWN"
+FlyDownBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 255)
+FlyDownBtn.BackgroundTransparency = 0.5
+FlyDownBtn.TextColor3 = Color3.new(1, 1, 1)
+FlyDownBtn.TextSize = 12
+FlyDownBtn.Font = Enum.Font.GothamBold
+FlyDownBtn.Parent = FlyUI
+Instance.new("UICorner", FlyDownBtn)
+
+local upPressed, downPressed = false, false
+FlyUpBtn.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.Touch or i.UserInputType == Enum.UserInputType.MouseButton1 then upPressed = true end end)
+FlyUpBtn.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.Touch or i.UserInputType == Enum.UserInputType.MouseButton1 then upPressed = false end end)
+FlyDownBtn.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.Touch or i.UserInputType == Enum.UserInputType.MouseButton1 then downPressed = true end end)
+FlyDownBtn.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.Touch or i.UserInputType == Enum.UserInputType.MouseButton1 then downPressed = false end end)
 
 -- SPIN BOT & SPEED 
 local SpinBtn = Instance.new("TextButton")
@@ -371,7 +408,7 @@ task.spawn(function()
     end
 end)
 
--- ФУНКЦИОНАЛ FLY
+-- ФУНКЦИОНАЛ FLY (ОБНОВЛЕН ДЛЯ ТЕЛЕФОНА)
 local flying = false
 local flySpeed = 50
 local flyConn
@@ -380,6 +417,7 @@ FlyBtn.MouseButton1Click:Connect(function()
     flying = not flying
     FlyBtn.Text = flying and "FLY: ON" or "FLY: OFF"
     FlyBtn.BackgroundColor3 = flying and Color3.fromRGB(180, 0, 180) or Color3.fromRGB(120, 0, 120)
+    FlyUI.Visible = flying
     
     local char = LocalPlayer.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
@@ -403,19 +441,15 @@ FlyBtn.MouseButton1Click:Connect(function()
             local cam = workspace.CurrentCamera
             bg.CFrame = cam.CFrame
             
-            local v = Vector3.zero
-            if UIS:IsKeyDown(Enum.KeyCode.W) then v = v + cam.CFrame.LookVector end
-            if UIS:IsKeyDown(Enum.KeyCode.S) then v = v - cam.CFrame.LookVector end
-            if UIS:IsKeyDown(Enum.KeyCode.A) then v = v - cam.CFrame.RightVector end
-            if UIS:IsKeyDown(Enum.KeyCode.D) then v = v + cam.CFrame.RightVector end
-            if UIS:IsKeyDown(Enum.KeyCode.Space) then v = v + Vector3.new(0, 1, 0) end
-            if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then v = v - Vector3.new(0, 1, 0) end
+            -- MoveDirection отвечает за WASD на ПК и джойстик на мобилках
+            local moveVector = hum.MoveDirection
+            local v = moveVector * flySpeed
             
-            if v.Magnitude > 0 then 
-                bv.Velocity = v.Unit * flySpeed 
-            else 
-                bv.Velocity = Vector3.zero 
-            end
+            local yMove = 0
+            if UIS:IsKeyDown(Enum.KeyCode.Space) or upPressed then yMove = yMove + flySpeed end
+            if UIS:IsKeyDown(Enum.KeyCode.LeftControl) or downPressed then yMove = yMove - flySpeed end
+            
+            bv.Velocity = Vector3.new(v.X, yMove, v.Z)
         end)
     else
         if hrp:FindFirstChild("FlyBV") then hrp.FlyBV:Destroy() end
@@ -489,6 +523,7 @@ local function ForceCleanup()
     infStabActive = false
     spinActive = false
     flying = false
+    FlyUI.Visible = false
     
     for _, p in pairs(Players:GetPlayers()) do
         if p.Character and p.Character:FindFirstChild("LuxuryESP") then 
