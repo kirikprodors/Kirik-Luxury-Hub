@@ -188,7 +188,7 @@ Instance.new("UICorner", UnviewBtn)
 
 -- FLY ЛОГИКА
 local FlyBtn = Instance.new("TextButton")
-FlyBtn.Size = UDim2.new(0.9, 0, 0, 16)
+FlyBtn.Size = UDim2.new(0.55, 0, 0, 16)
 FlyBtn.Position = UDim2.new(0.05, 0, 0, 224)
 FlyBtn.Text = "FLY: OFF"
 FlyBtn.BackgroundColor3 = Color3.fromRGB(120, 0, 120)
@@ -196,6 +196,17 @@ FlyBtn.TextColor3 = Color3.new(1, 1, 1)
 FlyBtn.TextSize = 8
 FlyBtn.Parent = Content
 Instance.new("UICorner", FlyBtn)
+
+local FlySpeedBox = Instance.new("TextBox")
+FlySpeedBox.Size = UDim2.new(0.3, 0, 0, 16)
+FlySpeedBox.Position = UDim2.new(0.65, 0, 0, 224)
+FlySpeedBox.Text = "50"
+FlySpeedBox.PlaceholderText = "Spd"
+FlySpeedBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+FlySpeedBox.TextColor3 = Color3.new(1, 1, 1)
+FlySpeedBox.TextSize = 8
+FlySpeedBox.Parent = Content
+Instance.new("UICorner", FlySpeedBox)
 
 -- МОБИЛЬНЫЕ КНОПКИ ДЛЯ FLY
 local FlyUI = Instance.new("Frame")
@@ -408,9 +419,8 @@ task.spawn(function()
     end
 end)
 
--- ФУНКЦИОНАЛ FLY (ОБНОВЛЕН ДЛЯ ТЕЛЕФОНА)
+-- ФУНКЦИОНАЛ FLY
 local flying = false
-local flySpeed = 50
 local flyConn
 
 FlyBtn.MouseButton1Click:Connect(function()
@@ -428,11 +438,11 @@ FlyBtn.MouseButton1Click:Connect(function()
     if flying then
         local bv = Instance.new("BodyVelocity", hrp)
         bv.Name = "FlyBV"
-        bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+        bv.MaxForce = Vector3.new(9e9, 9e9, 9e9) 
         
         local bg = Instance.new("BodyGyro", hrp)
         bg.Name = "FlyBG"
-        bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+        bg.MaxTorque = Vector3.new(9e9, 9e9, 9e9) 
         bg.P = 9e4
         
         hum.PlatformStand = true
@@ -441,13 +451,13 @@ FlyBtn.MouseButton1Click:Connect(function()
             local cam = workspace.CurrentCamera
             bg.CFrame = cam.CFrame
             
-            -- MoveDirection отвечает за WASD на ПК и джойстик на мобилках
+            local currentFlySpeed = tonumber(FlySpeedBox.Text) or 50
             local moveVector = hum.MoveDirection
-            local v = moveVector * flySpeed
+            local v = moveVector * currentFlySpeed
             
             local yMove = 0
-            if UIS:IsKeyDown(Enum.KeyCode.Space) or upPressed then yMove = yMove + flySpeed end
-            if UIS:IsKeyDown(Enum.KeyCode.LeftControl) or downPressed then yMove = yMove - flySpeed end
+            if UIS:IsKeyDown(Enum.KeyCode.Space) or upPressed then yMove = yMove + currentFlySpeed end
+            if UIS:IsKeyDown(Enum.KeyCode.LeftControl) or downPressed then yMove = yMove - currentFlySpeed end
             
             bv.Velocity = Vector3.new(v.X, yMove, v.Z)
         end)
