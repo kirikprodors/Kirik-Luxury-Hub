@@ -14,7 +14,7 @@ MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
 MainFrame.BorderSizePixel = 0
 MainFrame.Position = UDim2.new(0.5, -62, 0.5, -120)
-MainFrame.Size = UDim2.new(0, 125, 0, 290)
+MainFrame.Size = UDim2.new(0, 125, 0, 310)
 MainFrame.Active = true
 MainFrame.ClipsDescendants = true
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 6)
@@ -22,7 +22,7 @@ local Stroke = Instance.new("UIStroke", MainFrame)
 Stroke.Color = Color3.fromRGB(0, 255, 255)
 Stroke.Thickness = 2
 
--- ИСПРАВЛЕННЫЙ DRAG (без багов при ходьбе)
+-- ИСПРАВЛЕННЫЙ DRAG
 local DragHandle = Instance.new("Frame")
 DragHandle.Size = UDim2.new(1, -40, 0, 25)
 DragHandle.BackgroundTransparency = 1
@@ -90,7 +90,7 @@ MinBtn.MouseButton1Click:Connect(function()
     Content.Visible = not minimized
     MinBtn.Text = minimized and "+" or "-"
     Title.Text = minimized and "Cheat Hub" or "KIRIK HUB V32"
-    MainFrame.Size = minimized and UDim2.new(0, 125, 0, 25) or UDim2.new(0, 125, 0, 290)
+    MainFrame.Size = minimized and UDim2.new(0, 125, 0, 25) or UDim2.new(0, 125, 0, 310)
 end)
 
 -- ESP & MODE
@@ -245,7 +245,7 @@ FlyUpBtn.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType
 FlyDownBtn.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.Touch or i.UserInputType == Enum.UserInputType.MouseButton1 then downPressed = true end end)
 FlyDownBtn.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.Touch or i.UserInputType == Enum.UserInputType.MouseButton1 then downPressed = false end end)
 
--- SPIN BOT & SPEED 
+-- SPIN BOT
 local SpinBtn = Instance.new("TextButton")
 SpinBtn.Size = UDim2.new(0.55, 0, 0, 16)
 SpinBtn.Position = UDim2.new(0.05, 0, 0, 244)
@@ -288,6 +288,40 @@ CFrameSpeedBox.TextColor3 = Color3.new(1, 1, 1)
 CFrameSpeedBox.TextSize = 8
 CFrameSpeedBox.Parent = Content
 Instance.new("UICorner", CFrameSpeedBox)
+
+-- ПЛАТФОРМА (AIR WALK)
+local PlatformBtn = Instance.new("TextButton")
+PlatformBtn.Size = UDim2.new(0.9, 0, 0, 16)
+PlatformBtn.Position = UDim2.new(0.05, 0, 0, 284)
+PlatformBtn.Text = "PLATFORM: OFF"
+PlatformBtn.BackgroundColor3 = Color3.fromRGB(0, 80, 120)
+PlatformBtn.TextColor3 = Color3.new(1, 1, 1)
+PlatformBtn.TextSize = 8
+PlatformBtn.Parent = Content
+Instance.new("UICorner", PlatformBtn)
+
+-- UI ДЛЯ ПЛАТФОРМЫ (КНОПКА ВНИЗ)
+local PlatUI = Instance.new("Frame")
+PlatUI.Size = UDim2.new(0, 60, 0, 60)
+PlatUI.Position = UDim2.new(1, -80, 0.5, 0)
+PlatUI.BackgroundTransparency = 1
+PlatUI.Visible = false
+PlatUI.Parent = ScreenGui
+
+local PlatDownBtn = Instance.new("TextButton")
+PlatDownBtn.Size = UDim2.new(1, 0, 1, 0)
+PlatDownBtn.Text = "DOWN"
+PlatDownBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 255)
+PlatDownBtn.BackgroundTransparency = 0.5
+PlatDownBtn.TextColor3 = Color3.new(1, 1, 1)
+PlatDownBtn.TextSize = 12
+PlatDownBtn.Font = Enum.Font.GothamBold
+PlatDownBtn.Parent = PlatUI
+Instance.new("UICorner", PlatDownBtn)
+
+local platDownPressed = false
+PlatDownBtn.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.Touch or i.UserInputType == Enum.UserInputType.MouseButton1 then platDownPressed = true end end)
+PlatDownBtn.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.Touch or i.UserInputType == Enum.UserInputType.MouseButton1 then platDownPressed = false end end)
 
 -- ЛОГИКА СПИСКОВ & TP PART
 local listMode = "TP"
@@ -530,6 +564,53 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
+-- ЛОГИКА ПЛАТФОРМЫ
+local platActive = false
+local platPart = nil
+local platConn = nil
+
+PlatformBtn.MouseButton1Click:Connect(function()
+    platActive = not platActive
+    PlatformBtn.Text = platActive and "PLATFORM: ON" or "PLATFORM: OFF"
+    PlatformBtn.BackgroundColor3 = platActive and Color3.fromRGB(0, 150, 200) or Color3.fromRGB(0, 80, 120)
+    PlatUI.Visible = platActive
+
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+
+    if platActive and hrp then
+        platPart = Instance.new("Part")
+        platPart.Size = Vector3.new(6, 1, 6)
+        platPart.Anchored = true
+        platPart.CanCollide = true
+        platPart.Transparency = 1 
+        platPart.Parent = workspace
+
+        local currentY = hrp.Position.Y - 3.5
+        
+        platConn = RunService.RenderStepped:Connect(function()
+            local cChar = LocalPlayer.Character
+            local cHrp = cChar and cChar:FindFirstChild("HumanoidRootPart")
+            if not cHrp then return end
+            
+            -- Проверка прыжка (поднятие)
+            if cHrp.Position.Y - 3.5 > currentY then
+                currentY = cHrp.Position.Y - 3.5
+            end
+            
+            -- Спуск вниз
+            if platDownPressed or UIS:IsKeyDown(Enum.KeyCode.LeftControl) then
+                currentY = currentY - 1
+            end
+            
+            platPart.CFrame = CFrame.new(cHrp.Position.X, currentY, cHrp.Position.Z)
+        end)
+    else
+        if platPart then platPart:Destroy() end
+        if platConn then platConn:Disconnect() end
+    end
+end)
+
 -- ULTRA RUN & NOCLIP
 local ultraRunActive = false
 UltraRunBtn.MouseButton1Click:Connect(function()
@@ -576,7 +657,10 @@ local function ForceCleanup()
     spinActive = false
     cfSpeedActive = false
     flying = false
+    platActive = false
+    
     FlyUI.Visible = false
+    PlatUI.Visible = false
     
     for _, p in pairs(Players:GetPlayers()) do
         if p.Character and p.Character:FindFirstChild("LuxuryESP") then 
@@ -594,6 +678,8 @@ local function ForceCleanup()
     end
     
     if flyConn then flyConn:Disconnect() end
+    if platPart then platPart:Destroy() end
+    if platConn then platConn:Disconnect() end
     
     if hum then 
         hum.PlatformStand = false
@@ -603,10 +689,32 @@ local function ForceCleanup()
     end
 end
 
--- AFK ЗАЩИТА (30 СЕКУНД)
+-- AFK ЗАЩИТА ТОЛЬКО ПО ВЗАИМОДЕЙСТВИЮ С ХАБОМ (30 СЕКУНД)
 local lastActive = tick()
-UIS.InputBegan:Connect(function() lastActive = tick() end)
-UIS.InputChanged:Connect(function() lastActive = tick() end)
+
+local function checkUIInteraction(input)
+    local pos = input.Position
+    local framesToCheck = {MainFrame}
+    if FlyUI.Visible then table.insert(framesToCheck, FlyUI) end
+    if PlatUI.Visible then table.insert(framesToCheck, PlatUI) end
+    
+    for _, frame in ipairs(framesToCheck) do
+        local ax = frame.AbsolutePosition.X
+        local ay = frame.AbsolutePosition.Y
+        local sx = frame.AbsoluteSize.X
+        local sy = frame.AbsoluteSize.Y
+        if pos.X >= ax and pos.X <= ax + sx and pos.Y >= ay and pos.Y <= ay + sy then
+            lastActive = tick()
+        end
+    end
+end
+
+UIS.InputBegan:Connect(checkUIInteraction)
+UIS.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        checkUIInteraction(input)
+    end
+end)
 
 task.spawn(function()
     while task.wait(1) do
