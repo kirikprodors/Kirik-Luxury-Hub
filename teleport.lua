@@ -14,7 +14,7 @@ MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
 MainFrame.BorderSizePixel = 0
 MainFrame.Position = UDim2.new(0.5, -62, 0.5, -120)
-MainFrame.Size = UDim2.new(0, 125, 0, 270)
+MainFrame.Size = UDim2.new(0, 125, 0, 290)
 MainFrame.Active = true
 MainFrame.ClipsDescendants = true
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 6)
@@ -90,7 +90,7 @@ MinBtn.MouseButton1Click:Connect(function()
     Content.Visible = not minimized
     MinBtn.Text = minimized and "+" or "-"
     Title.Text = minimized and "Cheat Hub" or "KIRIK HUB V32"
-    MainFrame.Size = minimized and UDim2.new(0, 125, 0, 25) or UDim2.new(0, 125, 0, 270)
+    MainFrame.Size = minimized and UDim2.new(0, 125, 0, 25) or UDim2.new(0, 125, 0, 290)
 end)
 
 -- ESP & MODE
@@ -266,6 +266,28 @@ SpinBox.TextColor3 = Color3.new(1, 1, 1)
 SpinBox.TextSize = 8
 SpinBox.Parent = Content
 Instance.new("UICorner", SpinBox)
+
+-- CFRAME SPEED 
+local CFrameSpeedBtn = Instance.new("TextButton")
+CFrameSpeedBtn.Size = UDim2.new(0.55, 0, 0, 16)
+CFrameSpeedBtn.Position = UDim2.new(0.05, 0, 0, 264)
+CFrameSpeedBtn.Text = "CF SPD: OFF"
+CFrameSpeedBtn.BackgroundColor3 = Color3.fromRGB(150, 80, 0)
+CFrameSpeedBtn.TextColor3 = Color3.new(1, 1, 1)
+CFrameSpeedBtn.TextSize = 8
+CFrameSpeedBtn.Parent = Content
+Instance.new("UICorner", CFrameSpeedBtn)
+
+local CFrameSpeedBox = Instance.new("TextBox")
+CFrameSpeedBox.Size = UDim2.new(0.3, 0, 0, 16)
+CFrameSpeedBox.Position = UDim2.new(0.65, 0, 0, 264)
+CFrameSpeedBox.Text = "2"
+CFrameSpeedBox.PlaceholderText = "Spd"
+CFrameSpeedBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+CFrameSpeedBox.TextColor3 = Color3.new(1, 1, 1)
+CFrameSpeedBox.TextSize = 8
+CFrameSpeedBox.Parent = Content
+Instance.new("UICorner", CFrameSpeedBox)
 
 -- ЛОГИКА СПИСКОВ & TP PART
 local listMode = "TP"
@@ -488,6 +510,26 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
+-- CFRAME SPEED ЛОГИКА
+local cfSpeedActive = false
+CFrameSpeedBtn.MouseButton1Click:Connect(function()
+    cfSpeedActive = not cfSpeedActive
+    CFrameSpeedBtn.Text = cfSpeedActive and "CF SPD: ON" or "CF SPD: OFF"
+    CFrameSpeedBtn.BackgroundColor3 = cfSpeedActive and Color3.fromRGB(200, 100, 0) or Color3.fromRGB(150, 80, 0)
+end)
+
+RunService.RenderStepped:Connect(function()
+    if cfSpeedActive then
+        local char = LocalPlayer.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        local hum = char and char:FindFirstChild("Humanoid")
+        if hrp and hum and hum.MoveDirection.Magnitude > 0 then
+            local speed = tonumber(CFrameSpeedBox.Text) or 2
+            hrp.CFrame = hrp.CFrame + (hum.MoveDirection * speed)
+        end
+    end
+end)
+
 -- ULTRA RUN & NOCLIP
 local ultraRunActive = false
 UltraRunBtn.MouseButton1Click:Connect(function()
@@ -532,6 +574,7 @@ local function ForceCleanup()
     noclipActive = false
     infStabActive = false
     spinActive = false
+    cfSpeedActive = false
     flying = false
     FlyUI.Visible = false
     
