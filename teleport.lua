@@ -14,7 +14,7 @@ MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
 MainFrame.BorderSizePixel = 0
 MainFrame.Position = UDim2.new(0.5, -62, 0.5, -120)
-MainFrame.Size = UDim2.new(0, 125, 0, 310)
+MainFrame.Size = UDim2.new(0, 125, 0, 330) -- Увеличено для нового поля
 MainFrame.Active = true
 MainFrame.ClipsDescendants = true
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 6)
@@ -90,7 +90,7 @@ MinBtn.MouseButton1Click:Connect(function()
     Content.Visible = not minimized
     MinBtn.Text = minimized and "+" or "-"
     Title.Text = minimized and "Cheat Hub" or "KIRIK HUB V32"
-    MainFrame.Size = minimized and UDim2.new(0, 125, 0, 25) or UDim2.new(0, 125, 0, 310)
+    MainFrame.Size = minimized and UDim2.new(0, 125, 0, 25) or UDim2.new(0, 125, 0, 330)
 end)
 
 -- ESP & MODE
@@ -299,6 +299,18 @@ PlatformBtn.TextColor3 = Color3.new(1, 1, 1)
 PlatformBtn.TextSize = 8
 PlatformBtn.Parent = Content
 Instance.new("UICorner", PlatformBtn)
+
+-- AFK ТАЙМЕР ПОЛЕ ВВОДА
+local AfkBox = Instance.new("TextBox")
+AfkBox.Size = UDim2.new(0.9, 0, 0, 16)
+AfkBox.Position = UDim2.new(0.05, 0, 0, 304)
+AfkBox.Text = "30"
+AfkBox.PlaceholderText = "AFK Time (sec)"
+AfkBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+AfkBox.TextColor3 = Color3.new(1, 1, 1)
+AfkBox.TextSize = 8
+AfkBox.Parent = Content
+Instance.new("UICorner", AfkBox)
 
 -- UI ДЛЯ ПЛАТФОРМЫ (КНОПКА ВНИЗ)
 local PlatUI = Instance.new("Frame")
@@ -593,8 +605,8 @@ PlatformBtn.MouseButton1Click:Connect(function()
             local cHrp = cChar and cChar:FindFirstChild("HumanoidRootPart")
             if not cHrp then return end
             
-            -- Проверка прыжка (поднятие)
-            if cHrp.Position.Y - 3.5 > currentY then
+            -- ИСПРАВЛЕНИЕ: Добавлен порог 0.5, чтобы анимация дыхания не поднимала платформу
+            if (cHrp.Position.Y - 3.5) > currentY + 0.5 then
                 currentY = cHrp.Position.Y - 3.5
             end
             
@@ -689,7 +701,7 @@ local function ForceCleanup()
     end
 end
 
--- AFK ЗАЩИТА ТОЛЬКО ПО ВЗАИМОДЕЙСТВИЮ С ХАБОМ (30 СЕКУНД)
+-- AFK ЗАЩИТА ТОЛЬКО ПО ВЗАИМОДЕЙСТВИЮ С ХАБОМ (КАСТОМНЫЙ ТАЙМЕР)
 local lastActive = tick()
 
 local function checkUIInteraction(input)
@@ -719,7 +731,10 @@ end)
 task.spawn(function()
     while task.wait(1) do
         if not ScreenGui.Parent then break end
-        if tick() - lastActive > 30 then
+        -- Читаем значение из поля ввода
+        local afkTime = tonumber(AfkBox.Text) or 30 
+        
+        if tick() - lastActive > afkTime then
             ForceCleanup()
             ScreenGui:Destroy()
             break
