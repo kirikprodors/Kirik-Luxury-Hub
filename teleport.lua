@@ -8,13 +8,13 @@ local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
--- ОКНО УВЕЛИЧЕНО НА 50%
+-- ОКНО УВЕЛИЧЕНО ПОД НОВУЮ КНОПКУ
 local MainFrame = Instance.new("Frame")
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
 MainFrame.BorderSizePixel = 0
 MainFrame.Position = UDim2.new(0.5, -47, 0.5, -90)
-MainFrame.Size = UDim2.new(0, 95, 0, 278) 
+MainFrame.Size = UDim2.new(0, 95, 0, 293) 
 MainFrame.Active = true
 MainFrame.ClipsDescendants = true
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 4)
@@ -22,7 +22,7 @@ local Stroke = Instance.new("UIStroke", MainFrame)
 Stroke.Color = Color3.fromRGB(0, 255, 255)
 Stroke.Thickness = 1
 
--- ИСПРАВЛЕННЫЙ DRAG
+-- DRAG
 local DragHandle = Instance.new("Frame")
 DragHandle.Size = UDim2.new(1, -30, 0, 20)
 DragHandle.BackgroundTransparency = 1
@@ -57,7 +57,7 @@ Content.BackgroundTransparency = 1
 Content.Parent = MainFrame
 
 local Title = Instance.new("TextLabel")
-Title.Text = "KIRIK HUB V33"
+Title.Text = "KIRIK HUB V34"
 Title.TextColor3 = Color3.fromRGB(255, 215, 0)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 8
@@ -91,8 +91,8 @@ MinBtn.MouseButton1Click:Connect(function()
     minimized = not minimized
     Content.Visible = not minimized
     MinBtn.Text = minimized and "+" or "-"
-    Title.Text = minimized and "Cheat Hub" or "KIRIK HUB V33"
-    MainFrame.Size = minimized and UDim2.new(0, 95, 0, 20) or UDim2.new(0, 95, 0, 278)
+    Title.Text = minimized and "Cheat Hub" or "KIRIK HUB V34"
+    MainFrame.Size = minimized and UDim2.new(0, 95, 0, 20) or UDim2.new(0, 95, 0, 293)
 end)
 
 -- ESP & MODE
@@ -188,7 +188,7 @@ UnviewBtn.TextScaled = true
 UnviewBtn.Parent = Content
 Instance.new("UICorner", UnviewBtn)
 
--- FLY ЛОГИКА
+-- FLY
 local FlyBtn = Instance.new("TextButton")
 FlyBtn.Size = UDim2.new(0.55, 0, 0, 12)
 FlyBtn.Position = UDim2.new(0.05, 0, 0, 168)
@@ -358,7 +358,29 @@ JpBox.TextScaled = true
 JpBox.Parent = Content
 Instance.new("UICorner", JpBox)
 
--- UI ДЛЯ ПЛАТФОРМЫ (КНОПКА ВНИЗ)
+-- ГРАВИТАЦИЯ (GRAVITY SWITCH)
+local GravBtn = Instance.new("TextButton")
+GravBtn.Size = UDim2.new(0.55, 0, 0, 12)
+GravBtn.Position = UDim2.new(0.05, 0, 0, 273)
+GravBtn.Text = "SET GRAV"
+GravBtn.BackgroundColor3 = Color3.fromRGB(100, 0, 150)
+GravBtn.TextColor3 = Color3.new(1, 1, 1)
+GravBtn.TextScaled = true
+GravBtn.Parent = Content
+Instance.new("UICorner", GravBtn)
+
+local GravBox = Instance.new("TextBox")
+GravBox.Size = UDim2.new(0.3, 0, 0, 12)
+GravBox.Position = UDim2.new(0.65, 0, 0, 273)
+GravBox.Text = "50"
+GravBox.PlaceholderText = "GR"
+GravBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+GravBox.TextColor3 = Color3.new(1, 1, 1)
+GravBox.TextScaled = true
+GravBox.Parent = Content
+Instance.new("UICorner", GravBox)
+
+-- UI ДЛЯ ПЛАТФОРМЫ
 local PlatUI = Instance.new("Frame")
 PlatUI.Size = UDim2.new(0, 45, 0, 45)
 PlatUI.Position = UDim2.new(1, -60, 0.5, 0)
@@ -720,6 +742,28 @@ JpBtn.MouseButton1Click:Connect(function()
     end
 end)
 
+-- ЛОГИКА ГРАВИТАЦИИ
+local gravActive = false
+local defaultGravity = workspace.Gravity
+
+GravBtn.MouseButton1Click:Connect(function()
+    gravActive = not gravActive
+    GravBtn.Text = gravActive and "GRAV: ON" or "SET GRAV"
+    GravBtn.BackgroundColor3 = gravActive and Color3.fromRGB(150, 0, 200) or Color3.fromRGB(100, 0, 150)
+    
+    if gravActive then
+        workspace.Gravity = tonumber(GravBox.Text) or 196.2
+    else
+        workspace.Gravity = defaultGravity
+    end
+end)
+
+GravBox.FocusLost:Connect(function()
+    if gravActive then
+        workspace.Gravity = tonumber(GravBox.Text) or 196.2
+    end
+end)
+
 -- УНИВЕРСАЛЬНАЯ ОЧИСТКА ВСЕХ ФУНКЦИЙ
 local function ForceCleanup()
     espActive = false
@@ -730,9 +774,13 @@ local function ForceCleanup()
     cfSpeedActive = false
     flying = false
     platActive = false
+    gravActive = false
     
     FlyUI.Visible = false
     PlatUI.Visible = false
+    
+    -- Сброс гравитации
+    workspace.Gravity = 196.2
     
     for _, p in pairs(Players:GetPlayers()) do
         if p.Character and p.Character:FindFirstChild("LuxuryESP") then 
