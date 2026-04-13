@@ -14,7 +14,7 @@ MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
 MainFrame.BorderSizePixel = 0
 MainFrame.Position = UDim2.new(0.5, -62, 0.5, -120)
-MainFrame.Size = UDim2.new(0, 125, 0, 330) -- Увеличено для нового поля
+MainFrame.Size = UDim2.new(0, 125, 0, 370) -- Увеличено для новых кнопок
 MainFrame.Active = true
 MainFrame.ClipsDescendants = true
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 6)
@@ -57,7 +57,7 @@ Content.BackgroundTransparency = 1
 Content.Parent = MainFrame
 
 local Title = Instance.new("TextLabel")
-Title.Text = "KIRIK HUB V32"
+Title.Text = "KIRIK HUB V33"
 Title.TextColor3 = Color3.fromRGB(255, 215, 0)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 10
@@ -89,8 +89,8 @@ MinBtn.MouseButton1Click:Connect(function()
     minimized = not minimized
     Content.Visible = not minimized
     MinBtn.Text = minimized and "+" or "-"
-    Title.Text = minimized and "Cheat Hub" or "KIRIK HUB V32"
-    MainFrame.Size = minimized and UDim2.new(0, 125, 0, 25) or UDim2.new(0, 125, 0, 330)
+    Title.Text = minimized and "Cheat Hub" or "KIRIK HUB V33"
+    MainFrame.Size = minimized and UDim2.new(0, 125, 0, 25) or UDim2.new(0, 125, 0, 370)
 end)
 
 -- ESP & MODE
@@ -300,7 +300,7 @@ PlatformBtn.TextSize = 8
 PlatformBtn.Parent = Content
 Instance.new("UICorner", PlatformBtn)
 
--- AFK ТАЙМЕР ПОЛЕ ВВОДА
+-- AFK ТАЙМЕР
 local AfkBox = Instance.new("TextBox")
 AfkBox.Size = UDim2.new(0.9, 0, 0, 16)
 AfkBox.Position = UDim2.new(0.05, 0, 0, 304)
@@ -311,6 +311,50 @@ AfkBox.TextColor3 = Color3.new(1, 1, 1)
 AfkBox.TextSize = 8
 AfkBox.Parent = Content
 Instance.new("UICorner", AfkBox)
+
+-- СКОРОСТЬ БЕГА (WALKSPEED)
+local WsBtn = Instance.new("TextButton")
+WsBtn.Size = UDim2.new(0.55, 0, 0, 16)
+WsBtn.Position = UDim2.new(0.05, 0, 0, 324)
+WsBtn.Text = "SET SPEED"
+WsBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 50)
+WsBtn.TextColor3 = Color3.new(1, 1, 1)
+WsBtn.TextSize = 8
+WsBtn.Parent = Content
+Instance.new("UICorner", WsBtn)
+
+local WsBox = Instance.new("TextBox")
+WsBox.Size = UDim2.new(0.3, 0, 0, 16)
+WsBox.Position = UDim2.new(0.65, 0, 0, 324)
+WsBox.Text = "16"
+WsBox.PlaceholderText = "WalkSpeed"
+WsBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+WsBox.TextColor3 = Color3.new(1, 1, 1)
+WsBox.TextSize = 8
+WsBox.Parent = Content
+Instance.new("UICorner", WsBox)
+
+-- СИЛА ПРЫЖКА (JUMPPOWER)
+local JpBtn = Instance.new("TextButton")
+JpBtn.Size = UDim2.new(0.55, 0, 0, 16)
+JpBtn.Position = UDim2.new(0.05, 0, 0, 344)
+JpBtn.Text = "SET JUMP"
+JpBtn.BackgroundColor3 = Color3.fromRGB(200, 150, 0)
+JpBtn.TextColor3 = Color3.new(1, 1, 1)
+JpBtn.TextSize = 8
+JpBtn.Parent = Content
+Instance.new("UICorner", JpBtn)
+
+local JpBox = Instance.new("TextBox")
+JpBox.Size = UDim2.new(0.3, 0, 0, 16)
+JpBox.Position = UDim2.new(0.65, 0, 0, 344)
+JpBox.Text = "50"
+JpBox.PlaceholderText = "JumpPower"
+JpBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+JpBox.TextColor3 = Color3.new(1, 1, 1)
+JpBox.TextSize = 8
+JpBox.Parent = Content
+Instance.new("UICorner", JpBox)
 
 -- UI ДЛЯ ПЛАТФОРМЫ (КНОПКА ВНИЗ)
 local PlatUI = Instance.new("Frame")
@@ -605,12 +649,10 @@ PlatformBtn.MouseButton1Click:Connect(function()
             local cHrp = cChar and cChar:FindFirstChild("HumanoidRootPart")
             if not cHrp then return end
             
-            -- ИСПРАВЛЕНИЕ: Добавлен порог 0.5, чтобы анимация дыхания не поднимала платформу
             if (cHrp.Position.Y - 3.5) > currentY + 0.5 then
                 currentY = cHrp.Position.Y - 3.5
             end
             
-            -- Спуск вниз
             if platDownPressed or UIS:IsKeyDown(Enum.KeyCode.LeftControl) then
                 currentY = currentY - 1
             end
@@ -660,6 +702,22 @@ RunService.Stepped:Connect(function()
     end
 end)
 
+-- ЛОГИКА СКОРОСТИ И ПРЫЖКА
+WsBtn.MouseButton1Click:Connect(function()
+    local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
+    if hum then
+        hum.WalkSpeed = tonumber(WsBox.Text) or 16
+    end
+end)
+
+JpBtn.MouseButton1Click:Connect(function()
+    local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
+    if hum then
+        hum.UseJumpPower = true
+        hum.JumpPower = tonumber(JpBox.Text) or 50
+    end
+end)
+
 -- УНИВЕРСАЛЬНАЯ ОЧИСТКА ВСЕХ ФУНКЦИЙ
 local function ForceCleanup()
     espActive = false
@@ -696,12 +754,14 @@ local function ForceCleanup()
     if hum then 
         hum.PlatformStand = false
         hum.WalkSpeed = 16
+        hum.UseJumpPower = true
+        hum.JumpPower = 50
         for _, track in pairs(hum:GetPlayingAnimationTracks()) do track:AdjustSpeed(1) end 
         workspace.CurrentCamera.CameraSubject = hum
     end
 end
 
--- AFK ЗАЩИТА ТОЛЬКО ПО ВЗАИМОДЕЙСТВИЮ С ХАБОМ (КАСТОМНЫЙ ТАЙМЕР)
+-- AFK ЗАЩИТА ТОЛЬКО ПО ВЗАИМОДЕЙСТВИЮ С ХАБОМ
 local lastActive = tick()
 
 local function checkUIInteraction(input)
@@ -731,7 +791,6 @@ end)
 task.spawn(function()
     while task.wait(1) do
         if not ScreenGui.Parent then break end
-        -- Читаем значение из поля ввода
         local afkTime = tonumber(AfkBox.Text) or 30 
         
         if tick() - lastActive > afkTime then
