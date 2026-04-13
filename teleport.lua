@@ -8,23 +8,23 @@ local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
--- МИКРО-ОКНО (Luxury Compact)
+-- МИКРО-ОКНО (Luxury Compact - x0.5)
 local MainFrame = Instance.new("Frame")
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
 MainFrame.BorderSizePixel = 0
-MainFrame.Position = UDim2.new(0.5, -62, 0.5, -120)
-MainFrame.Size = UDim2.new(0, 125, 0, 370) -- Увеличено для новых кнопок
+MainFrame.Position = UDim2.new(0.5, -31, 0.5, -60)
+MainFrame.Size = UDim2.new(0, 63, 0, 185) 
 MainFrame.Active = true
 MainFrame.ClipsDescendants = true
-Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 6)
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 3)
 local Stroke = Instance.new("UIStroke", MainFrame)
 Stroke.Color = Color3.fromRGB(0, 255, 255)
-Stroke.Thickness = 2
+Stroke.Thickness = 1
 
 -- ИСПРАВЛЕННЫЙ DRAG
 local DragHandle = Instance.new("Frame")
-DragHandle.Size = UDim2.new(1, -40, 0, 25)
+DragHandle.Size = UDim2.new(1, -20, 0, 13)
 DragHandle.BackgroundTransparency = 1
 DragHandle.Parent = MainFrame
 
@@ -60,28 +60,30 @@ local Title = Instance.new("TextLabel")
 Title.Text = "KIRIK HUB V33"
 Title.TextColor3 = Color3.fromRGB(255, 215, 0)
 Title.Font = Enum.Font.GothamBold
-Title.TextSize = 10
-Title.Size = UDim2.new(1, -45, 0, 25)
+Title.TextSize = 5
+Title.Size = UDim2.new(1, -22, 0, 13)
 Title.BackgroundTransparency = 1
 Title.Parent = MainFrame
 
 local MinBtn = Instance.new("TextButton")
 MinBtn.Text = "-"
-MinBtn.Size = UDim2.new(0, 18, 0, 18)
-MinBtn.Position = UDim2.new(1, -42, 0, 3)
+MinBtn.TextSize = 8
+MinBtn.Size = UDim2.new(0, 9, 0, 9)
+MinBtn.Position = UDim2.new(1, -21, 0, 2)
 MinBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 0)
 MinBtn.TextColor3 = Color3.new(1, 1, 1)
 MinBtn.Parent = MainFrame
-Instance.new("UICorner", MinBtn).CornerRadius = UDim.new(0, 4)
+Instance.new("UICorner", MinBtn).CornerRadius = UDim.new(0, 2)
 
 local CloseBtn = Instance.new("TextButton")
 CloseBtn.Text = "X"
-CloseBtn.Size = UDim2.new(0, 18, 0, 18)
-CloseBtn.Position = UDim2.new(1, -21, 0, 3)
+CloseBtn.TextSize = 8
+CloseBtn.Size = UDim2.new(0, 9, 0, 9)
+CloseBtn.Position = UDim2.new(1, -11, 0, 2)
 CloseBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
 CloseBtn.TextColor3 = Color3.new(1, 1, 1)
 CloseBtn.Parent = MainFrame
-Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 4)
+Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 2)
 
 -- СВОРАЧИВАНИЕ
 local minimized = false
@@ -90,128 +92,128 @@ MinBtn.MouseButton1Click:Connect(function()
     Content.Visible = not minimized
     MinBtn.Text = minimized and "+" or "-"
     Title.Text = minimized and "Cheat Hub" or "KIRIK HUB V33"
-    MainFrame.Size = minimized and UDim2.new(0, 125, 0, 25) or UDim2.new(0, 125, 0, 370)
+    MainFrame.Size = minimized and UDim2.new(0, 63, 0, 13) or UDim2.new(0, 63, 0, 185)
 end)
 
 -- ESP & MODE
 local EspBtn = Instance.new("TextButton")
-EspBtn.Size = UDim2.new(0.9, 0, 0, 16)
-EspBtn.Position = UDim2.new(0.05, 0, 0, 28)
+EspBtn.Size = UDim2.new(0.9, 0, 0, 8)
+EspBtn.Position = UDim2.new(0.05, 0, 0, 14)
 EspBtn.Text = "ESP: OFF"
 EspBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 EspBtn.TextColor3 = Color3.new(1, 1, 1)
-EspBtn.TextSize = 8
+EspBtn.TextScaled = true -- Включено TextScaled для читаемости мелкого шрифта
 EspBtn.Parent = Content
 Instance.new("UICorner", EspBtn)
 
 local ModeBtn = Instance.new("TextButton")
-ModeBtn.Size = UDim2.new(0.9, 0, 0, 16)
-ModeBtn.Position = UDim2.new(0.05, 0, 0, 46)
+ModeBtn.Size = UDim2.new(0.9, 0, 0, 8)
+ModeBtn.Position = UDim2.new(0.05, 0, 0, 23)
 ModeBtn.Text = "LIST MODE: TP"
 ModeBtn.BackgroundColor3 = Color3.fromRGB(80, 0, 80)
 ModeBtn.TextColor3 = Color3.new(1, 1, 1)
-ModeBtn.TextSize = 8
+ModeBtn.TextScaled = true
 ModeBtn.Parent = Content
 Instance.new("UICorner", ModeBtn)
 
 local PlayerList = Instance.new("ScrollingFrame")
-PlayerList.Size = UDim2.new(0.9, 0, 0, 60)
-PlayerList.Position = UDim2.new(0.05, 0, 0, 64)
+PlayerList.Size = UDim2.new(0.9, 0, 0, 30)
+PlayerList.Position = UDim2.new(0.05, 0, 0, 32)
 PlayerList.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
 PlayerList.AutomaticCanvasSize = Enum.AutomaticSize.Y
-PlayerList.ScrollBarThickness = 2
+PlayerList.ScrollBarThickness = 1
 PlayerList.Parent = Content
-Instance.new("UIListLayout", PlayerList).Padding = UDim.new(0, 2)
+Instance.new("UIListLayout", PlayerList).Padding = UDim.new(0, 1)
 
 -- CUSTOM TP
 local AddTpBtn = Instance.new("TextButton")
-AddTpBtn.Size = UDim2.new(0.9, 0, 0, 16)
-AddTpBtn.Position = UDim2.new(0.05, 0, 0, 126)
+AddTpBtn.Size = UDim2.new(0.9, 0, 0, 8)
+AddTpBtn.Position = UDim2.new(0.05, 0, 0, 63)
 AddTpBtn.Text = "ADD TP PART"
 AddTpBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 150)
 AddTpBtn.TextColor3 = Color3.new(1, 1, 1)
-AddTpBtn.TextSize = 8
+AddTpBtn.TextScaled = true
 AddTpBtn.Parent = Content
 Instance.new("UICorner", AddTpBtn)
 
 -- STAB & LAG
 local AntiFlingBtn = Instance.new("TextButton")
-AntiFlingBtn.Size = UDim2.new(0.43, 0, 0, 18)
-AntiFlingBtn.Position = UDim2.new(0.05, 0, 0, 144)
+AntiFlingBtn.Size = UDim2.new(0.43, 0, 0, 9)
+AntiFlingBtn.Position = UDim2.new(0.05, 0, 0, 72)
 AntiFlingBtn.Text = "STAB"
 AntiFlingBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
 AntiFlingBtn.TextColor3 = Color3.new(1, 1, 1)
-AntiFlingBtn.TextSize = 8
+AntiFlingBtn.TextScaled = true
 AntiFlingBtn.Parent = Content
 Instance.new("UICorner", AntiFlingBtn)
 
 local InfStabBtn = Instance.new("TextButton")
-InfStabBtn.Size = UDim2.new(0.43, 0, 0, 18)
-InfStabBtn.Position = UDim2.new(0.52, 0, 0, 144)
+InfStabBtn.Size = UDim2.new(0.43, 0, 0, 9)
+InfStabBtn.Position = UDim2.new(0.52, 0, 0, 72)
 InfStabBtn.Text = "CHAOS LAG"
 InfStabBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 InfStabBtn.TextColor3 = Color3.new(1, 1, 1)
-InfStabBtn.TextSize = 8
+InfStabBtn.TextScaled = true
 InfStabBtn.Parent = Content
 Instance.new("UICorner", InfStabBtn)
 
 -- ULTRA RUN & NOCLIP
 local UltraRunBtn = Instance.new("TextButton")
-UltraRunBtn.Size = UDim2.new(0.9, 0, 0, 18)
-UltraRunBtn.Position = UDim2.new(0.05, 0, 0, 164)
+UltraRunBtn.Size = UDim2.new(0.9, 0, 0, 9)
+UltraRunBtn.Position = UDim2.new(0.05, 0, 0, 82)
 UltraRunBtn.Text = "ULTRA RUN: OFF"
 UltraRunBtn.BackgroundColor3 = Color3.fromRGB(180, 80, 0)
 UltraRunBtn.TextColor3 = Color3.new(1, 1, 1)
-UltraRunBtn.TextSize = 8
+UltraRunBtn.TextScaled = true
 UltraRunBtn.Parent = Content
 Instance.new("UICorner", UltraRunBtn)
 
 local NoclipBtn = Instance.new("TextButton")
-NoclipBtn.Size = UDim2.new(0.9, 0, 0, 18)
-NoclipBtn.Position = UDim2.new(0.05, 0, 0, 184)
+NoclipBtn.Size = UDim2.new(0.9, 0, 0, 9)
+NoclipBtn.Position = UDim2.new(0.05, 0, 0, 92)
 NoclipBtn.Text = "NOCLIP: OFF"
 NoclipBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 100)
 NoclipBtn.TextColor3 = Color3.new(1, 1, 1)
-NoclipBtn.TextSize = 8
+NoclipBtn.TextScaled = true
 NoclipBtn.Parent = Content
 Instance.new("UICorner", NoclipBtn)
 
 local UnviewBtn = Instance.new("TextButton")
-UnviewBtn.Size = UDim2.new(0.9, 0, 0, 16)
-UnviewBtn.Position = UDim2.new(0.05, 0, 0, 204)
+UnviewBtn.Size = UDim2.new(0.9, 0, 0, 8)
+UnviewBtn.Position = UDim2.new(0.05, 0, 0, 102)
 UnviewBtn.Text = "RESET CAMERA"
 UnviewBtn.BackgroundColor3 = Color3.fromRGB(0, 80, 150)
 UnviewBtn.TextColor3 = Color3.new(1, 1, 1)
-UnviewBtn.TextSize = 8
+UnviewBtn.TextScaled = true
 UnviewBtn.Parent = Content
 Instance.new("UICorner", UnviewBtn)
 
 -- FLY ЛОГИКА
 local FlyBtn = Instance.new("TextButton")
-FlyBtn.Size = UDim2.new(0.55, 0, 0, 16)
-FlyBtn.Position = UDim2.new(0.05, 0, 0, 224)
+FlyBtn.Size = UDim2.new(0.55, 0, 0, 8)
+FlyBtn.Position = UDim2.new(0.05, 0, 0, 112)
 FlyBtn.Text = "FLY: OFF"
 FlyBtn.BackgroundColor3 = Color3.fromRGB(120, 0, 120)
 FlyBtn.TextColor3 = Color3.new(1, 1, 1)
-FlyBtn.TextSize = 8
+FlyBtn.TextScaled = true
 FlyBtn.Parent = Content
 Instance.new("UICorner", FlyBtn)
 
 local FlySpeedBox = Instance.new("TextBox")
-FlySpeedBox.Size = UDim2.new(0.3, 0, 0, 16)
-FlySpeedBox.Position = UDim2.new(0.65, 0, 0, 224)
+FlySpeedBox.Size = UDim2.new(0.3, 0, 0, 8)
+FlySpeedBox.Position = UDim2.new(0.65, 0, 0, 112)
 FlySpeedBox.Text = "50"
 FlySpeedBox.PlaceholderText = "Spd"
 FlySpeedBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 FlySpeedBox.TextColor3 = Color3.new(1, 1, 1)
-FlySpeedBox.TextSize = 8
+FlySpeedBox.TextScaled = true
 FlySpeedBox.Parent = Content
 Instance.new("UICorner", FlySpeedBox)
 
 -- МОБИЛЬНЫЕ КНОПКИ ДЛЯ FLY
 local FlyUI = Instance.new("Frame")
-FlyUI.Size = UDim2.new(0, 60, 0, 130)
-FlyUI.Position = UDim2.new(1, -80, 0.5, -65)
+FlyUI.Size = UDim2.new(0, 30, 0, 65)
+FlyUI.Position = UDim2.new(1, -40, 0.5, -32)
 FlyUI.BackgroundTransparency = 1
 FlyUI.Visible = false
 FlyUI.Parent = ScreenGui
@@ -222,7 +224,7 @@ FlyUpBtn.Text = "UP"
 FlyUpBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 255)
 FlyUpBtn.BackgroundTransparency = 0.5
 FlyUpBtn.TextColor3 = Color3.new(1, 1, 1)
-FlyUpBtn.TextSize = 12
+FlyUpBtn.TextScaled = true
 FlyUpBtn.Font = Enum.Font.GothamBold
 FlyUpBtn.Parent = FlyUI
 Instance.new("UICorner", FlyUpBtn)
@@ -234,7 +236,7 @@ FlyDownBtn.Text = "DOWN"
 FlyDownBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 255)
 FlyDownBtn.BackgroundTransparency = 0.5
 FlyDownBtn.TextColor3 = Color3.new(1, 1, 1)
-FlyDownBtn.TextSize = 12
+FlyDownBtn.TextScaled = true
 FlyDownBtn.Font = Enum.Font.GothamBold
 FlyDownBtn.Parent = FlyUI
 Instance.new("UICorner", FlyDownBtn)
@@ -247,119 +249,119 @@ FlyDownBtn.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputTy
 
 -- SPIN BOT
 local SpinBtn = Instance.new("TextButton")
-SpinBtn.Size = UDim2.new(0.55, 0, 0, 16)
-SpinBtn.Position = UDim2.new(0.05, 0, 0, 244)
+SpinBtn.Size = UDim2.new(0.55, 0, 0, 8)
+SpinBtn.Position = UDim2.new(0.05, 0, 0, 122)
 SpinBtn.Text = "SPIN: OFF"
 SpinBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 80)
 SpinBtn.TextColor3 = Color3.new(1, 1, 1)
-SpinBtn.TextSize = 8
+SpinBtn.TextScaled = true
 SpinBtn.Parent = Content
 Instance.new("UICorner", SpinBtn)
 
 local SpinBox = Instance.new("TextBox")
-SpinBox.Size = UDim2.new(0.3, 0, 0, 16)
-SpinBox.Position = UDim2.new(0.65, 0, 0, 244)
+SpinBox.Size = UDim2.new(0.3, 0, 0, 8)
+SpinBox.Position = UDim2.new(0.65, 0, 0, 122)
 SpinBox.Text = "50"
 SpinBox.PlaceholderText = "Spd"
 SpinBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 SpinBox.TextColor3 = Color3.new(1, 1, 1)
-SpinBox.TextSize = 8
+SpinBox.TextScaled = true
 SpinBox.Parent = Content
 Instance.new("UICorner", SpinBox)
 
 -- CFRAME SPEED 
 local CFrameSpeedBtn = Instance.new("TextButton")
-CFrameSpeedBtn.Size = UDim2.new(0.55, 0, 0, 16)
-CFrameSpeedBtn.Position = UDim2.new(0.05, 0, 0, 264)
+CFrameSpeedBtn.Size = UDim2.new(0.55, 0, 0, 8)
+CFrameSpeedBtn.Position = UDim2.new(0.05, 0, 0, 132)
 CFrameSpeedBtn.Text = "CF SPD: OFF"
 CFrameSpeedBtn.BackgroundColor3 = Color3.fromRGB(150, 80, 0)
 CFrameSpeedBtn.TextColor3 = Color3.new(1, 1, 1)
-CFrameSpeedBtn.TextSize = 8
+CFrameSpeedBtn.TextScaled = true
 CFrameSpeedBtn.Parent = Content
 Instance.new("UICorner", CFrameSpeedBtn)
 
 local CFrameSpeedBox = Instance.new("TextBox")
-CFrameSpeedBox.Size = UDim2.new(0.3, 0, 0, 16)
-CFrameSpeedBox.Position = UDim2.new(0.65, 0, 0, 264)
+CFrameSpeedBox.Size = UDim2.new(0.3, 0, 0, 8)
+CFrameSpeedBox.Position = UDim2.new(0.65, 0, 0, 132)
 CFrameSpeedBox.Text = "2"
 CFrameSpeedBox.PlaceholderText = "Spd"
 CFrameSpeedBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 CFrameSpeedBox.TextColor3 = Color3.new(1, 1, 1)
-CFrameSpeedBox.TextSize = 8
+CFrameSpeedBox.TextScaled = true
 CFrameSpeedBox.Parent = Content
 Instance.new("UICorner", CFrameSpeedBox)
 
 -- ПЛАТФОРМА (AIR WALK)
 local PlatformBtn = Instance.new("TextButton")
-PlatformBtn.Size = UDim2.new(0.9, 0, 0, 16)
-PlatformBtn.Position = UDim2.new(0.05, 0, 0, 284)
+PlatformBtn.Size = UDim2.new(0.9, 0, 0, 8)
+PlatformBtn.Position = UDim2.new(0.05, 0, 0, 142)
 PlatformBtn.Text = "PLATFORM: OFF"
 PlatformBtn.BackgroundColor3 = Color3.fromRGB(0, 80, 120)
 PlatformBtn.TextColor3 = Color3.new(1, 1, 1)
-PlatformBtn.TextSize = 8
+PlatformBtn.TextScaled = true
 PlatformBtn.Parent = Content
 Instance.new("UICorner", PlatformBtn)
 
 -- AFK ТАЙМЕР
 local AfkBox = Instance.new("TextBox")
-AfkBox.Size = UDim2.new(0.9, 0, 0, 16)
-AfkBox.Position = UDim2.new(0.05, 0, 0, 304)
+AfkBox.Size = UDim2.new(0.9, 0, 0, 8)
+AfkBox.Position = UDim2.new(0.05, 0, 0, 152)
 AfkBox.Text = "30"
-AfkBox.PlaceholderText = "AFK Time (sec)"
+AfkBox.PlaceholderText = "AFK Time"
 AfkBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 AfkBox.TextColor3 = Color3.new(1, 1, 1)
-AfkBox.TextSize = 8
+AfkBox.TextScaled = true
 AfkBox.Parent = Content
 Instance.new("UICorner", AfkBox)
 
 -- СКОРОСТЬ БЕГА (WALKSPEED)
 local WsBtn = Instance.new("TextButton")
-WsBtn.Size = UDim2.new(0.55, 0, 0, 16)
-WsBtn.Position = UDim2.new(0.05, 0, 0, 324)
+WsBtn.Size = UDim2.new(0.55, 0, 0, 8)
+WsBtn.Position = UDim2.new(0.05, 0, 0, 162)
 WsBtn.Text = "SET SPEED"
 WsBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 50)
 WsBtn.TextColor3 = Color3.new(1, 1, 1)
-WsBtn.TextSize = 8
+WsBtn.TextScaled = true
 WsBtn.Parent = Content
 Instance.new("UICorner", WsBtn)
 
 local WsBox = Instance.new("TextBox")
-WsBox.Size = UDim2.new(0.3, 0, 0, 16)
-WsBox.Position = UDim2.new(0.65, 0, 0, 324)
+WsBox.Size = UDim2.new(0.3, 0, 0, 8)
+WsBox.Position = UDim2.new(0.65, 0, 0, 162)
 WsBox.Text = "16"
-WsBox.PlaceholderText = "WalkSpeed"
+WsBox.PlaceholderText = "WS"
 WsBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 WsBox.TextColor3 = Color3.new(1, 1, 1)
-WsBox.TextSize = 8
+WsBox.TextScaled = true
 WsBox.Parent = Content
 Instance.new("UICorner", WsBox)
 
 -- СИЛА ПРЫЖКА (JUMPPOWER)
 local JpBtn = Instance.new("TextButton")
-JpBtn.Size = UDim2.new(0.55, 0, 0, 16)
-JpBtn.Position = UDim2.new(0.05, 0, 0, 344)
+JpBtn.Size = UDim2.new(0.55, 0, 0, 8)
+JpBtn.Position = UDim2.new(0.05, 0, 0, 172)
 JpBtn.Text = "SET JUMP"
 JpBtn.BackgroundColor3 = Color3.fromRGB(200, 150, 0)
 JpBtn.TextColor3 = Color3.new(1, 1, 1)
-JpBtn.TextSize = 8
+JpBtn.TextScaled = true
 JpBtn.Parent = Content
 Instance.new("UICorner", JpBtn)
 
 local JpBox = Instance.new("TextBox")
-JpBox.Size = UDim2.new(0.3, 0, 0, 16)
-JpBox.Position = UDim2.new(0.65, 0, 0, 344)
+JpBox.Size = UDim2.new(0.3, 0, 0, 8)
+JpBox.Position = UDim2.new(0.65, 0, 0, 172)
 JpBox.Text = "50"
-JpBox.PlaceholderText = "JumpPower"
+JpBox.PlaceholderText = "JP"
 JpBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 JpBox.TextColor3 = Color3.new(1, 1, 1)
-JpBox.TextSize = 8
+JpBox.TextScaled = true
 JpBox.Parent = Content
 Instance.new("UICorner", JpBox)
 
 -- UI ДЛЯ ПЛАТФОРМЫ (КНОПКА ВНИЗ)
 local PlatUI = Instance.new("Frame")
-PlatUI.Size = UDim2.new(0, 60, 0, 60)
-PlatUI.Position = UDim2.new(1, -80, 0.5, 0)
+PlatUI.Size = UDim2.new(0, 30, 0, 30)
+PlatUI.Position = UDim2.new(1, -40, 0.5, 0)
 PlatUI.BackgroundTransparency = 1
 PlatUI.Visible = false
 PlatUI.Parent = ScreenGui
@@ -370,7 +372,7 @@ PlatDownBtn.Text = "DOWN"
 PlatDownBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 255)
 PlatDownBtn.BackgroundTransparency = 0.5
 PlatDownBtn.TextColor3 = Color3.new(1, 1, 1)
-PlatDownBtn.TextSize = 12
+PlatDownBtn.TextScaled = true
 PlatDownBtn.Font = Enum.Font.GothamBold
 PlatDownBtn.Parent = PlatUI
 Instance.new("UICorner", PlatDownBtn)
@@ -395,11 +397,11 @@ local function updateList()
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= LocalPlayer then
             local btn = Instance.new("TextButton")
-            btn.Size = UDim2.new(1, -5, 0, 16)
+            btn.Size = UDim2.new(1, -5, 0, 8)
             btn.Text = player.DisplayName
             btn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
             btn.TextColor3 = Color3.new(1, 1, 1)
-            btn.TextSize = 8
+            btn.TextScaled = true
             btn.Parent = PlayerList
             Instance.new("UICorner", btn)
             btn.MouseButton1Click:Connect(function()
@@ -419,7 +421,7 @@ local function updateList()
     
     for i, spot in ipairs(savedSpots) do
         local spotFrame = Instance.new("Frame")
-        spotFrame.Size = UDim2.new(1, -5, 0, 16)
+        spotFrame.Size = UDim2.new(1, -5, 0, 8)
         spotFrame.BackgroundTransparency = 1
         spotFrame.Parent = PlayerList
         
@@ -428,7 +430,7 @@ local function updateList()
         tpBtn.Text = spot.name
         tpBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
         tpBtn.TextColor3 = Color3.new(1, 1, 1)
-        tpBtn.TextSize = 8
+        tpBtn.TextScaled = true
         tpBtn.Parent = spotFrame
         Instance.new("UICorner", tpBtn)
         
@@ -438,7 +440,7 @@ local function updateList()
         delBtn.Text = "X"
         delBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
         delBtn.TextColor3 = Color3.new(1, 1, 1)
-        delBtn.TextSize = 8
+        delBtn.TextScaled = true
         delBtn.Parent = spotFrame
         Instance.new("UICorner", delBtn)
         
