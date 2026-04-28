@@ -43,7 +43,7 @@ local function ApplyStyle(inst, strokeColor, bgColor, textColor)
     
     inst.BorderSizePixel = 0
     if inst:IsA("TextButton") or inst:IsA("TextBox") or inst:IsA("TextLabel") then
-        inst.Font = Enum.Font.GothamBold -- Улучшена читаемость (вместо GothamBlack)
+        inst.Font = Enum.Font.GothamBold
         inst.TextScaled = true
     end
     
@@ -51,7 +51,6 @@ local function ApplyStyle(inst, strokeColor, bgColor, textColor)
     corner.CornerRadius = UDim.new(0, 4)
     
     local stroke = inst:FindFirstChild("UIStroke") or Instance.new("UIStroke", inst)
-    -- Для текста обводка тоньше, чтобы не сливалось
     stroke.Thickness = inst:IsA("TextLabel") and 1 or 1.5 
     stroke.ApplyStrokeMode = inst:IsA("TextLabel") and Enum.ApplyStrokeMode.Contextual or Enum.ApplyStrokeMode.Border
 
@@ -102,7 +101,7 @@ UIS.InputChanged:Connect(function(input)
 end)
 
 local Title = Instance.new("TextLabel")
-Title.Text = "KIRIK HUB V40"
+Title.Text = "KIRIK HUB V41"
 Title.Size = UDim2.new(1, -60, 0, 25)
 Title.Position = UDim2.new(0, 10, 0, 0)
 Title.TextXAlignment = Enum.TextXAlignment.Left
@@ -208,7 +207,7 @@ end)
 local HomeTab = MakeTab("HOME", true)
 local WelcomeText = Instance.new("TextLabel", HomeTab)
 WelcomeText.Size = UDim2.new(1, 0, 1, 0)
-WelcomeText.Text = "KIRIK HUB V40\n\n[ FEATURE HIGHLIGHTS ]\n- Custom Themes & UI Resizing (See Settings)\n- Players: ESP, INF TP, Custom Targets\n- Character: Speed, Gravity, Noclip, Spin\n- Flight: Mobile Support, Air Walk\n- Lag: Custom Chaos Chain System"
+WelcomeText.Text = "KIRIK HUB V41\n\n[ FEATURE HIGHLIGHTS ]\n- Custom Themes & UI Resizing\n- Players: ESP, INF TP, Custom Spots\n- NPCs: Scan & Interact with game bots\n- Character: Speed, Gravity, Noclip\n- Flight: Mobile Support, Air Walk\n- Lag: Custom Chaos Chain System"
 WelcomeText.TextWrapped = true
 WelcomeText.TextYAlignment = Enum.TextYAlignment.Top
 ApplyStyle(WelcomeText, Color3.fromRGB(0, 255, 255), Color3.fromRGB(15, 15, 20))
@@ -238,7 +237,27 @@ PlayerListWrapper.Size = UDim2.new(1, 0, 1, -95)
 PlayerListWrapper.BackgroundTransparency = 1
 local PlayerList, _ = MakeScrollArea(PlayerListWrapper)
 
--- 3. CHARACTER TAB
+-- 3. NPCs TAB
+local NpcsTab = MakeTab("NPCs", false)
+local NTopLayout = Instance.new("UIListLayout", NpcsTab)
+NTopLayout.Padding = UDim.new(0, 5)
+
+local NpcModeBtn = Instance.new("TextButton", MakeRow(NpcsTab))
+NpcModeBtn.Size = UDim2.new(1, 0, 1, 0)
+NpcModeBtn.Text = "LIST MODE: TP"
+ApplyStyle(NpcModeBtn, Color3.fromRGB(255, 0, 255))
+
+local NpcRefreshBtn = Instance.new("TextButton", MakeRow(NpcsTab))
+NpcRefreshBtn.Size = UDim2.new(1, 0, 1, 0)
+NpcRefreshBtn.Text = "REFRESH NPCs"
+ApplyStyle(NpcRefreshBtn, Color3.fromRGB(0, 255, 100))
+
+local NpcListWrapper = Instance.new("Frame", NpcsTab)
+NpcListWrapper.Size = UDim2.new(1, 0, 1, -65)
+NpcListWrapper.BackgroundTransparency = 1
+local NpcList, _ = MakeScrollArea(NpcListWrapper)
+
+-- 4. CHARACTER TAB
 local CharTab = MakeTab("CHARACTER", false)
 local CharScroll, _ = MakeScrollArea(CharTab)
 
@@ -278,7 +297,7 @@ UnviewBtn.Size = UDim2.new(1, 0, 1, 0)
 UnviewBtn.Text = "RESET CAMERA"
 ApplyStyle(UnviewBtn, Color3.fromRGB(150, 150, 255))
 
--- 4. FLIGHT TAB
+-- 5. FLIGHT TAB
 local FlyTab = MakeTab("FLIGHT", false)
 local FlyScroll, _ = MakeScrollArea(FlyTab)
 
@@ -298,7 +317,7 @@ PlatformBtn.Size = UDim2.new(1, 0, 1, 0)
 PlatformBtn.Text = "PLATFORM: OFF"
 ApplyStyle(PlatformBtn, Color3.fromRGB(0, 150, 255))
 
--- 5. LAG TAB
+-- 6. LAG TAB
 local LagTab = MakeTab("LAG", false)
 local LagTopLayout = Instance.new("UIListLayout", LagTab)
 LagTopLayout.Padding = UDim.new(0, 5)
@@ -323,7 +342,7 @@ LagListWrapper.Size = UDim2.new(1, 0, 1, -95)
 LagListWrapper.BackgroundTransparency = 1
 local LagList, _ = MakeScrollArea(LagListWrapper)
 
--- 6. SETTINGS TAB
+-- 7. SETTINGS TAB
 local SettingsTab = MakeTab("SETTINGS", false)
 local SettingsScroll, _ = MakeScrollArea(SettingsTab)
 
@@ -418,7 +437,6 @@ HookMobileBtn(FlyUpBtn, "up")
 HookMobileBtn(FlyDownBtn, "down")
 HookMobileBtn(PlatDownBtn, "plat")
 
--- UI SCALE LOGIC APPLIED TO ALL SCALERS
 ShrinkBox.FocusLost:Connect(function()
     local factor = tonumber(ShrinkBox.Text)
     if factor and factor > 0 then
@@ -435,35 +453,62 @@ end)
 
 -- ==================== LOGIC & SYSTEMS ====================
 
--- PLAYER LIST & INF TP LOGIC
 local listMode = "TP"
+local npcListMode = "TP"
 local savedSpots = {}
+local cachedNPCs = {}
 local spotCount = 0
+
 local currentInfTpTarget = nil
 local infTpConn = nil
+
+local updatePlayerList
+local updateNpcList
 
 local function stopInfTp()
     if infTpConn then infTpConn:Disconnect() infTpConn = nil end
     currentInfTpTarget = nil
 end
 
-local function startInfTp(player)
+local function startInfTp(target)
     stopInfTp()
-    currentInfTpTarget = player
+    currentInfTpTarget = target
     infTpConn = RunService.Heartbeat:Connect(function()
-        if currentInfTpTarget and currentInfTpTarget.Character then
-            local tHum = currentInfTpTarget.Character:FindFirstChild("Humanoid")
-            local tHrp = currentInfTpTarget.Character:FindFirstChild("HumanoidRootPart")
+        if not currentInfTpTarget then stopInfTp() return end
+        
+        local tChar = currentInfTpTarget
+        if typeof(currentInfTpTarget) == "Instance" and currentInfTpTarget:IsA("Player") then
+            tChar = currentInfTpTarget.Character
+        end
+        
+        if tChar and tChar.Parent then
+            local tHum = tChar:FindFirstChildOfClass("Humanoid")
+            local tHrp = tChar:FindFirstChild("HumanoidRootPart")
             local mChar = LocalPlayer.Character
             local mHrp = mChar and mChar:FindFirstChild("HumanoidRootPart")
+            
             if tHrp and mHrp and tHum and tHum.Health > 0 then
                 mHrp.CFrame = tHrp.CFrame * CFrame.new(0, 0, 3)
+            else
+                if typeof(currentInfTpTarget) ~= "Instance" or not currentInfTpTarget:IsA("Player") then
+                    if not tChar.Parent or (tHum and tHum.Health <= 0) then
+                        stopInfTp()
+                        if updatePlayerList then updatePlayerList() end
+                        if updateNpcList then updateNpcList() end
+                    end
+                end
+            end
+        else
+            if typeof(currentInfTpTarget) ~= "Instance" or not currentInfTpTarget:IsA("Player") then
+                stopInfTp()
+                if updatePlayerList then updatePlayerList() end
+                if updateNpcList then updateNpcList() end
             end
         end
     end)
 end
 
-local function updatePlayerList()
+updatePlayerList = function()
     for _, c in pairs(PlayerList:GetChildren()) do if c:IsA("Frame") then c:Destroy() end end
     
     for _, player in pairs(Players:GetPlayers()) do
@@ -494,6 +539,7 @@ local function updatePlayerList()
                 elseif listMode == "INF TP" then
                     if currentInfTpTarget == player then stopInfTp() else startInfTp(player) end
                     updatePlayerList()
+                    updateNpcList()
                 end
             end)
         end
@@ -526,6 +572,60 @@ local function updatePlayerList()
     end
 end
 
+updateNpcList = function()
+    for _, c in pairs(NpcList:GetChildren()) do if c:IsA("Frame") then c:Destroy() end end
+    
+    for _, npc in ipairs(cachedNPCs) do
+        if npc and npc.Parent then
+            local row = MakeRow(NpcList)
+            local btn = Instance.new("TextButton", row)
+            btn.Size = UDim2.new(1, 0, 1, 0)
+            
+            if npcListMode == "INF TP" then
+                local isActive = (currentInfTpTarget == npc)
+                btn.Text = npc.Name .. (isActive and " [ON]" or " [OFF]")
+                ApplyStyle(btn, isActive and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0))
+            else
+                btn.Text = npc.Name
+                ApplyStyle(btn, Color3.fromRGB(255, 100, 0))
+            end
+            
+            btn.MouseButton1Click:Connect(function()
+                if npcListMode == "TP" then
+                    local hrp = npc:FindFirstChild("HumanoidRootPart")
+                    if hrp and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                        LocalPlayer.Character.HumanoidRootPart.CFrame = hrp.CFrame
+                    end
+                elseif npcListMode == "VIEW" then
+                    local hum = npc:FindFirstChildOfClass("Humanoid")
+                    if hum then workspace.CurrentCamera.CameraSubject = hum end
+                elseif npcListMode == "INF TP" then
+                    if currentInfTpTarget == npc then stopInfTp() else startInfTp(npc) end
+                    updateNpcList()
+                    updatePlayerList()
+                end
+            end)
+        end
+    end
+end
+
+local function refreshNPCs()
+    cachedNPCs = {}
+    NpcRefreshBtn.Text = "SCANNING..."
+    task.wait(0.1)
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj:IsA("Model") and obj ~= LocalPlayer.Character then
+            if obj:FindFirstChildOfClass("Humanoid") and obj:FindFirstChild("HumanoidRootPart") then
+                if not Players:GetPlayerFromCharacter(obj) then
+                    table.insert(cachedNPCs, obj)
+                end
+            end
+        end
+    end
+    NpcRefreshBtn.Text = "REFRESH NPCs"
+    updateNpcList()
+end
+
 ModeBtn.MouseButton1Click:Connect(function()
     if listMode == "TP" then listMode = "VIEW"
     elseif listMode == "VIEW" then listMode = "INF TP"
@@ -533,6 +633,16 @@ ModeBtn.MouseButton1Click:Connect(function()
     ModeBtn.Text = "LIST MODE: " .. listMode
     updatePlayerList()
 end)
+
+NpcModeBtn.MouseButton1Click:Connect(function()
+    if npcListMode == "TP" then npcListMode = "VIEW"
+    elseif npcListMode == "VIEW" then npcListMode = "INF TP"
+    else npcListMode = "TP" end
+    NpcModeBtn.Text = "LIST MODE: " .. npcListMode
+    updateNpcList()
+end)
+
+NpcRefreshBtn.MouseButton1Click:Connect(refreshNPCs)
 
 local waitingForClick = false
 local mouse = LocalPlayer:GetMouse()
