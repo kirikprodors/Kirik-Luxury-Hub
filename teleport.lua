@@ -8,13 +8,13 @@ local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
--- MAIN FRAME
+-- MAIN FRAME (RESIZED TO COMPENSATE REMOVED LAG FIELDS)
 local MainFrame = Instance.new("Frame")
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
 MainFrame.BorderSizePixel = 0
 MainFrame.Position = UDim2.new(0.5, -47, 0.5, -100)
-MainFrame.Size = UDim2.new(0, 95, 0, 323) 
+MainFrame.Size = UDim2.new(0, 95, 0, 293) 
 MainFrame.Active = true
 MainFrame.ClipsDescendants = true
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 4)
@@ -57,7 +57,7 @@ Content.BackgroundTransparency = 1
 Content.Parent = MainFrame
 
 local Title = Instance.new("TextLabel")
-Title.Text = "KIRIK HUB V35"
+Title.Text = "KIRIK HUB V36"
 Title.TextColor3 = Color3.fromRGB(255, 215, 0)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 8
@@ -91,8 +91,8 @@ MinBtn.MouseButton1Click:Connect(function()
     minimized = not minimized
     Content.Visible = not minimized
     MinBtn.Text = minimized and "+" or "-"
-    Title.Text = minimized and "Cheat Hub" or "KIRIK HUB V35"
-    MainFrame.Size = minimized and UDim2.new(0, 95, 0, 20) or UDim2.new(0, 95, 0, 323)
+    Title.Text = minimized and "Cheat Hub" or "KIRIK HUB V36"
+    MainFrame.Size = minimized and UDim2.new(0, 95, 0, 20) or UDim2.new(0, 95, 0, 293)
 end)
 
 -- ESP & MODE
@@ -157,43 +157,10 @@ InfStabBtn.TextScaled = true
 InfStabBtn.Parent = Content
 Instance.new("UICorner", InfStabBtn)
 
--- LAG SETTINGS (ANCHOR / FREE)
-local LagAnchorBox = Instance.new("TextBox")
-LagAnchorBox.Size = UDim2.new(0.43, 0, 0, 12)
-LagAnchorBox.Position = UDim2.new(0.05, 0, 0, 123)
-LagAnchorBox.Text = "0.2"
-LagAnchorBox.PlaceholderText = "Freeze"
-LagAnchorBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-LagAnchorBox.TextColor3 = Color3.new(1, 1, 1)
-LagAnchorBox.TextScaled = true
-LagAnchorBox.Parent = Content
-Instance.new("UICorner", LagAnchorBox)
-
-local LagFreeBox = Instance.new("TextBox")
-LagFreeBox.Size = UDim2.new(0.43, 0, 0, 12)
-LagFreeBox.Position = UDim2.new(0.52, 0, 0, 123)
-LagFreeBox.Text = "0.1"
-LagFreeBox.PlaceholderText = "Free"
-LagFreeBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-LagFreeBox.TextColor3 = Color3.new(1, 1, 1)
-LagFreeBox.TextScaled = true
-LagFreeBox.Parent = Content
-Instance.new("UICorner", LagFreeBox)
-
-local AddLagBtn = Instance.new("TextButton")
-AddLagBtn.Size = UDim2.new(0.9, 0, 0, 12)
-AddLagBtn.Position = UDim2.new(0.05, 0, 0, 138)
-AddLagBtn.Text = "ADD TO CHAIN"
-AddLagBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
-AddLagBtn.TextColor3 = Color3.new(1, 1, 1)
-AddLagBtn.TextScaled = true
-AddLagBtn.Parent = Content
-Instance.new("UICorner", AddLagBtn)
-
 -- ULTRA RUN & NOCLIP
 local UltraRunBtn = Instance.new("TextButton")
 UltraRunBtn.Size = UDim2.new(0.9, 0, 0, 14)
-UltraRunBtn.Position = UDim2.new(0.05, 0, 0, 153)
+UltraRunBtn.Position = UDim2.new(0.05, 0, 0, 123)
 UltraRunBtn.Text = "ULTRA RUN: OFF"
 UltraRunBtn.BackgroundColor3 = Color3.fromRGB(180, 80, 0)
 UltraRunBtn.TextColor3 = Color3.new(1, 1, 1)
@@ -203,7 +170,7 @@ Instance.new("UICorner", UltraRunBtn)
 
 local NoclipBtn = Instance.new("TextButton")
 NoclipBtn.Size = UDim2.new(0.9, 0, 0, 14)
-NoclipBtn.Position = UDim2.new(0.05, 0, 0, 168)
+NoclipBtn.Position = UDim2.new(0.05, 0, 0, 138)
 NoclipBtn.Text = "NOCLIP: OFF"
 NoclipBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 100)
 NoclipBtn.TextColor3 = Color3.new(1, 1, 1)
@@ -213,7 +180,7 @@ Instance.new("UICorner", NoclipBtn)
 
 local UnviewBtn = Instance.new("TextButton")
 UnviewBtn.Size = UDim2.new(0.9, 0, 0, 12)
-UnviewBtn.Position = UDim2.new(0.05, 0, 0, 183)
+UnviewBtn.Position = UDim2.new(0.05, 0, 0, 153)
 UnviewBtn.Text = "RESET CAMERA"
 UnviewBtn.BackgroundColor3 = Color3.fromRGB(0, 80, 150)
 UnviewBtn.TextColor3 = Color3.new(1, 1, 1)
@@ -224,7 +191,7 @@ Instance.new("UICorner", UnviewBtn)
 -- FLY
 local FlyBtn = Instance.new("TextButton")
 FlyBtn.Size = UDim2.new(0.55, 0, 0, 12)
-FlyBtn.Position = UDim2.new(0.05, 0, 0, 198)
+FlyBtn.Position = UDim2.new(0.05, 0, 0, 168)
 FlyBtn.Text = "FLY: OFF"
 FlyBtn.BackgroundColor3 = Color3.fromRGB(120, 0, 120)
 FlyBtn.TextColor3 = Color3.new(1, 1, 1)
@@ -234,7 +201,7 @@ Instance.new("UICorner", FlyBtn)
 
 local FlySpeedBox = Instance.new("TextBox")
 FlySpeedBox.Size = UDim2.new(0.3, 0, 0, 12)
-FlySpeedBox.Position = UDim2.new(0.65, 0, 0, 198)
+FlySpeedBox.Position = UDim2.new(0.65, 0, 0, 168)
 FlySpeedBox.Text = "50"
 FlySpeedBox.PlaceholderText = "Spd"
 FlySpeedBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
@@ -283,7 +250,7 @@ FlyDownBtn.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputTy
 -- SPIN BOT
 local SpinBtn = Instance.new("TextButton")
 SpinBtn.Size = UDim2.new(0.55, 0, 0, 12)
-SpinBtn.Position = UDim2.new(0.05, 0, 0, 213)
+SpinBtn.Position = UDim2.new(0.05, 0, 0, 183)
 SpinBtn.Text = "SPIN: OFF"
 SpinBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 80)
 SpinBtn.TextColor3 = Color3.new(1, 1, 1)
@@ -293,7 +260,7 @@ Instance.new("UICorner", SpinBtn)
 
 local SpinBox = Instance.new("TextBox")
 SpinBox.Size = UDim2.new(0.3, 0, 0, 12)
-SpinBox.Position = UDim2.new(0.65, 0, 0, 213)
+SpinBox.Position = UDim2.new(0.65, 0, 0, 183)
 SpinBox.Text = "50"
 SpinBox.PlaceholderText = "Spd"
 SpinBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
@@ -305,7 +272,7 @@ Instance.new("UICorner", SpinBox)
 -- CFRAME SPEED 
 local CFrameSpeedBtn = Instance.new("TextButton")
 CFrameSpeedBtn.Size = UDim2.new(0.55, 0, 0, 12)
-CFrameSpeedBtn.Position = UDim2.new(0.05, 0, 0, 228)
+CFrameSpeedBtn.Position = UDim2.new(0.05, 0, 0, 198)
 CFrameSpeedBtn.Text = "CF SPD: OFF"
 CFrameSpeedBtn.BackgroundColor3 = Color3.fromRGB(150, 80, 0)
 CFrameSpeedBtn.TextColor3 = Color3.new(1, 1, 1)
@@ -315,7 +282,7 @@ Instance.new("UICorner", CFrameSpeedBtn)
 
 local CFrameSpeedBox = Instance.new("TextBox")
 CFrameSpeedBox.Size = UDim2.new(0.3, 0, 0, 12)
-CFrameSpeedBox.Position = UDim2.new(0.65, 0, 0, 228)
+CFrameSpeedBox.Position = UDim2.new(0.65, 0, 0, 198)
 CFrameSpeedBox.Text = "2"
 CFrameSpeedBox.PlaceholderText = "Spd"
 CFrameSpeedBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
@@ -327,7 +294,7 @@ Instance.new("UICorner", CFrameSpeedBox)
 -- AIR WALK
 local PlatformBtn = Instance.new("TextButton")
 PlatformBtn.Size = UDim2.new(0.9, 0, 0, 12)
-PlatformBtn.Position = UDim2.new(0.05, 0, 0, 243)
+PlatformBtn.Position = UDim2.new(0.05, 0, 0, 213)
 PlatformBtn.Text = "PLATFORM: OFF"
 PlatformBtn.BackgroundColor3 = Color3.fromRGB(0, 80, 120)
 PlatformBtn.TextColor3 = Color3.new(1, 1, 1)
@@ -338,7 +305,7 @@ Instance.new("UICorner", PlatformBtn)
 -- AFK 
 local AfkBox = Instance.new("TextBox")
 AfkBox.Size = UDim2.new(0.9, 0, 0, 12)
-AfkBox.Position = UDim2.new(0.05, 0, 0, 258)
+AfkBox.Position = UDim2.new(0.05, 0, 0, 228)
 AfkBox.Text = "30"
 AfkBox.PlaceholderText = "AFK Time"
 AfkBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
@@ -350,7 +317,7 @@ Instance.new("UICorner", AfkBox)
 -- WALK SPEED
 local WsBtn = Instance.new("TextButton")
 WsBtn.Size = UDim2.new(0.55, 0, 0, 12)
-WsBtn.Position = UDim2.new(0.05, 0, 0, 273)
+WsBtn.Position = UDim2.new(0.05, 0, 0, 243)
 WsBtn.Text = "SET SPEED"
 WsBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 50)
 WsBtn.TextColor3 = Color3.new(1, 1, 1)
@@ -360,7 +327,7 @@ Instance.new("UICorner", WsBtn)
 
 local WsBox = Instance.new("TextBox")
 WsBox.Size = UDim2.new(0.3, 0, 0, 12)
-WsBox.Position = UDim2.new(0.65, 0, 0, 273)
+WsBox.Position = UDim2.new(0.65, 0, 0, 243)
 WsBox.Text = "16"
 WsBox.PlaceholderText = "WS"
 WsBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
@@ -372,7 +339,7 @@ Instance.new("UICorner", WsBox)
 -- JUMP POWER
 local JpBtn = Instance.new("TextButton")
 JpBtn.Size = UDim2.new(0.55, 0, 0, 12)
-JpBtn.Position = UDim2.new(0.05, 0, 0, 288)
+JpBtn.Position = UDim2.new(0.05, 0, 0, 258)
 JpBtn.Text = "SET JUMP"
 JpBtn.BackgroundColor3 = Color3.fromRGB(200, 150, 0)
 JpBtn.TextColor3 = Color3.new(1, 1, 1)
@@ -382,7 +349,7 @@ Instance.new("UICorner", JpBtn)
 
 local JpBox = Instance.new("TextBox")
 JpBox.Size = UDim2.new(0.3, 0, 0, 12)
-JpBox.Position = UDim2.new(0.65, 0, 0, 288)
+JpBox.Position = UDim2.new(0.65, 0, 0, 258)
 JpBox.Text = "50"
 JpBox.PlaceholderText = "JP"
 JpBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
@@ -394,7 +361,7 @@ Instance.new("UICorner", JpBox)
 -- GRAVITY
 local GravBtn = Instance.new("TextButton")
 GravBtn.Size = UDim2.new(0.55, 0, 0, 12)
-GravBtn.Position = UDim2.new(0.05, 0, 0, 303)
+GravBtn.Position = UDim2.new(0.05, 0, 0, 273)
 GravBtn.Text = "SET GRAV"
 GravBtn.BackgroundColor3 = Color3.fromRGB(100, 0, 150)
 GravBtn.TextColor3 = Color3.new(1, 1, 1)
@@ -404,7 +371,7 @@ Instance.new("UICorner", GravBtn)
 
 local GravBox = Instance.new("TextBox")
 GravBox.Size = UDim2.new(0.3, 0, 0, 12)
-GravBox.Position = UDim2.new(0.65, 0, 0, 303)
+GravBox.Position = UDim2.new(0.65, 0, 0, 273)
 GravBox.Text = "50"
 GravBox.PlaceholderText = "GR"
 GravBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
@@ -441,8 +408,8 @@ local listMode = "TP" -- TP / VIEW / LAG
 local savedSpots = {}
 local spotCount = 0
 
--- CHAOS LAG CHAIN SYSTEM
-local lagChain = {}
+-- CHAOS LAG CHAIN SYSTEM (DEFAULT INIT)
+local lagChain = {{anchor = 0.2, free = 0.1}}
 
 ModeBtn.MouseButton1Click:Connect(function()
     if listMode == "TP" then listMode = "VIEW"
@@ -523,35 +490,77 @@ function updateList()
         
     elseif listMode == "LAG" then
         for i, preset in ipairs(lagChain) do
-            local spotFrame = Instance.new("Frame")
-            spotFrame.Size = UDim2.new(1, -5, 0, 12)
-            spotFrame.BackgroundTransparency = 1
-            spotFrame.Parent = PlayerList
+            local itemFrame = Instance.new("Frame")
+            itemFrame.Size = UDim2.new(1, -5, 0, 14)
+            itemFrame.BackgroundTransparency = 1
+            itemFrame.Parent = PlayerList
             
-            local infoBtn = Instance.new("TextButton")
-            infoBtn.Size = UDim2.new(0.75, 0, 1, 0)
-            infoBtn.Text = string.format("%d: Lag %s | Free %s", i, tostring(preset.anchor), tostring(preset.free))
-            infoBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-            infoBtn.TextColor3 = Color3.new(1, 1, 1)
-            infoBtn.TextScaled = true
-            infoBtn.Parent = spotFrame
-            Instance.new("UICorner", infoBtn)
+            local anchorBox = Instance.new("TextBox")
+            anchorBox.Size = UDim2.new(0.38, 0, 1, 0)
+            anchorBox.Text = tostring(preset.anchor)
+            anchorBox.PlaceholderText = "Lag"
+            anchorBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+            anchorBox.TextColor3 = Color3.new(1, 1, 1)
+            anchorBox.TextScaled = true
+            anchorBox.Parent = itemFrame
+            Instance.new("UICorner", anchorBox)
+            
+            local freeBox = Instance.new("TextBox")
+            freeBox.Size = UDim2.new(0.38, 0, 1, 0)
+            freeBox.Position = UDim2.new(0.42, 0, 0, 0)
+            freeBox.Text = tostring(preset.free)
+            freeBox.PlaceholderText = "Free"
+            freeBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+            freeBox.TextColor3 = Color3.new(1, 1, 1)
+            freeBox.TextScaled = true
+            freeBox.Parent = itemFrame
+            Instance.new("UICorner", freeBox)
             
             local delBtn = Instance.new("TextButton")
-            delBtn.Size = UDim2.new(0.2, 0, 1, 0)
-            delBtn.Position = UDim2.new(0.8, 0, 0, 0)
-            delBtn.Text = "X"
+            delBtn.Size = UDim2.new(0.16, 0, 1, 0)
+            delBtn.Position = UDim2.new(0.84, 0, 0, 0)
+            delBtn.Text = "-"
             delBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
             delBtn.TextColor3 = Color3.new(1, 1, 1)
             delBtn.TextScaled = true
-            delBtn.Parent = spotFrame
+            delBtn.Parent = itemFrame
             Instance.new("UICorner", delBtn)
+            
+            anchorBox.FocusLost:Connect(function()
+                preset.anchor = math.max(0.01, tonumber(anchorBox.Text) or preset.anchor)
+                anchorBox.Text = tostring(preset.anchor)
+            end)
+            
+            freeBox.FocusLost:Connect(function()
+                preset.free = math.max(0.01, tonumber(freeBox.Text) or preset.free)
+                freeBox.Text = tostring(preset.free)
+            end)
             
             delBtn.MouseButton1Click:Connect(function()
                 table.remove(lagChain, i)
                 updateList()
             end)
         end
+        
+        -- DYNAMIC PLUS BUTTON TO ADD TO CHAIN
+        local addFrame = Instance.new("Frame")
+        addFrame.Size = UDim2.new(1, -5, 0, 14)
+        addFrame.BackgroundTransparency = 1
+        addFrame.Parent = PlayerList
+        
+        local addBtn = Instance.new("TextButton")
+        addBtn.Size = UDim2.new(1, 0, 1, 0)
+        addBtn.Text = "+ NEW LAG"
+        addBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
+        addBtn.TextColor3 = Color3.new(1, 1, 1)
+        addBtn.TextScaled = true
+        addBtn.Parent = addFrame
+        Instance.new("UICorner", addBtn)
+        
+        addBtn.MouseButton1Click:Connect(function()
+            table.insert(lagChain, {anchor = 0.2, free = 0.1})
+            updateList()
+        end)
     end
 end
 
@@ -615,13 +624,6 @@ AntiFlingBtn.MouseButton1Click:Connect(function()
 end)
 
 -- CHAOS LAG (HEARTBEAT BASED)
-AddLagBtn.MouseButton1Click:Connect(function()
-    local aTime = tonumber(LagAnchorBox.Text) or 0.2
-    local fTime = tonumber(LagFreeBox.Text) or 0.1
-    table.insert(lagChain, {anchor = aTime, free = fTime})
-    if listMode == "LAG" then updateList() end
-end)
-
 local infStabActive = false
 local lagState = "FREE"
 local lagTimer = 0
@@ -632,7 +634,7 @@ InfStabBtn.MouseButton1Click:Connect(function()
     InfStabBtn.Text = infStabActive and "LAG: ON" or "LAG: OFF"
     InfStabBtn.BackgroundColor3 = infStabActive and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(50, 50, 50)
     
-    -- Reset state upon turning off
+    -- Reset state gracefully upon manual turning off
     if not infStabActive then
         lagState = "FREE"
         lagTimer = 0
@@ -650,7 +652,7 @@ RunService.Heartbeat:Connect(function(dt)
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
     local hum = char and char:FindFirstChild("Humanoid")
     
-    -- Reset gracefully if dead
+    -- Emergency reset if dead or nil elements
     if not hrp or not hum or hum.Health <= 0 then
         lagState = "FREE"
         lagTimer = 0
@@ -661,16 +663,13 @@ RunService.Heartbeat:Connect(function(dt)
         return
     end
 
-    -- Get current preset logic
+    -- Process chain properly or use fallback
     local currentItem
     if #lagChain > 0 then
         if lagIndex > #lagChain then lagIndex = 1 end
         currentItem = lagChain[lagIndex]
     else
-        currentItem = {
-            anchor = tonumber(LagAnchorBox.Text) or 0.2, 
-            free = tonumber(LagFreeBox.Text) or 0.1
-        }
+        currentItem = {anchor = 0.2, free = 0.1}
     end
 
     lagTimer = lagTimer - dt
@@ -689,7 +688,7 @@ RunService.Heartbeat:Connect(function(dt)
             lagIndex = lagIndex + 1
         end
     else
-        -- Force correct state enforcement
+        -- Force persistent override to block accidental character physics
         if lagState == "LAG" then
             hrp.Velocity = Vector3.zero 
             hrp.RotVelocity = Vector3.zero
