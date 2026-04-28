@@ -43,7 +43,7 @@ local function ApplyStyle(inst, strokeColor, bgColor, textColor)
     
     inst.BorderSizePixel = 0
     if inst:IsA("TextButton") or inst:IsA("TextBox") or inst:IsA("TextLabel") then
-        inst.Font = Enum.Font.GothamBlack
+        inst.Font = Enum.Font.GothamBold -- Улучшена читаемость (вместо GothamBlack)
         inst.TextScaled = true
     end
     
@@ -51,7 +51,8 @@ local function ApplyStyle(inst, strokeColor, bgColor, textColor)
     corner.CornerRadius = UDim.new(0, 4)
     
     local stroke = inst:FindFirstChild("UIStroke") or Instance.new("UIStroke", inst)
-    stroke.Thickness = 1.5
+    -- Для текста обводка тоньше, чтобы не сливалось
+    stroke.Thickness = inst:IsA("TextLabel") and 1 or 1.5 
     stroke.ApplyStrokeMode = inst:IsA("TextLabel") and Enum.ApplyStrokeMode.Contextual or Enum.ApplyStrokeMode.Border
 
     UpdateInstanceTheme(inst)
@@ -96,13 +97,12 @@ end)
 UIS.InputChanged:Connect(function(input)
     if input == dragInput and dragging then
         local delta = input.Position - dragStart
-        -- Compensate for UIScale so dragging remains accurate
         MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + (delta.X / MainScaler.Scale), startPos.Y.Scale, startPos.Y.Offset + (delta.Y / MainScaler.Scale))
     end
 end)
 
 local Title = Instance.new("TextLabel")
-Title.Text = "KIRIK HUB V39"
+Title.Text = "KIRIK HUB V40"
 Title.Size = UDim2.new(1, -60, 0, 25)
 Title.Position = UDim2.new(0, 10, 0, 0)
 Title.TextXAlignment = Enum.TextXAlignment.Left
@@ -208,7 +208,7 @@ end)
 local HomeTab = MakeTab("HOME", true)
 local WelcomeText = Instance.new("TextLabel", HomeTab)
 WelcomeText.Size = UDim2.new(1, 0, 1, 0)
-WelcomeText.Text = "KIRIK HUB V39\n\n[ FEATURE HIGHLIGHTS ]\n- Custom Themes & UI Resizing (See Settings)\n- Players: ESP, INF TP, Custom Targets\n- Character: Speed, Gravity, Noclip, Spin\n- Flight: Mobile Support, Air Walk\n- Lag: Custom Chaos Chain System"
+WelcomeText.Text = "KIRIK HUB V40\n\n[ FEATURE HIGHLIGHTS ]\n- Custom Themes & UI Resizing (See Settings)\n- Players: ESP, INF TP, Custom Targets\n- Character: Speed, Gravity, Noclip, Spin\n- Flight: Mobile Support, Air Walk\n- Lag: Custom Chaos Chain System"
 WelcomeText.TextWrapped = true
 WelcomeText.TextYAlignment = Enum.TextYAlignment.Top
 ApplyStyle(WelcomeText, Color3.fromRGB(0, 255, 255), Color3.fromRGB(15, 15, 20))
@@ -278,17 +278,6 @@ UnviewBtn.Size = UDim2.new(1, 0, 1, 0)
 UnviewBtn.Text = "RESET CAMERA"
 ApplyStyle(UnviewBtn, Color3.fromRGB(150, 150, 255))
 
-local AfkRow = MakeRow(CharScroll)
-local AfkLbl = Instance.new("TextLabel", AfkRow)
-AfkLbl.Size = UDim2.new(0.65, 0, 1, 0)
-AfkLbl.Text = "AFK TIMEOUT (SEC)"
-ApplyStyle(AfkLbl, Color3.fromRGB(150, 150, 150))
-local AfkBox = Instance.new("TextBox", AfkRow)
-AfkBox.Size = UDim2.new(0.33, 0, 1, 0)
-AfkBox.Position = UDim2.new(0.67, 0, 0, 0)
-AfkBox.Text = "30"
-ApplyStyle(AfkBox, Color3.fromRGB(150, 150, 150))
-
 -- 4. FLIGHT TAB
 local FlyTab = MakeTab("FLIGHT", false)
 local FlyScroll, _ = MakeScrollArea(FlyTab)
@@ -334,7 +323,7 @@ LagListWrapper.Size = UDim2.new(1, 0, 1, -95)
 LagListWrapper.BackgroundTransparency = 1
 local LagList, _ = MakeScrollArea(LagListWrapper)
 
--- 6. SETTINGS TAB (NEW)
+-- 6. SETTINGS TAB
 local SettingsTab = MakeTab("SETTINGS", false)
 local SettingsScroll, _ = MakeScrollArea(SettingsTab)
 
@@ -349,6 +338,18 @@ ShrinkBox.Size = UDim2.new(0.33, 0, 1, 0)
 ShrinkBox.Position = UDim2.new(0.67, 0, 0, 0)
 ShrinkBox.Text = "1"
 ApplyStyle(ShrinkBox, Color3.fromRGB(255, 255, 0))
+
+local AfkRow = MakeRow(SettingsScroll)
+local AfkLbl = Instance.new("TextLabel", AfkRow)
+AfkLbl.Size = UDim2.new(0.65, 0, 1, 0)
+AfkLbl.Text = "AFK TIMEOUT (SEC)"
+ApplyStyle(AfkLbl, Color3.fromRGB(150, 150, 150))
+
+local AfkBox = Instance.new("TextBox", AfkRow)
+AfkBox.Size = UDim2.new(0.33, 0, 1, 0)
+AfkBox.Position = UDim2.new(0.67, 0, 0, 0)
+AfkBox.Text = "30"
+ApplyStyle(AfkBox, Color3.fromRGB(150, 150, 150))
 
 local ThemeLbl = Instance.new("TextLabel", MakeRow(SettingsScroll))
 ThemeLbl.Size = UDim2.new(1, 0, 1, 0)
