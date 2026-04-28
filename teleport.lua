@@ -8,40 +8,76 @@ local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
--- NEON THEME HELPER
-local function ApplyNeon(inst, strokeColor, bgColor)
-    if bgColor then 
-        inst.BackgroundColor3 = bgColor 
-    else 
-        inst.BackgroundColor3 = Color3.fromRGB(15, 15, 20) 
-    end
-    inst.BorderSizePixel = 0
+-- THEME SYSTEM
+local currentTheme = "NEON"
+
+local function UpdateInstanceTheme(inst)
+    if not inst:GetAttribute("NeonStroke") then return end
+    local stroke = inst:FindFirstChildWhichIsA("UIStroke")
     
+    if currentTheme == "NEON" then
+        inst.BackgroundColor3 = inst:GetAttribute("NeonBg")
+        if stroke then stroke.Color = inst:GetAttribute("NeonStroke") end
+        if inst:IsA("TextLabel") or inst:IsA("TextButton") or inst:IsA("TextBox") then
+            inst.TextColor3 = inst:GetAttribute("NeonText")
+        end
+    elseif currentTheme == "HACKER" then
+        inst.BackgroundColor3 = Color3.fromRGB(5, 10, 5)
+        if stroke then stroke.Color = Color3.fromRGB(0, 255, 0) end
+        if inst:IsA("TextLabel") or inst:IsA("TextButton") or inst:IsA("TextBox") then
+            inst.TextColor3 = Color3.fromRGB(0, 255, 0)
+        end
+    elseif currentTheme == "B&W" then
+        inst.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+        if stroke then stroke.Color = Color3.fromRGB(255, 255, 255) end
+        if inst:IsA("TextLabel") or inst:IsA("TextButton") or inst:IsA("TextBox") then
+            inst.TextColor3 = Color3.fromRGB(255, 255, 255)
+        end
+    end
+end
+
+local function ApplyStyle(inst, strokeColor, bgColor, textColor)
+    inst:SetAttribute("NeonStroke", strokeColor or Color3.fromRGB(0, 255, 255))
+    inst:SetAttribute("NeonBg", bgColor or Color3.fromRGB(15, 15, 20))
+    inst:SetAttribute("NeonText", textColor or Color3.new(1, 1, 1))
+    
+    inst.BorderSizePixel = 0
     if inst:IsA("TextButton") or inst:IsA("TextBox") or inst:IsA("TextLabel") then
         inst.Font = Enum.Font.GothamBlack
-        inst.TextColor3 = Color3.new(1, 1, 1)
         inst.TextScaled = true
     end
     
-    local corner = Instance.new("UICorner", inst)
+    local corner = inst:FindFirstChild("UICorner") or Instance.new("UICorner", inst)
     corner.CornerRadius = UDim.new(0, 4)
     
-    local stroke = Instance.new("UIStroke", inst)
-    stroke.Color = strokeColor or Color3.fromRGB(0, 255, 255)
+    local stroke = inst:FindFirstChild("UIStroke") or Instance.new("UIStroke", inst)
     stroke.Thickness = 1.5
     stroke.ApplyStrokeMode = inst:IsA("TextLabel") and Enum.ApplyStrokeMode.Contextual or Enum.ApplyStrokeMode.Border
+
+    UpdateInstanceTheme(inst)
 end
 
--- MAIN FRAME (EXPANDED FOR TABS)
+local function SetTheme(themeName)
+    currentTheme = themeName
+    for _, inst in pairs(ScreenGui:GetDescendants()) do
+        UpdateInstanceTheme(inst)
+    end
+    UpdateInstanceTheme(ScreenGui)
+end
+
+-- MAIN FRAME & SCALERS
 local MainFrame = Instance.new("Frame")
 MainFrame.Parent = ScreenGui
 MainFrame.Position = UDim2.new(0.5, -225, 0.5, -150)
 MainFrame.Size = UDim2.new(0, 450, 0, 300) 
 MainFrame.Active = true
 MainFrame.ClipsDescendants = true
-ApplyNeon(MainFrame, Color3.fromRGB(255, 0, 255), Color3.fromRGB(10, 5, 15))
+ApplyStyle(MainFrame, Color3.fromRGB(255, 0, 255), Color3.fromRGB(10, 5, 15))
 
--- DRAG LOGIC
+local MainScaler = Instance.new("UIScale", MainFrame)
+MainScaler.Scale = 1
+
+-- DRAG LOGIC (WITH UI SCALE SUPPORT)
 local DragHandle = Instance.new("Frame")
 DragHandle.Size = UDim2.new(1, -50, 0, 25)
 DragHandle.BackgroundTransparency = 1
@@ -60,16 +96,17 @@ end)
 UIS.InputChanged:Connect(function(input)
     if input == dragInput and dragging then
         local delta = input.Position - dragStart
-        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        -- Compensate for UIScale so dragging remains accurate
+        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + (delta.X / MainScaler.Scale), startPos.Y.Scale, startPos.Y.Offset + (delta.Y / MainScaler.Scale))
     end
 end)
 
 local Title = Instance.new("TextLabel")
-Title.Text = "KIRIK HUB V38"
+Title.Text = "KIRIK HUB V39"
 Title.Size = UDim2.new(1, -60, 0, 25)
 Title.Position = UDim2.new(0, 10, 0, 0)
 Title.TextXAlignment = Enum.TextXAlignment.Left
-ApplyNeon(Title, Color3.fromRGB(255, 0, 255))
+ApplyStyle(Title, Color3.fromRGB(255, 0, 255))
 Title.BackgroundTransparency = 1
 Title.Parent = MainFrame
 
@@ -77,17 +114,17 @@ local MinBtn = Instance.new("TextButton")
 MinBtn.Text = "-"
 MinBtn.Size = UDim2.new(0, 20, 0, 20)
 MinBtn.Position = UDim2.new(1, -50, 0, 3)
-ApplyNeon(MinBtn, Color3.fromRGB(255, 255, 0))
+ApplyStyle(MinBtn, Color3.fromRGB(255, 255, 0))
 MinBtn.Parent = MainFrame
 
 local CloseBtn = Instance.new("TextButton")
 CloseBtn.Text = "X"
 CloseBtn.Size = UDim2.new(0, 20, 0, 20)
 CloseBtn.Position = UDim2.new(1, -25, 0, 3)
-ApplyNeon(CloseBtn, Color3.fromRGB(255, 0, 0))
+ApplyStyle(CloseBtn, Color3.fromRGB(255, 0, 0))
 CloseBtn.Parent = MainFrame
 
--- TAB SYSTEM LOGIC
+-- TAB SYSTEM
 local Sidebar = Instance.new("Frame", MainFrame)
 Sidebar.Size = UDim2.new(0, 110, 1, -35)
 Sidebar.Position = UDim2.new(0, 5, 0, 30)
@@ -107,7 +144,7 @@ local function MakeTab(name, isDefault)
     local btn = Instance.new("TextButton", Sidebar)
     btn.Size = UDim2.new(1, 0, 0, 25)
     btn.Text = name
-    ApplyNeon(btn, Color3.fromRGB(0, 150, 255), Color3.fromRGB(15, 15, 20))
+    ApplyStyle(btn, Color3.fromRGB(0, 150, 255), Color3.fromRGB(15, 15, 20))
     
     local page = Instance.new("Frame", TabContainer)
     page.Size = UDim2.new(1, 0, 1, 0)
@@ -119,12 +156,22 @@ local function MakeTab(name, isDefault)
     
     btn.MouseButton1Click:Connect(function()
         for _, t in ipairs(tabs) do t.Visible = false end
-        for _, b in ipairs(tabBtns) do ApplyNeon(b, Color3.fromRGB(0, 150, 255), Color3.fromRGB(15, 15, 20)) end
+        for _, b in ipairs(tabBtns) do 
+            b:SetAttribute("NeonStroke", Color3.fromRGB(0, 150, 255))
+            b:SetAttribute("NeonBg", Color3.fromRGB(15, 15, 20))
+            UpdateInstanceTheme(b)
+        end
         page.Visible = true
-        ApplyNeon(btn, Color3.fromRGB(255, 0, 255), Color3.fromRGB(30, 20, 40))
+        btn:SetAttribute("NeonStroke", Color3.fromRGB(255, 0, 255))
+        btn:SetAttribute("NeonBg", Color3.fromRGB(30, 20, 40))
+        UpdateInstanceTheme(btn)
     end)
     
-    if isDefault then ApplyNeon(btn, Color3.fromRGB(255, 0, 255), Color3.fromRGB(30, 20, 40)) end
+    if isDefault then 
+        btn:SetAttribute("NeonStroke", Color3.fromRGB(255, 0, 255))
+        btn:SetAttribute("NeonBg", Color3.fromRGB(30, 20, 40))
+        UpdateInstanceTheme(btn)
+    end
     return page
 end
 
@@ -146,7 +193,6 @@ local function MakeRow(parent, height)
     return row
 end
 
--- MINIMIZE
 local minimized = false
 MinBtn.MouseButton1Click:Connect(function()
     minimized = not minimized
@@ -162,10 +208,10 @@ end)
 local HomeTab = MakeTab("HOME", true)
 local WelcomeText = Instance.new("TextLabel", HomeTab)
 WelcomeText.Size = UDim2.new(1, 0, 1, 0)
-WelcomeText.Text = "WELCOME TO KIRIK HUB V38\n\n[ NAVIGATE VIA LEFT TABS ]\n\n- PLAYERS: ESP, Custom TP, View, INF TP.\n- CHARACTER: Speed, Jump, Spin, Noclip, etc.\n- FLIGHT: Mobile-friendly Fly & Platforms.\n- LAG: Dedicated Chaos Lag chain editor.\n\nEnjoy the Neon aesthetic."
+WelcomeText.Text = "KIRIK HUB V39\n\n[ FEATURE HIGHLIGHTS ]\n- Custom Themes & UI Resizing (See Settings)\n- Players: ESP, INF TP, Custom Targets\n- Character: Speed, Gravity, Noclip, Spin\n- Flight: Mobile Support, Air Walk\n- Lag: Custom Chaos Chain System"
 WelcomeText.TextWrapped = true
 WelcomeText.TextYAlignment = Enum.TextYAlignment.Top
-ApplyNeon(WelcomeText, Color3.fromRGB(0, 255, 255), Color3.fromRGB(15, 15, 20))
+ApplyStyle(WelcomeText, Color3.fromRGB(0, 255, 255), Color3.fromRGB(15, 15, 20))
 
 -- 2. PLAYERS TAB
 local PlayersTab = MakeTab("PLAYERS", false)
@@ -175,17 +221,17 @@ PTopLayout.Padding = UDim.new(0, 5)
 local EspBtn = Instance.new("TextButton", MakeRow(PlayersTab))
 EspBtn.Size = UDim2.new(1, 0, 1, 0)
 EspBtn.Text = "ESP: OFF"
-ApplyNeon(EspBtn, Color3.fromRGB(0, 255, 100))
+ApplyStyle(EspBtn, Color3.fromRGB(0, 255, 100))
 
 local ModeBtn = Instance.new("TextButton", MakeRow(PlayersTab))
 ModeBtn.Size = UDim2.new(1, 0, 1, 0)
 ModeBtn.Text = "LIST MODE: TP"
-ApplyNeon(ModeBtn, Color3.fromRGB(255, 0, 255))
+ApplyStyle(ModeBtn, Color3.fromRGB(255, 0, 255))
 
 local AddTpBtn = Instance.new("TextButton", MakeRow(PlayersTab))
 AddTpBtn.Size = UDim2.new(1, 0, 1, 0)
 AddTpBtn.Text = "ADD CUSTOM TP PART"
-ApplyNeon(AddTpBtn, Color3.fromRGB(0, 150, 255))
+ApplyStyle(AddTpBtn, Color3.fromRGB(0, 150, 255))
 
 local PlayerListWrapper = Instance.new("Frame", PlayersTab)
 PlayerListWrapper.Size = UDim2.new(1, 0, 1, -95)
@@ -201,13 +247,13 @@ local function MakeCharStat(name, defaultVal, placeholder)
     local btn = Instance.new("TextButton", row)
     btn.Size = UDim2.new(0.65, 0, 1, 0)
     btn.Text = "SET " .. name
-    ApplyNeon(btn, Color3.fromRGB(255, 255, 0))
+    ApplyStyle(btn, Color3.fromRGB(255, 255, 0))
     local box = Instance.new("TextBox", row)
     box.Size = UDim2.new(0.33, 0, 1, 0)
     box.Position = UDim2.new(0.67, 0, 0, 0)
     box.Text = tostring(defaultVal)
     box.PlaceholderText = placeholder
-    ApplyNeon(box, Color3.fromRGB(255, 255, 0))
+    ApplyStyle(box, Color3.fromRGB(255, 255, 0))
     return btn, box
 end
 
@@ -220,28 +266,28 @@ local SpinBtn, SpinBox = MakeCharStat("SPIN", 50, "Spd")
 local UltraRunBtn = Instance.new("TextButton", MakeRow(CharScroll))
 UltraRunBtn.Size = UDim2.new(1, 0, 1, 0)
 UltraRunBtn.Text = "ULTRA RUN: OFF"
-ApplyNeon(UltraRunBtn, Color3.fromRGB(255, 80, 0))
+ApplyStyle(UltraRunBtn, Color3.fromRGB(255, 80, 0))
 
 local NoclipBtn = Instance.new("TextButton", MakeRow(CharScroll))
 NoclipBtn.Size = UDim2.new(1, 0, 1, 0)
 NoclipBtn.Text = "NOCLIP: OFF"
-ApplyNeon(NoclipBtn, Color3.fromRGB(0, 255, 200))
+ApplyStyle(NoclipBtn, Color3.fromRGB(0, 255, 200))
 
 local UnviewBtn = Instance.new("TextButton", MakeRow(CharScroll))
 UnviewBtn.Size = UDim2.new(1, 0, 1, 0)
 UnviewBtn.Text = "RESET CAMERA"
-ApplyNeon(UnviewBtn, Color3.fromRGB(150, 150, 255))
+ApplyStyle(UnviewBtn, Color3.fromRGB(150, 150, 255))
 
 local AfkRow = MakeRow(CharScroll)
 local AfkLbl = Instance.new("TextLabel", AfkRow)
 AfkLbl.Size = UDim2.new(0.65, 0, 1, 0)
 AfkLbl.Text = "AFK TIMEOUT (SEC)"
-ApplyNeon(AfkLbl, Color3.fromRGB(150, 150, 150))
+ApplyStyle(AfkLbl, Color3.fromRGB(150, 150, 150))
 local AfkBox = Instance.new("TextBox", AfkRow)
 AfkBox.Size = UDim2.new(0.33, 0, 1, 0)
 AfkBox.Position = UDim2.new(0.67, 0, 0, 0)
 AfkBox.Text = "30"
-ApplyNeon(AfkBox, Color3.fromRGB(150, 150, 150))
+ApplyStyle(AfkBox, Color3.fromRGB(150, 150, 150))
 
 -- 4. FLIGHT TAB
 local FlyTab = MakeTab("FLIGHT", false)
@@ -251,17 +297,17 @@ local FlyRow = MakeRow(FlyScroll)
 local FlyBtn = Instance.new("TextButton", FlyRow)
 FlyBtn.Size = UDim2.new(0.65, 0, 1, 0)
 FlyBtn.Text = "FLY: OFF"
-ApplyNeon(FlyBtn, Color3.fromRGB(255, 0, 255))
+ApplyStyle(FlyBtn, Color3.fromRGB(255, 0, 255))
 local FlySpeedBox = Instance.new("TextBox", FlyRow)
 FlySpeedBox.Size = UDim2.new(0.33, 0, 1, 0)
 FlySpeedBox.Position = UDim2.new(0.67, 0, 0, 0)
 FlySpeedBox.Text = "50"
-ApplyNeon(FlySpeedBox, Color3.fromRGB(255, 0, 255))
+ApplyStyle(FlySpeedBox, Color3.fromRGB(255, 0, 255))
 
 local PlatformBtn = Instance.new("TextButton", MakeRow(FlyScroll))
 PlatformBtn.Size = UDim2.new(1, 0, 1, 0)
 PlatformBtn.Text = "PLATFORM: OFF"
-ApplyNeon(PlatformBtn, Color3.fromRGB(0, 150, 255))
+ApplyStyle(PlatformBtn, Color3.fromRGB(0, 150, 255))
 
 -- 5. LAG TAB
 local LagTab = MakeTab("LAG", false)
@@ -271,22 +317,62 @@ LagTopLayout.Padding = UDim.new(0, 5)
 local AntiFlingBtn = Instance.new("TextButton", MakeRow(LagTab))
 AntiFlingBtn.Size = UDim2.new(1, 0, 1, 0)
 AntiFlingBtn.Text = "STAB (QUICK ANCHOR)"
-ApplyNeon(AntiFlingBtn, Color3.fromRGB(255, 50, 50))
+ApplyStyle(AntiFlingBtn, Color3.fromRGB(255, 50, 50))
 
 local InfStabBtn = Instance.new("TextButton", MakeRow(LagTab))
 InfStabBtn.Size = UDim2.new(1, 0, 1, 0)
 InfStabBtn.Text = "CHAOS LAG: OFF"
-ApplyNeon(InfStabBtn, Color3.fromRGB(255, 150, 0))
+ApplyStyle(InfStabBtn, Color3.fromRGB(255, 150, 0))
 
 local AddLagBtn = Instance.new("TextButton", MakeRow(LagTab))
 AddLagBtn.Size = UDim2.new(1, 0, 1, 0)
 AddLagBtn.Text = "+ ADD NEW LAG TO CHAIN"
-ApplyNeon(AddLagBtn, Color3.fromRGB(0, 255, 0))
+ApplyStyle(AddLagBtn, Color3.fromRGB(0, 255, 0))
 
 local LagListWrapper = Instance.new("Frame", LagTab)
 LagListWrapper.Size = UDim2.new(1, 0, 1, -95)
 LagListWrapper.BackgroundTransparency = 1
 local LagList, _ = MakeScrollArea(LagListWrapper)
+
+-- 6. SETTINGS TAB (NEW)
+local SettingsTab = MakeTab("SETTINGS", false)
+local SettingsScroll, _ = MakeScrollArea(SettingsTab)
+
+local ShrinkRow = MakeRow(SettingsScroll)
+local ShrinkLbl = Instance.new("TextLabel", ShrinkRow)
+ShrinkLbl.Size = UDim2.new(0.65, 0, 1, 0)
+ShrinkLbl.Text = "SHRINK UI (Ex: 2 = 2x smaller)"
+ApplyStyle(ShrinkLbl, Color3.fromRGB(255, 255, 0))
+
+local ShrinkBox = Instance.new("TextBox", ShrinkRow)
+ShrinkBox.Size = UDim2.new(0.33, 0, 1, 0)
+ShrinkBox.Position = UDim2.new(0.67, 0, 0, 0)
+ShrinkBox.Text = "1"
+ApplyStyle(ShrinkBox, Color3.fromRGB(255, 255, 0))
+
+local ThemeLbl = Instance.new("TextLabel", MakeRow(SettingsScroll))
+ThemeLbl.Size = UDim2.new(1, 0, 1, 0)
+ThemeLbl.Text = "--- THEMES ---"
+ApplyStyle(ThemeLbl, Color3.fromRGB(0, 255, 255))
+
+local NeonBtn = Instance.new("TextButton", MakeRow(SettingsScroll))
+NeonBtn.Size = UDim2.new(1, 0, 1, 0)
+NeonBtn.Text = "NEON (DEFAULT)"
+ApplyStyle(NeonBtn, Color3.fromRGB(255, 0, 255))
+
+local HackerBtn = Instance.new("TextButton", MakeRow(SettingsScroll))
+HackerBtn.Size = UDim2.new(1, 0, 1, 0)
+HackerBtn.Text = "HACKER (GREEN)"
+ApplyStyle(HackerBtn, Color3.fromRGB(0, 255, 0))
+
+local BWBtn = Instance.new("TextButton", MakeRow(SettingsScroll))
+BWBtn.Size = UDim2.new(1, 0, 1, 0)
+BWBtn.Text = "BLACK & WHITE"
+ApplyStyle(BWBtn, Color3.fromRGB(255, 255, 255))
+
+NeonBtn.MouseButton1Click:Connect(function() SetTheme("NEON") end)
+HackerBtn.MouseButton1Click:Connect(function() SetTheme("HACKER") end)
+BWBtn.MouseButton1Click:Connect(function() SetTheme("B&W") end)
 
 -- ==================== FLOATING MOBILE UI ====================
 local FlyUI = Instance.new("Frame", ScreenGui)
@@ -294,18 +380,19 @@ FlyUI.Size = UDim2.new(0, 60, 0, 120)
 FlyUI.Position = UDim2.new(1, -70, 0.5, -60)
 FlyUI.BackgroundTransparency = 1
 FlyUI.Visible = false
+local FlyScaler = Instance.new("UIScale", FlyUI)
 
 local FlyUpBtn = Instance.new("TextButton", FlyUI)
 FlyUpBtn.Size = UDim2.new(1, 0, 0.45, 0)
 FlyUpBtn.Text = "UP"
-ApplyNeon(FlyUpBtn, Color3.fromRGB(0, 255, 255))
+ApplyStyle(FlyUpBtn, Color3.fromRGB(0, 255, 255))
 FlyUpBtn.BackgroundTransparency = 0.5
 
 local FlyDownBtn = Instance.new("TextButton", FlyUI)
 FlyDownBtn.Size = UDim2.new(1, 0, 0.45, 0)
 FlyDownBtn.Position = UDim2.new(0, 0, 0.55, 0)
 FlyDownBtn.Text = "DOWN"
-ApplyNeon(FlyDownBtn, Color3.fromRGB(0, 255, 255))
+ApplyStyle(FlyDownBtn, Color3.fromRGB(0, 255, 255))
 FlyDownBtn.BackgroundTransparency = 0.5
 
 local PlatUI = Instance.new("Frame", ScreenGui)
@@ -313,11 +400,12 @@ PlatUI.Size = UDim2.new(0, 60, 0, 50)
 PlatUI.Position = UDim2.new(1, -70, 0.5, 70)
 PlatUI.BackgroundTransparency = 1
 PlatUI.Visible = false
+local PlatScaler = Instance.new("UIScale", PlatUI)
 
 local PlatDownBtn = Instance.new("TextButton", PlatUI)
 PlatDownBtn.Size = UDim2.new(1, 0, 1, 0)
 PlatDownBtn.Text = "DOWN"
-ApplyNeon(PlatDownBtn, Color3.fromRGB(0, 255, 255))
+ApplyStyle(PlatDownBtn, Color3.fromRGB(0, 255, 255))
 PlatDownBtn.BackgroundTransparency = 0.5
 
 local upPressed, downPressed, platDownPressed = false, false, false
@@ -328,6 +416,21 @@ end
 HookMobileBtn(FlyUpBtn, "up")
 HookMobileBtn(FlyDownBtn, "down")
 HookMobileBtn(PlatDownBtn, "plat")
+
+-- UI SCALE LOGIC APPLIED TO ALL SCALERS
+ShrinkBox.FocusLost:Connect(function()
+    local factor = tonumber(ShrinkBox.Text)
+    if factor and factor > 0 then
+        MainScaler.Scale = 1 / factor
+        FlyScaler.Scale = 1 / factor
+        PlatScaler.Scale = 1 / factor
+    else
+        ShrinkBox.Text = "1"
+        MainScaler.Scale = 1
+        FlyScaler.Scale = 1
+        PlatScaler.Scale = 1
+    end
+end)
 
 -- ==================== LOGIC & SYSTEMS ====================
 
@@ -371,10 +474,10 @@ local function updatePlayerList()
             if listMode == "INF TP" then
                 local isActive = (currentInfTpTarget == player)
                 btn.Text = player.DisplayName .. (isActive and " [ON]" or " [OFF]")
-                ApplyNeon(btn, isActive and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0))
+                ApplyStyle(btn, isActive and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0))
             else
                 btn.Text = player.DisplayName
-                ApplyNeon(btn, Color3.fromRGB(0, 200, 255))
+                ApplyStyle(btn, Color3.fromRGB(0, 200, 255))
             end
             
             btn.MouseButton1Click:Connect(function()
@@ -401,13 +504,13 @@ local function updatePlayerList()
             local tpBtn = Instance.new("TextButton", row)
             tpBtn.Size = UDim2.new(0.75, 0, 1, 0)
             tpBtn.Text = spot.name
-            ApplyNeon(tpBtn, Color3.fromRGB(0, 255, 100))
+            ApplyStyle(tpBtn, Color3.fromRGB(0, 255, 100))
             
             local delBtn = Instance.new("TextButton", row)
             delBtn.Size = UDim2.new(0.2, 0, 1, 0)
             delBtn.Position = UDim2.new(0.8, 0, 0, 0)
             delBtn.Text = "X"
-            ApplyNeon(delBtn, Color3.fromRGB(255, 0, 0))
+            ApplyStyle(delBtn, Color3.fromRGB(255, 0, 0))
             
             tpBtn.MouseButton1Click:Connect(function()
                 local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
@@ -462,20 +565,20 @@ local function updateLagList()
         anchorBox.Size = UDim2.new(0.38, 0, 1, 0)
         anchorBox.Text = tostring(preset.anchor)
         anchorBox.PlaceholderText = "Lag"
-        ApplyNeon(anchorBox, Color3.fromRGB(255, 0, 150))
+        ApplyStyle(anchorBox, Color3.fromRGB(255, 0, 150))
         
         local freeBox = Instance.new("TextBox", row)
         freeBox.Size = UDim2.new(0.38, 0, 1, 0)
         freeBox.Position = UDim2.new(0.42, 0, 0, 0)
         freeBox.Text = tostring(preset.free)
         freeBox.PlaceholderText = "Free"
-        ApplyNeon(freeBox, Color3.fromRGB(0, 255, 150))
+        ApplyStyle(freeBox, Color3.fromRGB(0, 255, 150))
         
         local delBtn = Instance.new("TextButton", row)
         delBtn.Size = UDim2.new(0.16, 0, 1, 0)
         delBtn.Position = UDim2.new(0.84, 0, 0, 0)
         delBtn.Text = "-"
-        ApplyNeon(delBtn, Color3.fromRGB(255, 0, 0))
+        ApplyStyle(delBtn, Color3.fromRGB(255, 0, 0))
         
         anchorBox.FocusLost:Connect(function()
             preset.anchor = math.max(0, tonumber(anchorBox.Text) or preset.anchor)
