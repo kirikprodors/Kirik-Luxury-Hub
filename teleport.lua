@@ -8,19 +8,32 @@ local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
--- NEON THEME HELPER
+-- NEON THEME HELPER (OPTIMIZATION)
 local function ApplyNeon(inst, strokeColor, bgColor)
-    if bgColor then inst.BackgroundColor3 = bgColor else inst.BackgroundColor3 = Color3.fromRGB(15, 15, 20) end
+    if bgColor then 
+        inst.BackgroundColor3 = bgColor 
+    else 
+        inst.BackgroundColor3 = Color3.fromRGB(15, 15, 20) 
+    end
+    inst.BorderSizePixel = 0
+    
     if inst:IsA("TextButton") or inst:IsA("TextBox") or inst:IsA("TextLabel") then
         inst.Font = Enum.Font.GothamBlack
         inst.TextColor3 = Color3.new(1, 1, 1)
     end
+    
     local corner = Instance.new("UICorner", inst)
     corner.CornerRadius = UDim.new(0, 4)
+    
     local stroke = Instance.new("UIStroke", inst)
     stroke.Color = strokeColor or Color3.fromRGB(0, 255, 255)
     stroke.Thickness = 1.5
-    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    
+    if inst:IsA("TextLabel") then
+        stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
+    else
+        stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    end
 end
 
 -- MAIN FRAME
@@ -68,15 +81,11 @@ Content.Parent = MainFrame
 
 local Title = Instance.new("TextLabel")
 Title.Text = "KIRIK V37"
-Title.TextColor3 = Color3.fromRGB(0, 255, 255)
 Title.TextSize = 10
 Title.Size = UDim2.new(1, -33, 0, 20)
+ApplyNeon(Title, Color3.fromRGB(255, 0, 255))
 Title.BackgroundTransparency = 1
 Title.Parent = MainFrame
-Title.Font = Enum.Font.GothamBlack
-local TitleStroke = Instance.new("TextStroke", Title)
-TitleStroke.Color = Color3.fromRGB(255, 0, 255)
-TitleStroke.Transparency = 0.5
 
 local MinBtn = Instance.new("TextButton")
 MinBtn.Text = "-"
@@ -211,6 +220,7 @@ FlyUpBtn.Size = UDim2.new(1, 0, 0.45, 0)
 FlyUpBtn.Text = "UP"
 FlyUpBtn.TextScaled = true
 ApplyNeon(FlyUpBtn, Color3.fromRGB(0, 255, 255))
+FlyUpBtn.BackgroundTransparency = 0.5
 FlyUpBtn.Parent = FlyUI
 
 local FlyDownBtn = Instance.new("TextButton")
@@ -219,6 +229,7 @@ FlyDownBtn.Position = UDim2.new(0, 0, 0.55, 0)
 FlyDownBtn.Text = "DOWN"
 FlyDownBtn.TextScaled = true
 ApplyNeon(FlyDownBtn, Color3.fromRGB(0, 255, 255))
+FlyDownBtn.BackgroundTransparency = 0.5
 FlyDownBtn.Parent = FlyUI
 
 local upPressed, downPressed = false, false
@@ -349,6 +360,7 @@ PlatDownBtn.Size = UDim2.new(1, 0, 1, 0)
 PlatDownBtn.Text = "DOWN"
 PlatDownBtn.TextScaled = true
 ApplyNeon(PlatDownBtn, Color3.fromRGB(0, 255, 255))
+PlatDownBtn.BackgroundTransparency = 0.5
 PlatDownBtn.Parent = PlatUI
 
 local platDownPressed = false
