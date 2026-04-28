@@ -8,7 +8,7 @@ local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
--- MAIN FRAME RESIZED TO 323 TO FIT NEW LAG CONFIG
+-- MAIN FRAME
 local MainFrame = Instance.new("Frame")
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
@@ -57,7 +57,7 @@ Content.BackgroundTransparency = 1
 Content.Parent = MainFrame
 
 local Title = Instance.new("TextLabel")
-Title.Text = "KIRIK HUB V34"
+Title.Text = "KIRIK HUB V35"
 Title.TextColor3 = Color3.fromRGB(255, 215, 0)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 8
@@ -91,7 +91,7 @@ MinBtn.MouseButton1Click:Connect(function()
     minimized = not minimized
     Content.Visible = not minimized
     MinBtn.Text = minimized and "+" or "-"
-    Title.Text = minimized and "Cheat Hub" or "KIRIK HUB V34"
+    Title.Text = minimized and "Cheat Hub" or "KIRIK HUB V35"
     MainFrame.Size = minimized and UDim2.new(0, 95, 0, 20) or UDim2.new(0, 95, 0, 323)
 end)
 
@@ -157,7 +157,7 @@ InfStabBtn.TextScaled = true
 InfStabBtn.Parent = Content
 Instance.new("UICorner", InfStabBtn)
 
--- LAG SETTINGS
+-- LAG SETTINGS (ANCHOR / FREE)
 local LagAnchorBox = Instance.new("TextBox")
 LagAnchorBox.Size = UDim2.new(0.43, 0, 0, 12)
 LagAnchorBox.Position = UDim2.new(0.05, 0, 0, 123)
@@ -183,7 +183,7 @@ Instance.new("UICorner", LagFreeBox)
 local AddLagBtn = Instance.new("TextButton")
 AddLagBtn.Size = UDim2.new(0.9, 0, 0, 12)
 AddLagBtn.Position = UDim2.new(0.05, 0, 0, 138)
-AddLagBtn.Text = "SAVE LAG PRESET"
+AddLagBtn.Text = "ADD TO CHAIN"
 AddLagBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
 AddLagBtn.TextColor3 = Color3.new(1, 1, 1)
 AddLagBtn.TextScaled = true
@@ -440,12 +440,9 @@ PlatDownBtn.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputT
 local listMode = "TP" -- TP / VIEW / LAG
 local savedSpots = {}
 local spotCount = 0
-local lagPresets = {}
-local lagPresetCount = 0
 
--- DYNAMIC LAG VARIABLES
-local currentLagAnchor = 0.2
-local currentLagFree = 0.1
+-- CHAOS LAG CHAIN SYSTEM
+local lagChain = {}
 
 ModeBtn.MouseButton1Click:Connect(function()
     if listMode == "TP" then listMode = "VIEW"
@@ -525,20 +522,20 @@ function updateList()
         end
         
     elseif listMode == "LAG" then
-        for i, preset in ipairs(lagPresets) do
+        for i, preset in ipairs(lagChain) do
             local spotFrame = Instance.new("Frame")
             spotFrame.Size = UDim2.new(1, -5, 0, 12)
             spotFrame.BackgroundTransparency = 1
             spotFrame.Parent = PlayerList
             
-            local selBtn = Instance.new("TextButton")
-            selBtn.Size = UDim2.new(0.75, 0, 1, 0)
-            selBtn.Text = preset.name .. ": " .. preset.anchor .. "s / " .. preset.free .. "s"
-            selBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
-            selBtn.TextColor3 = Color3.new(1, 1, 1)
-            selBtn.TextScaled = true
-            selBtn.Parent = spotFrame
-            Instance.new("UICorner", selBtn)
+            local infoBtn = Instance.new("TextButton")
+            infoBtn.Size = UDim2.new(0.75, 0, 1, 0)
+            infoBtn.Text = string.format("%d: Lag %s | Free %s", i, tostring(preset.anchor), tostring(preset.free))
+            infoBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+            infoBtn.TextColor3 = Color3.new(1, 1, 1)
+            infoBtn.TextScaled = true
+            infoBtn.Parent = spotFrame
+            Instance.new("UICorner", infoBtn)
             
             local delBtn = Instance.new("TextButton")
             delBtn.Size = UDim2.new(0.2, 0, 1, 0)
@@ -550,15 +547,8 @@ function updateList()
             delBtn.Parent = spotFrame
             Instance.new("UICorner", delBtn)
             
-            selBtn.MouseButton1Click:Connect(function()
-                LagAnchorBox.Text = tostring(preset.anchor)
-                LagFreeBox.Text = tostring(preset.free)
-                currentLagAnchor = preset.anchor
-                currentLagFree = preset.free
-            end)
-            
             delBtn.MouseButton1Click:Connect(function()
-                table.remove(lagPresets, i)
+                table.remove(lagChain, i)
                 updateList()
             end)
         end
@@ -614,7 +604,7 @@ Players.PlayerAdded:Connect(function(p) p.CharacterAdded:Connect(applyESP) updat
 Players.PlayerRemoving:Connect(updateList)
 for _, p in pairs(Players:GetPlayers()) do p.CharacterAdded:Connect(applyESP) end
 
--- STAB & CHAOS LAG LOGIC
+-- STAB 
 AntiFlingBtn.MouseButton1Click:Connect(function()
     local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     if hrp then
@@ -624,50 +614,88 @@ AntiFlingBtn.MouseButton1Click:Connect(function()
     end
 end)
 
-local function applyLagSettings()
-    currentLagAnchor = math.max(0.01, tonumber(LagAnchorBox.Text) or 0.2)
-    currentLagFree = math.max(0.01, tonumber(LagFreeBox.Text) or 0.1)
-end
-
-LagAnchorBox.FocusLost:Connect(applyLagSettings)
-LagFreeBox.FocusLost:Connect(applyLagSettings)
-
+-- CHAOS LAG (HEARTBEAT BASED)
 AddLagBtn.MouseButton1Click:Connect(function()
-    applyLagSettings()
-    lagPresetCount = lagPresetCount + 1
-    table.insert(lagPresets, {name = "L" .. lagPresetCount, anchor = currentLagAnchor, free = currentLagFree})
+    local aTime = tonumber(LagAnchorBox.Text) or 0.2
+    local fTime = tonumber(LagFreeBox.Text) or 0.1
+    table.insert(lagChain, {anchor = aTime, free = fTime})
     if listMode == "LAG" then updateList() end
 end)
 
 local infStabActive = false
+local lagState = "FREE"
+local lagTimer = 0
+local lagIndex = 1
+
 InfStabBtn.MouseButton1Click:Connect(function()
     infStabActive = not infStabActive
     InfStabBtn.Text = infStabActive and "LAG: ON" or "LAG: OFF"
     InfStabBtn.BackgroundColor3 = infStabActive and Color3.fromRGB(0, 150, 0) or Color3.fromRGB(50, 50, 50)
+    
+    -- Reset state upon turning off
+    if not infStabActive then
+        lagState = "FREE"
+        lagTimer = 0
+        lagIndex = 1
+        local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if hrp then 
+            hrp.Anchored = false 
+            hrp.Velocity = Vector3.zero
+        end
+    end
 end)
 
-task.spawn(function()
-    while true do
-        if infStabActive then
-            local char = LocalPlayer.Character
-            local hrp = char and char:FindFirstChild("HumanoidRootPart")
-            if hrp and hrp.Parent then
-                hrp.Velocity = Vector3.zero 
-                hrp.RotVelocity = Vector3.zero
-                hrp.Anchored = true 
-                task.wait(currentLagAnchor)
-                
-                if hrp and hrp.Parent then 
-                    hrp.Anchored = false
-                    task.wait(currentLagFree)
-                else
-                    task.wait(0.1)
-                end
-            else 
-                task.wait(0.2) 
-            end
-        else 
-            task.wait(0.2) 
+RunService.Heartbeat:Connect(function(dt)
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    local hum = char and char:FindFirstChild("Humanoid")
+    
+    -- Reset gracefully if dead
+    if not hrp or not hum or hum.Health <= 0 then
+        lagState = "FREE"
+        lagTimer = 0
+        return
+    end
+
+    if not infStabActive then
+        return
+    end
+
+    -- Get current preset logic
+    local currentItem
+    if #lagChain > 0 then
+        if lagIndex > #lagChain then lagIndex = 1 end
+        currentItem = lagChain[lagIndex]
+    else
+        currentItem = {
+            anchor = tonumber(LagAnchorBox.Text) or 0.2, 
+            free = tonumber(LagFreeBox.Text) or 0.1
+        }
+    end
+
+    lagTimer = lagTimer - dt
+
+    if lagTimer <= 0 then
+        if lagState == "FREE" then
+            lagState = "LAG"
+            lagTimer = currentItem.anchor
+            hrp.Velocity = Vector3.zero 
+            hrp.RotVelocity = Vector3.zero
+            hrp.Anchored = true
+        else
+            lagState = "FREE"
+            lagTimer = currentItem.free
+            hrp.Anchored = false
+            lagIndex = lagIndex + 1
+        end
+    else
+        -- Force correct state enforcement
+        if lagState == "LAG" then
+            hrp.Velocity = Vector3.zero 
+            hrp.RotVelocity = Vector3.zero
+            hrp.Anchored = true
+        else
+            hrp.Anchored = false
         end
     end
 end)
