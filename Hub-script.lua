@@ -77,7 +77,7 @@ ApplyStyle(MainFrame, Color3.fromRGB(255, 0, 255), Color3.fromRGB(10, 5, 15))
 local MainScaler = Instance.new("UIScale", MainFrame)
 MainScaler.Scale = 1
 
--- DRAG LOGIC (WITH UI SCALE SUPPORT)
+-- DRAG LOGIC
 local DragHandle = Instance.new("Frame")
 DragHandle.Size = UDim2.new(1, -50, 0, 25)
 DragHandle.BackgroundTransparency = 1
@@ -101,7 +101,7 @@ UIS.InputChanged:Connect(function(input)
 end)
 
 local Title = Instance.new("TextLabel")
-Title.Text = "KIRIK HUB V41"
+Title.Text = "KIRIK HUB V42"
 Title.Size = UDim2.new(1, -60, 0, 25)
 Title.Position = UDim2.new(0, 10, 0, 0)
 Title.TextXAlignment = Enum.TextXAlignment.Left
@@ -207,7 +207,7 @@ end)
 local HomeTab = MakeTab("HOME", true)
 local WelcomeText = Instance.new("TextLabel", HomeTab)
 WelcomeText.Size = UDim2.new(1, 0, 1, 0)
-WelcomeText.Text = "KIRIK HUB V41\n\n[ FEATURE HIGHLIGHTS ]\n- Custom Themes & UI Resizing\n- Players: ESP, INF TP, Custom Spots\n- NPCs: Scan & Interact with game bots\n- Character: Speed, Gravity, Noclip\n- Flight: Mobile Support, Air Walk\n- Lag: Custom Chaos Chain System"
+WelcomeText.Text = "KIRIK HUB V42\n\n[ FEATURE HIGHLIGHTS ]\n- Custom Themes & UI Resizing\n- Players: ESP, INF TP, Dynamic Part Targets\n- NPCs: Scan & Interact with game bots\n- Character: Speed, Gravity, Noclip\n- Flight: Mobile Support, Air Walk\n- Lag: Custom Chaos Chain System"
 WelcomeText.TextWrapped = true
 WelcomeText.TextYAlignment = Enum.TextYAlignment.Top
 ApplyStyle(WelcomeText, Color3.fromRGB(0, 255, 255), Color3.fromRGB(15, 15, 20))
@@ -476,34 +476,50 @@ local function startInfTp(target)
     infTpConn = RunService.Heartbeat:Connect(function()
         if not currentInfTpTarget then stopInfTp() return end
         
-        local tChar = currentInfTpTarget
-        if typeof(currentInfTpTarget) == "Instance" and currentInfTpTarget:IsA("Player") then
-            tChar = currentInfTpTarget.Character
-        end
+        local targetCFrame = nil
+        local isValid = false
         
-        if tChar and tChar.Parent then
-            local tHum = tChar:FindFirstChildOfClass("Humanoid")
-            local tHrp = tChar:FindFirstChild("HumanoidRootPart")
-            local mChar = LocalPlayer.Character
-            local mHrp = mChar and mChar:FindFirstChild("HumanoidRootPart")
-            
-            if tHrp and mHrp and tHum and tHum.Health > 0 then
-                mHrp.CFrame = tHrp.CFrame * CFrame.new(0, 0, 3)
-            else
-                if typeof(currentInfTpTarget) ~= "Instance" or not currentInfTpTarget:IsA("Player") then
-                    if not tChar.Parent or (tHum and tHum.Health <= 0) then
-                        stopInfTp()
-                        if updatePlayerList then updatePlayerList() end
-                        if updateNpcList then updateNpcList() end
+        if typeof(currentInfTpTarget) == "Instance" then
+            if currentInfTpTarget:IsA("Player") then
+                local tChar = currentInfTpTarget.Character
+                if tChar and tChar.Parent then
+                    local tHrp = tChar:FindFirstChild("HumanoidRootPart")
+                    local tHum = tChar:FindFirstChildOfClass("Humanoid")
+                    if tHrp and tHum and tHum.Health > 0 then
+                        targetCFrame = tHrp.CFrame * CFrame.new(0, 0, 3)
+                        isValid = true
+                    end
+                end
+            elseif currentInfTpTarget:IsA("Model") then
+                if currentInfTpTarget.Parent then
+                    local tHrp = currentInfTpTarget:FindFirstChild("HumanoidRootPart")
+                    local tHum = currentInfTpTarget:FindFirstChildOfClass("Humanoid")
+                    if tHrp and tHum and tHum.Health > 0 then
+                        targetCFrame = tHrp.CFrame * CFrame.new(0, 0, 3)
+                        isValid = true
                     end
                 end
             end
-        else
-            if typeof(currentInfTpTarget) ~= "Instance" or not currentInfTpTarget:IsA("Player") then
-                stopInfTp()
-                if updatePlayerList then updatePlayerList() end
-                if updateNpcList then updateNpcList() end
+        elseif type(currentInfTpTarget) == "table" then
+            if currentInfTpTarget.part and currentInfTpTarget.part.Parent then
+                targetCFrame = currentInfTpTarget.part.CFrame * CFrame.new(0, 3, 0)
+                isValid = true
+            else
+                targetCFrame = CFrame.new(currentInfTpTarget.pos + Vector3.new(0, 3, 0))
+                isValid = true
             end
+        end
+        
+        if isValid and targetCFrame then
+            local mChar = LocalPlayer.Character
+            local mHrp = mChar and mChar:FindFirstChild("HumanoidRootPart")
+            if mHrp then
+                mHrp.CFrame = targetCFrame
+            end
+        else
+            stopInfTp()
+            if updatePlayerList then updatePlayerList() end
+            if updateNpcList then updateNpcList() end
         end
     end)
 end
@@ -545,30 +561,51 @@ updatePlayerList = function()
         end
     end
     
-    if listMode == "TP" then
-        for i, spot in ipairs(savedSpots) do
-            local row = MakeRow(PlayerList)
-            local tpBtn = Instance.new("TextButton", row)
-            tpBtn.Size = UDim2.new(0.75, 0, 1, 0)
+    for i, spot in ipairs(savedSpots) do
+        local row = MakeRow(PlayerList)
+        local tpBtn = Instance.new("TextButton", row)
+        tpBtn.Size = UDim2.new(0.75, 0, 1, 0)
+        
+        if listMode == "INF TP" then
+            local isActive = (currentInfTpTarget == spot)
+            tpBtn.Text = spot.name .. (isActive and " [ON]" or "[OFF]")
+            ApplyStyle(tpBtn, isActive and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0))
+        else
             tpBtn.Text = spot.name
             ApplyStyle(tpBtn, Color3.fromRGB(0, 255, 100))
-            
-            local delBtn = Instance.new("TextButton", row)
-            delBtn.Size = UDim2.new(0.2, 0, 1, 0)
-            delBtn.Position = UDim2.new(0.8, 0, 0, 0)
-            delBtn.Text = "X"
-            ApplyStyle(delBtn, Color3.fromRGB(255, 0, 0))
-            
-            tpBtn.MouseButton1Click:Connect(function()
-                local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-                if hrp then hrp.CFrame = CFrame.new(spot.pos + Vector3.new(0, 3, 0)) end
-            end)
-            
-            delBtn.MouseButton1Click:Connect(function()
-                table.remove(savedSpots, i)
-                updatePlayerList()
-            end)
         end
+        
+        local delBtn = Instance.new("TextButton", row)
+        delBtn.Size = UDim2.new(0.2, 0, 1, 0)
+        delBtn.Position = UDim2.new(0.8, 0, 0, 0)
+        delBtn.Text = "X"
+        ApplyStyle(delBtn, Color3.fromRGB(255, 0, 0))
+        
+        tpBtn.MouseButton1Click:Connect(function()
+            if listMode == "TP" then
+                local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                if hrp then 
+                    if spot.part and spot.part.Parent then
+                        hrp.CFrame = spot.part.CFrame * CFrame.new(0, 3, 0)
+                    else
+                        hrp.CFrame = CFrame.new(spot.pos + Vector3.new(0, 3, 0))
+                    end
+                end
+            elseif listMode == "VIEW" then
+                if spot.part and spot.part.Parent then
+                    workspace.CurrentCamera.CameraSubject = spot.part
+                end
+            elseif listMode == "INF TP" then
+                if currentInfTpTarget == spot then stopInfTp() else startInfTp(spot) end
+                updatePlayerList()
+            end
+        end)
+        
+        delBtn.MouseButton1Click:Connect(function()
+            if currentInfTpTarget == spot then stopInfTp() end
+            table.remove(savedSpots, i)
+            updatePlayerList()
+        end)
     end
 end
 
@@ -594,7 +631,7 @@ updateNpcList = function()
                 if npcListMode == "TP" then
                     local hrp = npc:FindFirstChild("HumanoidRootPart")
                     if hrp and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                        LocalPlayer.Character.HumanoidRootPart.CFrame = hrp.CFrame
+                        LocalPlayer.Character.HumanoidRootPart.CFrame = hrp.CFrame * CFrame.new(0, 0, 3)
                     end
                 elseif npcListMode == "VIEW" then
                     local hum = npc:FindFirstChildOfClass("Humanoid")
@@ -656,7 +693,12 @@ mouse.Button1Down:Connect(function()
         waitingForClick = false
         AddTpBtn.Text = "ADD CUSTOM TP PART"
         spotCount = spotCount + 1
-        table.insert(savedSpots, {name = "SPOT " .. spotCount, pos = mouse.Hit.Position})
+        
+        local hitPart = mouse.Target
+        local hitPos = mouse.Hit.Position
+        local name = hitPart and ("[" .. hitPart.Name .. "]") or ("SPOT " .. spotCount)
+        
+        table.insert(savedSpots, {name = name, part = hitPart, pos = hitPos})
         updatePlayerList()
     end
 end)
