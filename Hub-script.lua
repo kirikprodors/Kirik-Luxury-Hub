@@ -59,10 +59,41 @@ end
 
 local function SetTheme(themeName)
     currentTheme = themeName
-    for _, inst in pairs(ScreenGui:GetDescendants()) do
-        UpdateInstanceTheme(inst)
-    end
+    for _, inst in pairs(ScreenGui:GetDescendants()) do UpdateInstanceTheme(inst) end
     UpdateInstanceTheme(ScreenGui)
+end
+
+local function ApplyToggleStyle(btn, state, defColor)
+    ApplyStyle(btn, state and Color3.fromRGB(0, 255, 0) or defColor)
+end
+
+-- BASE64 ENCODER/DECODER FOR SAVE SYSTEM
+local b64chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+local function B64Encode(data)
+    return ((data:gsub('.', function(x)
+        local r, b = '', x:byte()
+        for i = 8, 1, -1 do r = r .. (b % 2^i - b % 2^(i-1) > 0 and '1' or '0') end
+        return r;
+    end)..'0000'):gsub('%d%d%d?%d?%d?%d?', function(x)
+        if (#x < 6) then return '' end
+        local c = 0
+        for i = 1, 6 do c = c + (x:sub(i,i) == '1' and 2^(6-i) or 0) end
+        return b64chars:sub(c+1, c+1)
+    end)..({ '', '==', '=' })[#data%3+1])
+end
+local function B64Decode(data)
+    data = string.gsub(data, '[^'..b64chars..'=]', '')
+    return (data:gsub('.', function(x)
+        if (x == '=') then return '' end
+        local r, f = '', (b64chars:find(x)-1)
+        for i = 6, 1, -1 do r = r .. (f % 2^i - f % 2^(i-1) > 0 and '1' or '0') end
+        return r;
+    end):gsub('%d%d%d?%d?%d?%d?%d?%d?', function(x)
+        if (#x ~= 8) then return '' end
+        local c = 0
+        for i = 1, 8 do c = c + (x:sub(i,i) == '1' and 2^(8-i) or 0) end
+        return string.char(c)
+    end))
 end
 
 -- MAIN FRAME & SCALERS
@@ -101,7 +132,7 @@ UIS.InputChanged:Connect(function(input)
 end)
 
 local Title = Instance.new("TextLabel")
-Title.Text = "KIRIK HUB V46"
+Title.Text = "KIRIK HUB V47"
 Title.Size = UDim2.new(1, -60, 0, 25)
 Title.Position = UDim2.new(0, 10, 0, 0)
 Title.TextXAlignment = Enum.TextXAlignment.Left
@@ -204,12 +235,14 @@ MinBtn.MouseButton1Click:Connect(function()
 end)
 
 -- GLOBAL STATES
-local invisActive = false
-local platActive = false
-local undieActive = false
-local unvoidActive = false
+local espActive, ultraRunActive, noclipActive = false, false, false
+local invisActive, undieActive, platActive, unvoidActive = false, false, false, false
+local flying, infStabActive, cfSpeedActive, spinActive = false, false, false, false
 
-local ToggleInvis, TogglePlatform
+-- STATE SETTERS
+local ToggleInvis, TogglePlatform, SetFly, SetUltraRun, SetNoclip
+local ApplyShrink
+local updateLagList, updatePlayerList, updateNpcList
 
 -- ==================== TABS CREATION ====================
 
@@ -217,7 +250,7 @@ local ToggleInvis, TogglePlatform
 local HomeTab = MakeTab("HOME", true)
 local WelcomeText = Instance.new("TextLabel", HomeTab)
 WelcomeText.Size = UDim2.new(1, 0, 1, 0)
-WelcomeText.Text = "KIRIK HUB V46\n\n[ FEATURE HIGHLIGHTS ]\n- UN-DIE: Auto-Ghost on low health\n- UN-VOID: Auto-Platform if falling\n- Draggable Tab Ordering\n- Ghost Invisibility: FE Invis + Item Use\n- Players/NPCs: ESP, INF TP\n- Lag: Custom Chaos Chain System"
+WelcomeText.Text = "KIRIK HUB V47\n\n[ NEW FEATURES ]\n- Save System: Export & Import full configurations\n- Numeric Tab Order in Settings\n- UN-DIE: Auto-Ghost on low health\n- UN-VOID: Auto-Platform if falling\n- Ghost Invisibility, INF TP, Chaos Lag"
 WelcomeText.TextWrapped = true
 WelcomeText.TextYAlignment = Enum.TextYAlignment.Top
 ApplyStyle(WelcomeText, Color3.fromRGB(0, 255, 255), Color3.fromRGB(15, 15, 20))
@@ -419,96 +452,74 @@ NeonBtn.MouseButton1Click:Connect(function() SetTheme("NEON") end)
 HackerBtn.MouseButton1Click:Connect(function() SetTheme("HACKER") end)
 BWBtn.MouseButton1Click:Connect(function() SetTheme("B&W") end)
 
--- TAB ORDER DRAG & DROP UI (FIXED OVERLAPPING BUG)
 local TabOrderLbl = Instance.new("TextLabel", MakeRow(SettingsScroll))
 TabOrderLbl.Size = UDim2.new(1, 0, 1, 0)
-TabOrderLbl.Text = "--- TAB ORDER (DRAG TO SORT) ---"
+TabOrderLbl.Text = "--- TAB ORDER (NUMERIC) ---"
 ApplyStyle(TabOrderLbl, Color3.fromRGB(0, 255, 255))
 
-local TabOrderContainer = Instance.new("Frame", SettingsScroll)
-TabOrderContainer.Size = UDim2.new(1, -5, 0, #tabBtns * 30)
-TabOrderContainer.BackgroundTransparency = 1
-local TOLayout = Instance.new("UIListLayout", TabOrderContainer)
-TOLayout.Padding = UDim.new(0, 5)
-TOLayout.SortOrder = Enum.SortOrder.LayoutOrder
-
-local tabOrderItems = {}
-local tabDragActive = false
-local currentDragItem = nil
-local tabGhostItem = nil
-
+local OrderBoxes = {}
 for i, tBtn in ipairs(tabBtns) do
-    local dragItem = Instance.new("TextButton", TabOrderContainer)
-    dragItem.Size = UDim2.new(1, 0, 0, 25)
-    dragItem.Text = "☰ " .. tBtn.Text
-    dragItem.LayoutOrder = i
-    ApplyStyle(dragItem, Color3.fromRGB(255, 100, 0))
-    table.insert(tabOrderItems, dragItem)
-    
-    dragItem.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            tabDragActive = true
-            currentDragItem = dragItem
-            
-            tabGhostItem = dragItem:Clone()
-            tabGhostItem.Parent = MainFrame
-            tabGhostItem.Size = UDim2.new(0, TabOrderContainer.AbsoluteSize.X / MainScaler.Scale, 0, 25)
-            tabGhostItem.ZIndex = 100
-            
-            dragItem.BackgroundTransparency = 0.8
-            dragItem.TextTransparency = 0.8
-            
-            local localY = (input.Position.Y - MainFrame.AbsolutePosition.Y) / MainScaler.Scale - 12.5
-            tabGhostItem.Position = UDim2.new(0, (TabOrderContainer.AbsolutePosition.X - MainFrame.AbsolutePosition.X) / MainScaler.Scale, 0, localY)
-        end
-    end)
+    local row = MakeRow(SettingsScroll)
+    local lbl = Instance.new("TextLabel", row)
+    lbl.Size = UDim2.new(0.65, 0, 1, 0)
+    lbl.Text = "TAB: " .. tBtn.Text
+    ApplyStyle(lbl, Color3.fromRGB(255, 100, 0))
+    local box = Instance.new("TextBox", row)
+    box.Size = UDim2.new(0.33, 0, 1, 0)
+    box.Position = UDim2.new(0.67, 0, 0, 0)
+    box.Text = tostring(tBtn.LayoutOrder)
+    ApplyStyle(box, Color3.fromRGB(255, 100, 0))
+    table.insert(OrderBoxes, {btn = tBtn, box = box})
 end
 
-UIS.InputChanged:Connect(function(input)
-    if tabDragActive and currentDragItem and tabGhostItem and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-        local localY = (input.Position.Y - MainFrame.AbsolutePosition.Y) / MainScaler.Scale - 12.5
-        tabGhostItem.Position = UDim2.new(0, (TabOrderContainer.AbsolutePosition.X - MainFrame.AbsolutePosition.X) / MainScaler.Scale, 0, localY)
-        
-        for _, other in ipairs(tabOrderItems) do
-            if other ~= currentDragItem then
-                local center = other.AbsolutePosition.Y + (other.AbsoluteSize.Y / 2)
-                if math.abs(input.Position.Y - center) < 15 then
-                    local temp = currentDragItem.LayoutOrder
-                    currentDragItem.LayoutOrder = other.LayoutOrder
-                    other.LayoutOrder = temp
-                end
-            end
-        end
-    end
-end)
+local ApplyOrderBtn = Instance.new("TextButton", MakeRow(SettingsScroll))
+ApplyOrderBtn.Size = UDim2.new(1, 0, 1, 0)
+ApplyOrderBtn.Text = "APPLY TAB ORDER"
+ApplyStyle(ApplyOrderBtn, Color3.fromRGB(0, 255, 0))
 
-UIS.InputEnded:Connect(function(input)
-    if tabDragActive and currentDragItem and tabGhostItem and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
-        tabDragActive = false
-        currentDragItem.BackgroundTransparency = 0
-        currentDragItem.TextTransparency = 0
-        tabGhostItem:Destroy()
-        tabGhostItem = nil
-        currentDragItem = nil
+local function ApplyTabOrders()
+    for _, ob in ipairs(OrderBoxes) do
+        ob.btn.LayoutOrder = tonumber(ob.box.Text) or ob.btn.LayoutOrder
     end
-end)
+end
+ApplyOrderBtn.MouseButton1Click:Connect(ApplyTabOrders)
 
-local SaveTabsBtn = Instance.new("TextButton", MakeRow(SettingsScroll))
-SaveTabsBtn.Size = UDim2.new(1, 0, 1, 0)
-SaveTabsBtn.Text = "SAVE TAB ORDER"
-ApplyStyle(SaveTabsBtn, Color3.fromRGB(0, 255, 0))
+-- 8. SAVE TAB
+local SaveTab = MakeTab("SAVE", false)
+local SaveScroll, _ = MakeScrollArea(SaveTab)
 
-SaveTabsBtn.MouseButton1Click:Connect(function()
-    table.sort(tabOrderItems, function(a, b) return a.LayoutOrder < b.LayoutOrder end)
-    for i, dragItem in ipairs(tabOrderItems) do
-        local rawName = dragItem.Text:sub(5)
-        for _, tBtn in ipairs(tabBtns) do
-            if tBtn.Text == rawName then
-                tBtn.LayoutOrder = i
-            end
-        end
-    end
-end)
+local ExportLbl = Instance.new("TextLabel", MakeRow(SaveScroll))
+ExportLbl.Size = UDim2.new(1, 0, 1, 0)
+ExportLbl.Text = "--- EXPORT SAVE ---"
+ApplyStyle(ExportLbl, Color3.fromRGB(0, 255, 255))
+
+local ExportBox = Instance.new("TextBox", MakeRow(SaveScroll))
+ExportBox.Size = UDim2.new(1, 0, 1, 0)
+ExportBox.PlaceholderText = "YOUR SAVE CODE WILL APPEAR HERE"
+ExportBox.TextEditable = false
+ExportBox.ClearTextOnFocus = false
+ApplyStyle(ExportBox, Color3.fromRGB(150, 150, 150))
+
+local GenSaveBtn = Instance.new("TextButton", MakeRow(SaveScroll))
+GenSaveBtn.Size = UDim2.new(1, 0, 1, 0)
+GenSaveBtn.Text = "GENERATE SAVE CODE"
+ApplyStyle(GenSaveBtn, Color3.fromRGB(0, 255, 0))
+
+local ImportLbl = Instance.new("TextLabel", MakeRow(SaveScroll))
+ImportLbl.Size = UDim2.new(1, 0, 1, 0)
+ImportLbl.Text = "--- IMPORT SAVE ---"
+ApplyStyle(ImportLbl, Color3.fromRGB(255, 0, 255))
+
+local ImportBox = Instance.new("TextBox", MakeRow(SaveScroll))
+ImportBox.Size = UDim2.new(1, 0, 1, 0)
+ImportBox.PlaceholderText = "PASTE HUB-Save-... CODE HERE"
+ImportBox.ClearTextOnFocus = false
+ApplyStyle(ImportBox, Color3.fromRGB(255, 150, 0))
+
+local LoadSaveBtn = Instance.new("TextButton", MakeRow(SaveScroll))
+LoadSaveBtn.Size = UDim2.new(1, 0, 1, 0)
+LoadSaveBtn.Text = "LOAD SAVE CODE"
+ApplyStyle(LoadSaveBtn, Color3.fromRGB(255, 0, 0))
 
 -- ==================== FLOATING MOBILE UI ====================
 local FlyUI = Instance.new("Frame", ScreenGui)
@@ -553,7 +564,7 @@ HookMobileBtn(FlyUpBtn, "up")
 HookMobileBtn(FlyDownBtn, "down")
 HookMobileBtn(PlatDownBtn, "plat")
 
-ShrinkBox.FocusLost:Connect(function()
+ApplyShrink = function()
     local factor = tonumber(ShrinkBox.Text)
     if factor and factor > 0 then
         MainScaler.Scale = 1 / factor
@@ -565,7 +576,8 @@ ShrinkBox.FocusLost:Connect(function()
         FlyScaler.Scale = 1
         PlatScaler.Scale = 1
     end
-end)
+end
+ShrinkBox.FocusLost:Connect(ApplyShrink)
 
 local function ShowFailsafeMessage()
     local msg = Instance.new("TextLabel", ScreenGui)
@@ -577,59 +589,160 @@ local function ShowFailsafeMessage()
     msg.Font = Enum.Font.GothamBold
     msg.TextScaled = true
     msg.ZIndex = 1000
-    
     local stroke = Instance.new("UIStroke", msg)
     stroke.Thickness = 2
     stroke.Color = Color3.new(0, 0, 0)
-    
     task.spawn(function()
         task.wait(3)
-        for i = 0, 1, 0.1 do
-            msg.TextTransparency = i
-            stroke.Transparency = i
-            task.wait(0.05)
-        end
+        for i = 0, 1, 0.1 do msg.TextTransparency = i stroke.Transparency = i task.wait(0.05) end
         msg:Destroy()
     end)
 end
 
--- ==================== LOGIC & SYSTEMS ====================
+-- ==================== STATE HELPERS ====================
+local function SetESP(state)
+    espActive = state
+    ApplyToggleStyle(EspBtn, espActive, Color3.fromRGB(0, 255, 100))
+    EspBtn.Text = "ESP: " .. (espActive and "ON" or "OFF")
+    if not state then for _, p in pairs(Players:GetPlayers()) do if p.Character and p.Character:FindFirstChild("LuxuryESP") then p.Character.LuxuryESP:Destroy() end end end
+end
 
-local listMode = "TP"
-local npcListMode = "TP"
-local savedSpots = {}
-local cachedNPCs = {}
-local spotCount = 0
+local function SetUltraRun(state)
+    ultraRunActive = state
+    ApplyToggleStyle(UltraRunBtn, ultraRunActive, Color3.fromRGB(255, 80, 0))
+    UltraRunBtn.Text = "ULTRA RUN: " .. (ultraRunActive and "ON" or "OFF")
+    if not state then local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") if hum then for _, t in pairs(hum:GetPlayingAnimationTracks()) do t:AdjustSpeed(1) end end end
+end
 
-local currentInfTpTarget = nil
-local infTpConn = nil
-local platPart, platConn = nil, nil
+local function SetNoclip(state)
+    noclipActive = state
+    ApplyToggleStyle(NoclipBtn, noclipActive, Color3.fromRGB(0, 255, 200))
+    NoclipBtn.Text = "NOCLIP: " .. (noclipActive and "ON" or "OFF")
+end
+
+local function SetUndie(state)
+    undieActive = state
+    ApplyToggleStyle(UndieBtn, undieActive, Color3.fromRGB(200, 50, 50))
+    UndieBtn.Text = "UN-DIE: " .. (undieActive and "ON" or "OFF")
+end
+
+local function SetUnvoid(state)
+    unvoidActive = state
+    ApplyToggleStyle(UnvoidBtn, unvoidActive, Color3.fromRGB(50, 50, 255))
+    UnvoidBtn.Text = "UN-VOID: " .. (unvoidActive and "ON" or "OFF")
+end
+
+local function SetChaosLag(state)
+    infStabActive = state
+    ApplyToggleStyle(InfStabBtn, infStabActive, Color3.fromRGB(255, 150, 0))
+    InfStabBtn.Text = "CHAOS LAG: " .. (infStabActive and "ON" or "OFF")
+    if not state then
+        local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if hrp then hrp.Anchored = false hrp.Velocity = Vector3.zero end
+    end
+end
+
+local function SetCFSpeed(state)
+    cfSpeedActive = state
+    ApplyToggleStyle(CFrameSpeedBtn, cfSpeedActive, Color3.fromRGB(255, 100, 0))
+    CFrameSpeedBtn.Text = "CF SPD: " .. (cfSpeedActive and "ON" or "OFF")
+end
+
+local function SetSpin(state)
+    spinActive = state
+    ApplyToggleStyle(SpinBtn, spinActive, Color3.fromRGB(0, 255, 50))
+    SpinBtn.Text = "SPIN: " .. (spinActive and "ON" or "OFF")
+end
+
+local function applyWS() local h = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") if h then h.WalkSpeed = tonumber(WsBox.Text) or 16 end end
+local function applyJP() local h = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") if h then h.UseJumpPower = true h.JumpPower = tonumber(JpBox.Text) or 50 end end
+local function applyGrav() workspace.Gravity = tonumber(GravBox.Text) or 196.2 end
+
+-- ==================== SAVE / LOAD LOGIC ====================
+local lagChain = {{anchor = 0.2, free = 0.1}}
+
+GenSaveBtn.MouseButton1Click:Connect(function()
+    local tgs = string.format("%d%d%d%d%d%d%d%d%d%d%d",
+        espActive and 1 or 0, ultraRunActive and 1 or 0, noclipActive and 1 or 0,
+        invisActive and 1 or 0, undieActive and 1 or 0, flying and 1 or 0,
+        platActive and 1 or 0, unvoidActive and 1 or 0, infStabActive and 1 or 0,
+        cfSpeedActive and 1 or 0, spinActive and 1 or 0
+    )
+    local tabsOrderStr = ""
+    for i, ob in ipairs(OrderBoxes) do tabsOrderStr = tabsOrderStr .. tostring(ob.btn.LayoutOrder) .. (i == #OrderBoxes and "" or ",") end
+    
+    local lagStr = ""
+    for i, l in ipairs(lagChain) do lagStr = lagStr .. tostring(l.anchor) .. ":" .. tostring(l.free) .. (i == #lagChain and "" or ",") end
+
+    local rawStr = string.format("%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s",
+        currentTheme, ShrinkBox.Text, AfkBox.Text, WsBox.Text, JpBox.Text, GravBox.Text,
+        CFrameSpeedBox.Text, SpinBox.Text, tgs, tabsOrderStr, lagStr
+    )
+    ExportBox.Text = "HUB-Save-" .. B64Encode(rawStr)
+end)
+
+LoadSaveBtn.MouseButton1Click:Connect(function()
+    local str = ImportBox.Text
+    if not str:match("^HUB%-Save%-") then return end
+    local b64 = str:sub(10)
+    local dec = B64Decode(b64)
+    local p = string.split(dec, "|")
+    if #p >= 11 then
+        SetTheme(p[1])
+        ShrinkBox.Text = p[2] ApplyShrink()
+        AfkBox.Text = p[3]
+        WsBox.Text = p[4] applyWS()
+        JpBox.Text = p[5] applyJP()
+        GravBox.Text = p[6] applyGrav()
+        CFrameSpeedBox.Text = p[7]
+        SpinBox.Text = p[8]
+
+        local t = p[9]
+        SetESP(t:sub(1,1)=="1")
+        SetUltraRun(t:sub(2,2)=="1")
+        SetNoclip(t:sub(3,3)=="1")
+        ToggleInvis(t:sub(4,4)=="1")
+        SetUndie(t:sub(5,5)=="1")
+        SetFly(t:sub(6,6)=="1")
+        TogglePlatform(t:sub(7,7)=="1")
+        SetUnvoid(t:sub(8,8)=="1")
+        SetChaosLag(t:sub(9,9)=="1")
+        SetCFSpeed(t:sub(10,10)=="1")
+        SetSpin(t:sub(11,11)=="1")
+
+        local tOrd = string.split(p[10], ",")
+        for i, v in ipairs(tOrd) do
+            if OrderBoxes[i] then OrderBoxes[i].box.Text = v end
+        end
+        ApplyTabOrders()
+
+        lagChain = {}
+        if p[11] ~= "" then
+            local pairs = string.split(p[11], ",")
+            for _, pr in ipairs(pairs) do
+                local vals = string.split(pr, ":")
+                table.insert(lagChain, {anchor=tonumber(vals[1]) or 0.2, free=tonumber(vals[2]) or 0.1})
+            end
+        else
+            lagChain = {{anchor=0.2, free=0.1}}
+        end
+        updateLagList()
+        ImportBox.Text = ""
+        ImportBox.PlaceholderText = "SUCCESSFULLY LOADED!"
+    end
+end)
+
+-- ==================== INVISIBILITY & PLATFORM ENCAPSULATION ====================
 local realChar, fakeChar = nil, nil
 local isStriking = false
+local platPart, platConn = nil, nil
 local platFails, platFailTime = 0, 0
 
-local updatePlayerList, updateNpcList
-
--- UN-DIE TOGGLE
-UndieBtn.MouseButton1Click:Connect(function()
-    undieActive = not undieActive
-    UndieBtn.Text = "UN-DIE: " .. (undieActive and "ON" or "OFF")
-    ApplyStyle(UndieBtn, undieActive and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(200, 50, 50))
-end)
-
--- UN-VOID TOGGLE
-UnvoidBtn.MouseButton1Click:Connect(function()
-    unvoidActive = not unvoidActive
-    UnvoidBtn.Text = "UN-VOID: " .. (unvoidActive and "ON" or "OFF")
-    ApplyStyle(UnvoidBtn, unvoidActive and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(50, 50, 255))
-end)
-
--- ENCAPSULATED INVIS TOGGLE
 ToggleInvis = function(state)
     if invisActive == state then return end
     invisActive = state
+    ApplyToggleStyle(InvisBtn, invisActive, Color3.fromRGB(200, 0, 255))
     InvisBtn.Text = "INVISIBILITY (GHOST): " .. (invisActive and "ON" or "OFF")
-    ApplyStyle(InvisBtn, invisActive and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(200, 0, 255))
     
     if invisActive then
         realChar = LocalPlayer.Character
@@ -642,10 +755,7 @@ ToggleInvis = function(state)
             workspace.CurrentCamera.CameraSubject = fakeChar:FindFirstChild("Humanoid")
             
             local fAnim = fakeChar:FindFirstChild("Animate")
-            if fAnim then
-                fAnim.Disabled = true
-                task.delay(0.1, function() fAnim.Disabled = false end)
-            end
+            if fAnim then fAnim.Disabled = true task.delay(0.1, function() fAnim.Disabled = false end) end
             local rHrp = realChar:FindFirstChild("HumanoidRootPart")
             if rHrp then rHrp.Anchored = false end
             
@@ -658,9 +768,7 @@ ToggleInvis = function(state)
                 end)
             end
         else
-            invisActive = false
-            InvisBtn.Text = "INVISIBILITY (GHOST): OFF"
-            ApplyStyle(InvisBtn, Color3.fromRGB(200, 0, 255))
+            ToggleInvis(false)
         end
     else
         if fakeChar and realChar then
@@ -677,10 +785,10 @@ ToggleInvis = function(state)
 end
 InvisBtn.MouseButton1Click:Connect(function() ToggleInvis(not invisActive) end)
 
--- ENCAPSULATED PLATFORM TOGGLE
 TogglePlatform = function(state)
     if platActive == state then return end
     platActive = state
+    ApplyToggleStyle(PlatformBtn, platActive, Color3.fromRGB(0, 150, 255))
     PlatformBtn.Text = "PLATFORM: " .. (platActive and "ON" or "OFF")
     PlatUI.Visible = platActive
     platFails = 0
@@ -695,25 +803,18 @@ TogglePlatform = function(state)
         platConn = RunService.RenderStepped:Connect(function()
             local cHrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
             if not cHrp then return end
-            
             if (cHrp.Position.Y - 3.5) > currentY + 0.5 then currentY = cHrp.Position.Y - 3.5 end
             if platDownPressed or UIS:IsKeyDown(Enum.KeyCode.LeftControl) then currentY = currentY - 1 end
-            
             platPart.CFrame = CFrame.new(cHrp.Position.X, currentY, cHrp.Position.Z)
             
             local diff = currentY - (cHrp.Position.Y - 3.5)
             if diff > 1.5 and not (platDownPressed or UIS:IsKeyDown(Enum.KeyCode.LeftControl)) then
                 cHrp.Velocity = Vector3.new(cHrp.Velocity.X, 0, cHrp.Velocity.Z)
                 cHrp.CFrame = CFrame.new(cHrp.Position.X, currentY + 3.5, cHrp.Position.Z)
-                
                 local now = tick()
                 if now - platFailTime < 1.5 then platFails = platFails + 1 else platFails = 1 end
                 platFailTime = now
-                
-                if platFails > 8 then
-                    TogglePlatform(false)
-                    ShowFailsafeMessage()
-                end
+                if platFails > 8 then TogglePlatform(false) ShowFailsafeMessage() end
             end
         end)
     else
@@ -722,6 +823,63 @@ TogglePlatform = function(state)
     end
 end
 PlatformBtn.MouseButton1Click:Connect(function() TogglePlatform(not platActive) end)
+
+SetFly = function(state)
+    flying = state
+    ApplyToggleStyle(FlyBtn, flying, Color3.fromRGB(255, 0, 255))
+    FlyBtn.Text = "FLY: " .. (flying and "ON" or "OFF")
+    FlyUI.Visible = flying
+    
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    local hum = char and char:FindFirstChild("Humanoid")
+    if not hrp or not hum then return end
+    
+    if flying then
+        local bv = Instance.new("BodyVelocity", hrp) bv.Name = "FlyBV" bv.MaxForce = Vector3.new(9e9, 9e9, 9e9) 
+        local bg = Instance.new("BodyGyro", hrp) bg.Name = "FlyBG" bg.MaxTorque = Vector3.new(9e9, 9e9, 9e9) bg.P = 9e4
+        hum.PlatformStand = true
+        
+        flyConn = RunService.RenderStepped:Connect(function()
+            bg.CFrame = workspace.CurrentCamera.CFrame
+            local spd = tonumber(FlySpeedBox.Text) or 50
+            local yMove = 0
+            if UIS:IsKeyDown(Enum.KeyCode.Space) or upPressed then yMove = spd end
+            if UIS:IsKeyDown(Enum.KeyCode.LeftControl) or downPressed then yMove = -spd end
+            bv.Velocity = Vector3.new((hum.MoveDirection * spd).X, yMove, (hum.MoveDirection * spd).Z)
+        end)
+    else
+        if hrp:FindFirstChild("FlyBV") then hrp.FlyBV:Destroy() end
+        if hrp:FindFirstChild("FlyBG") then hrp.FlyBG:Destroy() end
+        hum.PlatformStand = false
+        if flyConn then flyConn:Disconnect() end
+    end
+end
+FlyBtn.MouseButton1Click:Connect(function() SetFly(not flying) end)
+
+-- UI CONNECTIONS
+EspBtn.MouseButton1Click:Connect(function() SetESP(not espActive) end)
+UltraRunBtn.MouseButton1Click:Connect(function() SetUltraRun(not ultraRunActive) end)
+NoclipBtn.MouseButton1Click:Connect(function() SetNoclip(not noclipActive) end)
+UndieBtn.MouseButton1Click:Connect(function() SetUndie(not undieActive) end)
+UnvoidBtn.MouseButton1Click:Connect(function() SetUnvoid(not unvoidActive) end)
+InfStabBtn.MouseButton1Click:Connect(function() SetChaosLag(not infStabActive) end)
+CFrameSpeedBtn.MouseButton1Click:Connect(function() SetCFSpeed(not cfSpeedActive) end)
+SpinBtn.MouseButton1Click:Connect(function() SetSpin(not spinActive) end)
+WsBtn.MouseButton1Click:Connect(applyWS)
+JpBtn.MouseButton1Click:Connect(applyJP)
+GravBtn.MouseButton1Click:Connect(applyGrav)
+
+-- ==================== LOGIC & SYSTEMS ====================
+
+local listMode = "TP"
+local npcListMode = "TP"
+local savedSpots = {}
+local cachedNPCs = {}
+local spotCount = 0
+
+local currentInfTpTarget = nil
+local infTpConn = nil
 
 local function stopInfTp()
     if infTpConn then infTpConn:Disconnect() infTpConn = nil end
@@ -791,7 +949,7 @@ updatePlayerList = function()
             
             if listMode == "INF TP" then
                 local isActive = (currentInfTpTarget == player)
-                btn.Text = player.DisplayName .. (isActive and " [ON]" or " [OFF]")
+                btn.Text = player.DisplayName .. (isActive and " [ON]" or "[OFF]")
                 ApplyStyle(btn, isActive and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0))
             else
                 btn.Text = player.DisplayName
@@ -842,16 +1000,11 @@ updatePlayerList = function()
                 if listMode == "TP" then
                     local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
                     if hrp then 
-                        if spot.part and spot.part.Parent then
-                            hrp.CFrame = spot.part.CFrame * CFrame.new(0, 3, 0)
-                        else
-                            hrp.CFrame = CFrame.new(spot.pos + Vector3.new(0, 3, 0))
-                        end
+                        if spot.part and spot.part.Parent then hrp.CFrame = spot.part.CFrame * CFrame.new(0, 3, 0)
+                        else hrp.CFrame = CFrame.new(spot.pos + Vector3.new(0, 3, 0)) end
                     end
                 elseif listMode == "VIEW" then
-                    if spot.part and spot.part.Parent then
-                        workspace.CurrentCamera.CameraSubject = spot.part
-                    end
+                    if spot.part and spot.part.Parent then workspace.CurrentCamera.CameraSubject = spot.part end
                 elseif listMode == "INF TP" then
                     if currentInfTpTarget == spot then stopInfTp() else startInfTp(spot) end
                     updatePlayerList()
@@ -999,91 +1152,45 @@ UIS.InputBegan:Connect(function(input, gpe)
     end
 end)
 
--- LAG CHAIN LOGIC
-local lagChain = {{anchor = 0.2, free = 0.1}}
-
-local function updateLagList()
+updateLagList = function()
     for _, c in pairs(LagList:GetChildren()) do if c:IsA("Frame") then c:Destroy() end end
     for i, preset in ipairs(lagChain) do
         local row = MakeRow(LagList)
-        
         local anchorBox = Instance.new("TextBox", row)
         anchorBox.Size = UDim2.new(0.38, 0, 1, 0)
         anchorBox.Text = tostring(preset.anchor)
-        anchorBox.PlaceholderText = "Lag"
         ApplyStyle(anchorBox, Color3.fromRGB(255, 0, 150))
-        
         local freeBox = Instance.new("TextBox", row)
         freeBox.Size = UDim2.new(0.38, 0, 1, 0)
         freeBox.Position = UDim2.new(0.42, 0, 0, 0)
         freeBox.Text = tostring(preset.free)
-        freeBox.PlaceholderText = "Free"
         ApplyStyle(freeBox, Color3.fromRGB(0, 255, 150))
-        
         local delBtn = Instance.new("TextButton", row)
         delBtn.Size = UDim2.new(0.16, 0, 1, 0)
         delBtn.Position = UDim2.new(0.84, 0, 0, 0)
         delBtn.Text = "-"
         ApplyStyle(delBtn, Color3.fromRGB(255, 0, 0))
         
-        anchorBox.FocusLost:Connect(function()
-            preset.anchor = math.max(0, tonumber(anchorBox.Text) or preset.anchor)
-            anchorBox.Text = tostring(preset.anchor)
-        end)
-        
-        freeBox.FocusLost:Connect(function()
-            preset.free = math.max(0, tonumber(freeBox.Text) or preset.free)
-            freeBox.Text = tostring(preset.free)
-        end)
-        
-        delBtn.MouseButton1Click:Connect(function()
-            table.remove(lagChain, i)
-            updateLagList()
-        end)
+        anchorBox.FocusLost:Connect(function() preset.anchor = math.max(0, tonumber(anchorBox.Text) or preset.anchor) anchorBox.Text = tostring(preset.anchor) end)
+        freeBox.FocusLost:Connect(function() preset.free = math.max(0, tonumber(freeBox.Text) or preset.free) freeBox.Text = tostring(preset.free) end)
+        delBtn.MouseButton1Click:Connect(function() table.remove(lagChain, i) updateLagList() end)
     end
 end
 
-AddLagBtn.MouseButton1Click:Connect(function()
-    table.insert(lagChain, {anchor = 0.2, free = 0.1})
-    updateLagList()
-end)
-
-local infStabActive = false
-local lagState = "FREE"
-local lagTimer = 0
-local lagIndex = 1
-
-InfStabBtn.MouseButton1Click:Connect(function()
-    infStabActive = not infStabActive
-    InfStabBtn.Text = "CHAOS LAG: " .. (infStabActive and "ON" or "OFF")
-    
-    if not infStabActive then
-        lagState = "FREE" lagTimer = 0 lagIndex = 1
-        local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-        if hrp then hrp.Anchored = false hrp.Velocity = Vector3.zero end
-    end
-end)
-
--- UN-DIE, UN-VOID, AND CHAOS LAG SYSTEM
+local lagTimer, lagIndex, lagState = 0, 1, "FREE"
 RunService.Heartbeat:Connect(function(dt)
     local char = LocalPlayer.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
     local hum = char and char:FindFirstChildOfClass("Humanoid")
     
-    -- UN-DIE LOGIC
     if undieActive and not invisActive and hum and hum.Health > 0 and hum.Health <= (hum.MaxHealth * 0.25) then
         ToggleInvis(true)
     end
     
-    -- UN-VOID LOGIC
     if unvoidActive and not platActive and hrp then
-        if hrp.Position.Y < (workspace.FallenPartsDestroyHeight + 100) then
-            TogglePlatform(true)
-            hrp.Velocity = Vector3.new(0, 50, 0)
-        end
+        if hrp.Position.Y < (workspace.FallenPartsDestroyHeight + 100) then TogglePlatform(true) hrp.Velocity = Vector3.new(0, 50, 0) end
     end
     
-    -- LAG LOGIC
     if not infStabActive then return end
     if not hrp or not hum or hum.Health <= 0 then lagState = "FREE" lagTimer = 0 return end
 
@@ -1092,13 +1199,8 @@ RunService.Heartbeat:Connect(function(dt)
 
     lagTimer = lagTimer - dt
     if lagTimer <= 0 then
-        if lagState == "FREE" then
-            lagState = "LAG" lagTimer = currentItem.anchor
-            hrp.Velocity = Vector3.zero hrp.RotVelocity = Vector3.zero hrp.Anchored = true
-        else
-            lagState = "FREE" lagTimer = currentItem.free
-            hrp.Anchored = false lagIndex = lagIndex + 1
-        end
+        if lagState == "FREE" then lagState = "LAG" lagTimer = currentItem.anchor hrp.Velocity = Vector3.zero hrp.RotVelocity = Vector3.zero hrp.Anchored = true
+        else lagState = "FREE" lagTimer = currentItem.free hrp.Anchored = false lagIndex = lagIndex + 1 end
     else
         if lagState == "LAG" then hrp.Velocity = Vector3.zero hrp.RotVelocity = Vector3.zero hrp.Anchored = true else hrp.Anchored = false end
     end
@@ -1107,109 +1209,6 @@ end)
 AntiFlingBtn.MouseButton1Click:Connect(function()
     local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     if hrp then hrp.Velocity = Vector3.zero hrp.RotVelocity = Vector3.zero hrp.Anchored = true task.wait(0.5) if hrp then hrp.Anchored = false end end
-end)
-
--- ESP
-local espActive = false
-local function applyESP(char)
-    if espActive then
-        task.wait(0.5)
-        if not char:FindFirstChild("LuxuryESP") then
-            local hl = Instance.new("Highlight", char)
-            hl.Name = "LuxuryESP"
-            hl.FillColor = Color3.fromRGB(0, 255, 255)
-            hl.OutlineColor = Color3.fromRGB(255, 0, 255)
-        end
-    end
-end
-
-EspBtn.MouseButton1Click:Connect(function()
-    espActive = not espActive
-    EspBtn.Text = "ESP: " .. (espActive and "ON" or "OFF")
-    for _, p in pairs(Players:GetPlayers()) do
-        if p ~= LocalPlayer and p.Character then
-            if espActive then applyESP(p.Character) elseif p.Character:FindFirstChild("LuxuryESP") then p.Character.LuxuryESP:Destroy() end
-        end
-    end
-end)
-Players.PlayerAdded:Connect(function(p) p.CharacterAdded:Connect(applyESP) end)
-for _, p in pairs(Players:GetPlayers()) do p.CharacterAdded:Connect(applyESP) end
-
--- CHARACTER SCRIPTS
-local ultraRunActive, noclipActive = false, false
-UltraRunBtn.MouseButton1Click:Connect(function()
-    ultraRunActive = not ultraRunActive
-    UltraRunBtn.Text = "ULTRA RUN: " .. (ultraRunActive and "ON" or "OFF")
-    local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
-    if hum and not ultraRunActive then for _, track in pairs(hum:GetPlayingAnimationTracks()) do track:AdjustSpeed(1) end end
-end)
-
-NoclipBtn.MouseButton1Click:Connect(function() noclipActive = not noclipActive NoclipBtn.Text = "NOCLIP: " .. (noclipActive and "ON" or "OFF") end)
-
-RunService.Stepped:Connect(function()
-    local char = LocalPlayer.Character
-    if noclipActive and char then
-        for _, part in pairs(char:GetDescendants()) do if part:IsA("BasePart") and part.CanCollide then part.CanCollide = false end end
-    end
-    if ultraRunActive and char then
-        local hum = char:FindFirstChild("Humanoid")
-        if hum then
-            hum.WalkSpeed = 16
-            for _, track in pairs(hum:GetPlayingAnimationTracks()) do track:AdjustSpeed(hum.MoveDirection.Magnitude > 0 and 50 or 1) end
-        end
-    end
-end)
-
-WsBtn.MouseButton1Click:Connect(function() local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") if hum then hum.WalkSpeed = tonumber(WsBox.Text) or 16 end end)
-JpBtn.MouseButton1Click:Connect(function() local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") if hum then hum.UseJumpPower = true hum.JumpPower = tonumber(JpBox.Text) or 50 end end)
-local defaultGravity = workspace.Gravity
-GravBtn.MouseButton1Click:Connect(function() workspace.Gravity = tonumber(GravBox.Text) or defaultGravity end)
-
-local cfSpeedActive, spinActive = false, false
-CFrameSpeedBtn.MouseButton1Click:Connect(function() cfSpeedActive = not cfSpeedActive CFrameSpeedBtn.Text = "CF SPD: " .. (cfSpeedActive and "ON" or "OFF") end)
-SpinBtn.MouseButton1Click:Connect(function() spinActive = not spinActive SpinBtn.Text = "SPIN: " .. (spinActive and "ON" or "OFF") end)
-
-RunService.RenderStepped:Connect(function()
-    local char = LocalPlayer.Character
-    local hrp = char and char:FindFirstChild("HumanoidRootPart")
-    local hum = char and char:FindFirstChild("Humanoid")
-    if cfSpeedActive and hrp and hum and hum.MoveDirection.Magnitude > 0 then hrp.CFrame = hrp.CFrame + (hum.MoveDirection * (tonumber(CFrameSpeedBox.Text) or 2)) end
-    if spinActive and hrp then hrp.CFrame = hrp.CFrame * CFrame.Angles(0, math.rad(tonumber(SpinBox.Text) or 50), 0) end
-end)
-
--- FLIGHT SCRIPTS
-local flying = false
-local flyConn
-
-FlyBtn.MouseButton1Click:Connect(function()
-    flying = not flying
-    FlyBtn.Text = "FLY: " .. (flying and "ON" or "OFF")
-    FlyUI.Visible = flying
-    
-    local char = LocalPlayer.Character
-    local hrp = char and char:FindFirstChild("HumanoidRootPart")
-    local hum = char and char:FindFirstChild("Humanoid")
-    if not hrp or not hum then return end
-    
-    if flying then
-        local bv = Instance.new("BodyVelocity", hrp) bv.Name = "FlyBV" bv.MaxForce = Vector3.new(9e9, 9e9, 9e9) 
-        local bg = Instance.new("BodyGyro", hrp) bg.Name = "FlyBG" bg.MaxTorque = Vector3.new(9e9, 9e9, 9e9) bg.P = 9e4
-        hum.PlatformStand = true
-        
-        flyConn = RunService.RenderStepped:Connect(function()
-            bg.CFrame = workspace.CurrentCamera.CFrame
-            local spd = tonumber(FlySpeedBox.Text) or 50
-            local yMove = 0
-            if UIS:IsKeyDown(Enum.KeyCode.Space) or upPressed then yMove = spd end
-            if UIS:IsKeyDown(Enum.KeyCode.LeftControl) or downPressed then yMove = -spd end
-            bv.Velocity = Vector3.new((hum.MoveDirection * spd).X, yMove, (hum.MoveDirection * spd).Z)
-        end)
-    else
-        if hrp:FindFirstChild("FlyBV") then hrp.FlyBV:Destroy() end
-        if hrp:FindFirstChild("FlyBG") then hrp.FlyBG:Destroy() end
-        hum.PlatformStand = false
-        if flyConn then flyConn:Disconnect() end
-    end
 end)
 
 -- AFK CLEANUP
@@ -1228,22 +1227,14 @@ UIS.InputBegan:Connect(checkUIInteraction)
 UIS.InputChanged:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then checkUIInteraction(input) end end)
 
 local function ForceCleanup()
-    espActive, ultraRunActive, noclipActive, infStabActive, spinActive, cfSpeedActive, flying = false, false, false, false, false, false, false
-    TogglePlatform(false)
+    SetESP(false) SetUltraRun(false) SetNoclip(false) SetChaosLag(false) SetSpin(false) SetCFSpeed(false) SetFly(false) TogglePlatform(false) ToggleInvis(false)
     undieActive, unvoidActive = false, false
-    
-    FlyUI.Visible = false
+    FlyUI.Visible, PlatUI.Visible = false, false
     stopInfTp()
     workspace.Gravity = 196.2
     
-    if invisActive then
-        ToggleInvis(false)
-    end
-    
-    for _, p in pairs(Players:GetPlayers()) do if p.Character and p.Character:FindFirstChild("LuxuryESP") then p.Character.LuxuryESP:Destroy() end end
     local char = LocalPlayer.Character local hum = char and char:FindFirstChild("Humanoid") local hrp = char and char:FindFirstChild("HumanoidRootPart")
     if hrp then if hrp:FindFirstChild("FlyBV") then hrp.FlyBV:Destroy() end if hrp:FindFirstChild("FlyBG") then hrp.FlyBG:Destroy() end hrp.Anchored = false end
-    if flyConn then flyConn:Disconnect() end
     if hum then hum.PlatformStand = false hum.WalkSpeed = 16 hum.UseJumpPower = true hum.JumpPower = 50 for _, track in pairs(hum:GetPlayingAnimationTracks()) do track:AdjustSpeed(1) end workspace.CurrentCamera.CameraSubject = hum end
 end
 
