@@ -59,7 +59,9 @@ end
 
 local function SetTheme(themeName)
     currentTheme = themeName
-    for _, inst in pairs(ScreenGui:GetDescendants()) do UpdateInstanceTheme(inst) end
+    for _, inst in pairs(ScreenGui:GetDescendants()) do
+        UpdateInstanceTheme(inst)
+    end
     UpdateInstanceTheme(ScreenGui)
 end
 
@@ -75,7 +77,7 @@ ApplyStyle(MainFrame, Color3.fromRGB(255, 0, 255), Color3.fromRGB(10, 5, 15))
 local MainScaler = Instance.new("UIScale", MainFrame)
 MainScaler.Scale = 1
 
--- DRAG LOGIC (WITH UI SCALE SUPPORT)
+-- DRAG LOGIC
 local DragHandle = Instance.new("Frame")
 DragHandle.Size = UDim2.new(1, -50, 0, 25)
 DragHandle.BackgroundTransparency = 1
@@ -99,7 +101,7 @@ UIS.InputChanged:Connect(function(input)
 end)
 
 local Title = Instance.new("TextLabel")
-Title.Text = "KIRIK HUB V43"
+Title.Text = "KIRIK HUB V44"
 Title.Size = UDim2.new(1, -60, 0, 25)
 Title.Position = UDim2.new(0, 10, 0, 0)
 Title.TextXAlignment = Enum.TextXAlignment.Left
@@ -205,7 +207,7 @@ end)
 local HomeTab = MakeTab("HOME", true)
 local WelcomeText = Instance.new("TextLabel", HomeTab)
 WelcomeText.Size = UDim2.new(1, 0, 1, 0)
-WelcomeText.Text = "KIRIK HUB V43\n\n[ FEATURE HIGHLIGHTS ]\n- Ghost Invisibility: FE Invis + Item Use\n- Custom Themes & UI Resizing\n- Players: ESP, INF TP, Dynamic Part Targets\n- NPCs: Scan & Interact with game bots\n- Character: Speed, Gravity, Noclip\n- Flight: Mobile Support, Air Walk\n- Lag: Custom Chaos Chain System"
+WelcomeText.Text = "KIRIK HUB V44\n\n[ FEATURE HIGHLIGHTS ]\n- Ghost Invisibility: FE Invis + Item Use\n- Custom Themes & UI Resizing\n- Players: ESP, INF TP, Dynamic Part Targets\n- NPCs: Scan & Interact with game bots\n- Character: Speed, Gravity, Noclip\n- Flight: Mobile Support, Air Walk\n- Lag: Custom Chaos Chain System"
 WelcomeText.TextWrapped = true
 WelcomeText.TextYAlignment = Enum.TextYAlignment.Top
 ApplyStyle(WelcomeText, Color3.fromRGB(0, 255, 255), Color3.fromRGB(15, 15, 20))
@@ -715,6 +717,7 @@ Players.PlayerRemoving:Connect(updatePlayerList)
 local invisActive = false
 local realChar = nil
 local fakeChar = nil
+local isStriking = false
 
 InvisBtn.MouseButton1Click:Connect(function()
     invisActive = not invisActive
@@ -726,22 +729,31 @@ InvisBtn.MouseButton1Click:Connect(function()
         if realChar then
             realChar.Archivable = true
             fakeChar = realChar:Clone()
-            fakeChar.Name = LocalPlayer.Name .. "_FakeGhost"
+            fakeChar.Name = realChar.Name -- Точная копия имени
             fakeChar.Parent = workspace
-            
-            local rHrp = realChar:FindFirstChild("HumanoidRootPart")
-            if rHrp then
-                rHrp.CFrame = rHrp.CFrame * CFrame.new(0, 500, 0)
-                rHrp.Anchored = true
-            end
             
             LocalPlayer.Character = fakeChar
             workspace.CurrentCamera.CameraSubject = fakeChar:FindFirstChild("Humanoid")
             
+            -- Перезагрузка анимаций для корректной работы R6/R15 у клона
+            local fAnim = fakeChar:FindFirstChild("Animate")
+            if fAnim then
+                fAnim.Disabled = true
+                task.delay(0.1, function() fAnim.Disabled = false end)
+            end
+            
+            -- Unanchored для лучшей передачи позиции серверу
+            local rHrp = realChar:FindFirstChild("HumanoidRootPart")
+            if rHrp then rHrp.Anchored = false end
+            
             local fHum = fakeChar:FindFirstChild("Humanoid")
             if fHum then
                 fHum.Died:Connect(function()
-                    if invisActive then InvisBtn.Text = "INVISIBILITY (GHOST): OFF" invisActive = false end
+                    if invisActive then 
+                        invisActive = false 
+                        InvisBtn.Text = "INVISIBILITY (GHOST): OFF"
+                        ApplyStyle(InvisBtn, Color3.fromRGB(200, 0, 255))
+                    end
                     LocalPlayer.Character = realChar
                     if realChar:FindFirstChild("Humanoid") then realChar.Humanoid.Health = 0 end
                 end)
@@ -753,12 +765,10 @@ InvisBtn.MouseButton1Click:Connect(function()
         end
     else
         if fakeChar and realChar then
+            isStriking = false
             local fHrp = fakeChar:FindFirstChild("HumanoidRootPart")
             local rHrp = realChar:FindFirstChild("HumanoidRootPart")
-            if rHrp and fHrp then
-                rHrp.Anchored = false
-                rHrp.CFrame = fHrp.CFrame
-            end
+            if rHrp and fHrp then rHrp.CFrame = fHrp.CFrame end
             LocalPlayer.Character = realChar
             workspace.CurrentCamera.CameraSubject = realChar:FindFirstChild("Humanoid")
             fakeChar:Destroy()
@@ -767,9 +777,22 @@ InvisBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- GHOST STRIKE SYNC
-RunService.RenderStepped:Connect(function()
+-- GHOST STRIKE SYNC & REAL CHAR POSITIONING
+RunService.Stepped:Connect(function()
     if invisActive and realChar and fakeChar then
+        local rHrp = realChar:FindFirstChild("HumanoidRootPart")
+        local fHrp = fakeChar:FindFirstChild("HumanoidRootPart")
+        
+        -- Постоянно держим реальное тело высоко в небе без привязки к Anchor
+        if rHrp and fHrp then
+            if not isStriking then
+                rHrp.CFrame = fHrp.CFrame * CFrame.new(0, 500, 0)
+                rHrp.Velocity = Vector3.zero
+                rHrp.RotVelocity = Vector3.zero
+            end
+        end
+        
+        -- Синхронизация инструментов
         local fakeTool = fakeChar:FindFirstChildOfClass("Tool")
         local realHum = realChar:FindFirstChildOfClass("Humanoid")
         if fakeTool and realHum then
@@ -783,19 +806,17 @@ end)
 
 UIS.InputBegan:Connect(function(input, gpe)
     if invisActive and realChar and fakeChar and input.UserInputType == Enum.UserInputType.MouseButton1 and not gpe then
+        isStriking = true
         local rHrp = realChar:FindFirstChild("HumanoidRootPart")
         local fHrp = fakeChar:FindFirstChild("HumanoidRootPart")
         if rHrp and fHrp then
-            local skyPos = rHrp.CFrame
-            rHrp.Anchored = false
             rHrp.CFrame = fHrp.CFrame
-            task.delay(0.05, function()
-                if invisActive and rHrp then
-                    rHrp.CFrame = skyPos
-                    rHrp.Anchored = true
-                end
-            end)
         end
+        
+        -- Возвращаемся в небо после клика
+        task.delay(0.1, function()
+            isStriking = false
+        end)
     end
 end)
 
@@ -1047,6 +1068,7 @@ local function ForceCleanup()
     if invisActive then
         invisActive = false
         if fakeChar and realChar then
+            isStriking = false
             local fHrp = fakeChar:FindFirstChild("HumanoidRootPart")
             local rHrp = realChar:FindFirstChild("HumanoidRootPart")
             if rHrp and fHrp then rHrp.Anchored = false rHrp.CFrame = fHrp.CFrame end
