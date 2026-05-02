@@ -77,7 +77,7 @@ ApplyStyle(MainFrame, Color3.fromRGB(255, 0, 255), Color3.fromRGB(10, 5, 15))
 local MainScaler = Instance.new("UIScale", MainFrame)
 MainScaler.Scale = 1
 
--- DRAG LOGIC
+-- DRAG LOGIC (WITH UI SCALE SUPPORT)
 local DragHandle = Instance.new("Frame")
 DragHandle.Size = UDim2.new(1, -50, 0, 25)
 DragHandle.BackgroundTransparency = 1
@@ -101,7 +101,7 @@ UIS.InputChanged:Connect(function(input)
 end)
 
 local Title = Instance.new("TextLabel")
-Title.Text = "KIRIK HUB V44"
+Title.Text = "KIRIK HUB V45"
 Title.Size = UDim2.new(1, -60, 0, 25)
 Title.Position = UDim2.new(0, 10, 0, 0)
 Title.TextXAlignment = Enum.TextXAlignment.Left
@@ -130,6 +130,7 @@ Sidebar.Position = UDim2.new(0, 5, 0, 30)
 Sidebar.BackgroundTransparency = 1
 local SideLayout = Instance.new("UIListLayout", Sidebar)
 SideLayout.Padding = UDim.new(0, 5)
+SideLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
 local TabContainer = Instance.new("Frame", MainFrame)
 TabContainer.Size = UDim2.new(1, -125, 1, -35)
@@ -143,6 +144,7 @@ local function MakeTab(name, isDefault)
     local btn = Instance.new("TextButton", Sidebar)
     btn.Size = UDim2.new(1, 0, 0, 25)
     btn.Text = name
+    btn.LayoutOrder = #tabBtns + 1
     ApplyStyle(btn, Color3.fromRGB(0, 150, 255), Color3.fromRGB(15, 15, 20))
     
     local page = Instance.new("Frame", TabContainer)
@@ -207,7 +209,7 @@ end)
 local HomeTab = MakeTab("HOME", true)
 local WelcomeText = Instance.new("TextLabel", HomeTab)
 WelcomeText.Size = UDim2.new(1, 0, 1, 0)
-WelcomeText.Text = "KIRIK HUB V44\n\n[ FEATURE HIGHLIGHTS ]\n- Ghost Invisibility: FE Invis + Item Use\n- Custom Themes & UI Resizing\n- Players: ESP, INF TP, Dynamic Part Targets\n- NPCs: Scan & Interact with game bots\n- Character: Speed, Gravity, Noclip\n- Flight: Mobile Support, Air Walk\n- Lag: Custom Chaos Chain System"
+WelcomeText.Text = "KIRIK HUB V45\n\n[ FEATURE HIGHLIGHTS ]\n- Ghost Invisibility: FE Invis + Item Use\n- Custom Themes, Resizing & Draggable Tabs\n- Platform Anti-Fall System\n- Players: ESP, INF TP, Dynamic Targets\n- NPCs: Scan & Interact with bots\n- Lag: Custom Chaos Chain System"
 WelcomeText.TextWrapped = true
 WelcomeText.TextYAlignment = Enum.TextYAlignment.Top
 ApplyStyle(WelcomeText, Color3.fromRGB(0, 255, 255), Color3.fromRGB(15, 15, 20))
@@ -399,6 +401,100 @@ NeonBtn.MouseButton1Click:Connect(function() SetTheme("NEON") end)
 HackerBtn.MouseButton1Click:Connect(function() SetTheme("HACKER") end)
 BWBtn.MouseButton1Click:Connect(function() SetTheme("B&W") end)
 
+-- TAB ORDER DRAG & DROP UI
+local TabOrderLbl = Instance.new("TextLabel", MakeRow(SettingsScroll))
+TabOrderLbl.Size = UDim2.new(1, 0, 1, 0)
+TabOrderLbl.Text = "--- TAB ORDER (DRAG & DROP) ---"
+ApplyStyle(TabOrderLbl, Color3.fromRGB(0, 255, 255))
+
+local TabOrderContainer = Instance.new("Frame", SettingsScroll)
+TabOrderContainer.Size = UDim2.new(1, -5, 0, #tabBtns * 30)
+TabOrderContainer.BackgroundTransparency = 1
+local TOLayout = Instance.new("UIListLayout", TabOrderContainer)
+TOLayout.Padding = UDim.new(0, 5)
+TOLayout.SortOrder = Enum.SortOrder.LayoutOrder
+
+local tabOrderItems = {}
+local tabDragActive = false
+local currentDragItem = nil
+local tabGhostItem = nil
+
+for i, tBtn in ipairs(tabBtns) do
+    local dragItem = Instance.new("TextButton", TabOrderContainer)
+    dragItem.Size = UDim2.new(1, 0, 0, 25)
+    dragItem.Text = "☰ " .. tBtn.Text
+    dragItem.LayoutOrder = i
+    ApplyStyle(dragItem, Color3.fromRGB(255, 100, 0))
+    table.insert(tabOrderItems, dragItem)
+    
+    dragItem.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            tabDragActive = true
+            currentDragItem = dragItem
+            
+            tabGhostItem = Instance.new("Frame", TabOrderContainer)
+            tabGhostItem.Size = dragItem.Size
+            tabGhostItem.BackgroundTransparency = 0.8
+            tabGhostItem.BackgroundColor3 = Color3.new(1,1,1)
+            tabGhostItem.LayoutOrder = dragItem.LayoutOrder
+            
+            dragItem.Parent = MainFrame
+            dragItem.Size = UDim2.new(0, TabOrderContainer.AbsoluteSize.X / MainScaler.Scale, 0, 25)
+            
+            local localY = (input.Position.Y - MainFrame.AbsolutePosition.Y) / MainScaler.Scale - 12.5
+            dragItem.Position = UDim2.new(0, (TabOrderContainer.AbsolutePosition.X - MainFrame.AbsolutePosition.X) / MainScaler.Scale, 0, localY)
+        end
+    end)
+end
+
+UIS.InputChanged:Connect(function(input)
+    if tabDragActive and currentDragItem and tabGhostItem and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local localY = (input.Position.Y - MainFrame.AbsolutePosition.Y) / MainScaler.Scale - 12.5
+        currentDragItem.Position = UDim2.new(0, (TabOrderContainer.AbsolutePosition.X - MainFrame.AbsolutePosition.X) / MainScaler.Scale, 0, localY)
+        
+        for _, other in ipairs(tabOrderItems) do
+            if other ~= currentDragItem and other.Parent == TabOrderContainer then
+                local center = other.AbsolutePosition.Y + (other.AbsoluteSize.Y / 2)
+                if math.abs(input.Position.Y - center) < 15 then
+                    local temp = tabGhostItem.LayoutOrder
+                    tabGhostItem.LayoutOrder = other.LayoutOrder
+                    other.LayoutOrder = temp
+                end
+            end
+        end
+    end
+end)
+
+UIS.InputEnded:Connect(function(input)
+    if tabDragActive and currentDragItem and tabGhostItem and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+        tabDragActive = false
+        currentDragItem.Parent = TabOrderContainer
+        currentDragItem.LayoutOrder = tabGhostItem.LayoutOrder
+        currentDragItem.Size = UDim2.new(1, 0, 0, 25)
+        currentDragItem.Position = UDim2.new(0, 0, 0, 0)
+        tabGhostItem:Destroy()
+        tabGhostItem = nil
+        currentDragItem = nil
+    end
+end)
+
+local SaveTabsBtn = Instance.new("TextButton", MakeRow(SettingsScroll))
+SaveTabsBtn.Size = UDim2.new(1, 0, 1, 0)
+SaveTabsBtn.Text = "SAVE TAB ORDER"
+ApplyStyle(SaveTabsBtn, Color3.fromRGB(0, 255, 0))
+
+SaveTabsBtn.MouseButton1Click:Connect(function()
+    table.sort(tabOrderItems, function(a, b) return a.LayoutOrder < b.LayoutOrder end)
+    for i, dragItem in ipairs(tabOrderItems) do
+        local rawName = dragItem.Text:sub(5) -- Remove "☰ "
+        for _, tBtn in ipairs(tabBtns) do
+            if tBtn.Text == rawName then
+                tBtn.LayoutOrder = i
+            end
+        end
+    end
+end)
+
 -- ==================== FLOATING MOBILE UI ====================
 local FlyUI = Instance.new("Frame", ScreenGui)
 FlyUI.Size = UDim2.new(0, 60, 0, 120)
@@ -455,6 +551,32 @@ ShrinkBox.FocusLost:Connect(function()
         PlatScaler.Scale = 1
     end
 end)
+
+local function ShowFailsafeMessage()
+    local msg = Instance.new("TextLabel", ScreenGui)
+    msg.Size = UDim2.new(1, 0, 0, 50)
+    msg.Position = UDim2.new(0, 0, 0.5, -25)
+    msg.BackgroundTransparency = 1
+    msg.Text = "Sorry, we were trying to keep you from falling."
+    msg.TextColor3 = Color3.fromRGB(255, 50, 50)
+    msg.Font = Enum.Font.GothamBold
+    msg.TextScaled = true
+    msg.ZIndex = 1000
+    
+    local stroke = Instance.new("UIStroke", msg)
+    stroke.Thickness = 2
+    stroke.Color = Color3.new(0, 0, 0)
+    
+    task.spawn(function()
+        task.wait(3)
+        for i = 0, 1, 0.1 do
+            msg.TextTransparency = i
+            stroke.Transparency = i
+            task.wait(0.05)
+        end
+        msg:Destroy()
+    end)
+end
 
 -- ==================== LOGIC & SYSTEMS ====================
 
@@ -518,9 +640,7 @@ local function startInfTp(target)
         if isValid and targetCFrame then
             local mChar = LocalPlayer.Character
             local mHrp = mChar and mChar:FindFirstChild("HumanoidRootPart")
-            if mHrp then
-                mHrp.CFrame = targetCFrame
-            end
+            if mHrp then mHrp.CFrame = targetCFrame end
         else
             stopInfTp()
             if updatePlayerList then updatePlayerList() end
@@ -627,7 +747,7 @@ updateNpcList = function()
             
             if npcListMode == "INF TP" then
                 local isActive = (currentInfTpTarget == npc)
-                btn.Text = npc.Name .. (isActive and " [ON]" or " [OFF]")
+                btn.Text = npc.Name .. (isActive and " [ON]" or "[OFF]")
                 ApplyStyle(btn, isActive and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0))
             else
                 btn.Text = npc.Name
@@ -729,20 +849,18 @@ InvisBtn.MouseButton1Click:Connect(function()
         if realChar then
             realChar.Archivable = true
             fakeChar = realChar:Clone()
-            fakeChar.Name = realChar.Name -- Точная копия имени
+            fakeChar.Name = realChar.Name 
             fakeChar.Parent = workspace
             
             LocalPlayer.Character = fakeChar
             workspace.CurrentCamera.CameraSubject = fakeChar:FindFirstChild("Humanoid")
             
-            -- Перезагрузка анимаций для корректной работы R6/R15 у клона
             local fAnim = fakeChar:FindFirstChild("Animate")
             if fAnim then
                 fAnim.Disabled = true
                 task.delay(0.1, function() fAnim.Disabled = false end)
             end
             
-            -- Unanchored для лучшей передачи позиции серверу
             local rHrp = realChar:FindFirstChild("HumanoidRootPart")
             if rHrp then rHrp.Anchored = false end
             
@@ -783,7 +901,6 @@ RunService.Stepped:Connect(function()
         local rHrp = realChar:FindFirstChild("HumanoidRootPart")
         local fHrp = fakeChar:FindFirstChild("HumanoidRootPart")
         
-        -- Постоянно держим реальное тело высоко в небе без привязки к Anchor
         if rHrp and fHrp then
             if not isStriking then
                 rHrp.CFrame = fHrp.CFrame * CFrame.new(0, 500, 0)
@@ -792,7 +909,6 @@ RunService.Stepped:Connect(function()
             end
         end
         
-        -- Синхронизация инструментов
         local fakeTool = fakeChar:FindFirstChildOfClass("Tool")
         local realHum = realChar:FindFirstChildOfClass("Humanoid")
         if fakeTool and realHum then
@@ -809,14 +925,8 @@ UIS.InputBegan:Connect(function(input, gpe)
         isStriking = true
         local rHrp = realChar:FindFirstChild("HumanoidRootPart")
         local fHrp = fakeChar:FindFirstChild("HumanoidRootPart")
-        if rHrp and fHrp then
-            rHrp.CFrame = fHrp.CFrame
-        end
-        
-        -- Возвращаемся в небо после клика
-        task.delay(0.1, function()
-            isStriking = false
-        end)
+        if rHrp and fHrp then rHrp.CFrame = fHrp.CFrame end
+        task.delay(0.1, function() isStriking = false end)
     end
 end)
 
@@ -983,7 +1093,7 @@ RunService.RenderStepped:Connect(function()
     if spinActive and hrp then hrp.CFrame = hrp.CFrame * CFrame.Angles(0, math.rad(tonumber(SpinBox.Text) or 50), 0) end
 end)
 
--- FLIGHT SCRIPTS
+-- FLIGHT & PLATFORM WITH ANTI-FALL
 local flying = false
 local flyConn
 
@@ -1019,10 +1129,14 @@ FlyBtn.MouseButton1Click:Connect(function()
 end)
 
 local platActive, platPart, platConn = false, nil, nil
+local platFails = 0
+local platFailTime = 0
+
 PlatformBtn.MouseButton1Click:Connect(function()
     platActive = not platActive
     PlatformBtn.Text = "PLATFORM: " .. (platActive and "ON" or "OFF")
     PlatUI.Visible = platActive
+    platFails = 0
 
     local char = LocalPlayer.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
@@ -1034,9 +1148,31 @@ PlatformBtn.MouseButton1Click:Connect(function()
         platConn = RunService.RenderStepped:Connect(function()
             local cHrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
             if not cHrp then return end
+            
             if (cHrp.Position.Y - 3.5) > currentY + 0.5 then currentY = cHrp.Position.Y - 3.5 end
             if platDownPressed or UIS:IsKeyDown(Enum.KeyCode.LeftControl) then currentY = currentY - 1 end
+            
             platPart.CFrame = CFrame.new(cHrp.Position.X, currentY, cHrp.Position.Z)
+            
+            -- ANTI-FALL LOGIC
+            local diff = currentY - (cHrp.Position.Y - 3.5)
+            if diff > 1.5 and not (platDownPressed or UIS:IsKeyDown(Enum.KeyCode.LeftControl)) then
+                cHrp.Velocity = Vector3.new(cHrp.Velocity.X, 0, cHrp.Velocity.Z)
+                cHrp.CFrame = CFrame.new(cHrp.Position.X, currentY + 3.5, cHrp.Position.Z)
+                
+                local now = tick()
+                if now - platFailTime < 1.5 then platFails = platFails + 1 else platFails = 1 end
+                platFailTime = now
+                
+                if platFails > 8 then
+                    platActive = false
+                    PlatformBtn.Text = "PLATFORM: OFF"
+                    PlatUI.Visible = false
+                    if platPart then platPart:Destroy() platPart = nil end
+                    if platConn then platConn:Disconnect() platConn = nil end
+                    ShowFailsafeMessage()
+                end
+            end
         end)
     else
         if platPart then platPart:Destroy() end
