@@ -59,9 +59,7 @@ end
 
 local function SetTheme(themeName)
     currentTheme = themeName
-    for _, inst in pairs(ScreenGui:GetDescendants()) do
-        UpdateInstanceTheme(inst)
-    end
+    for _, inst in pairs(ScreenGui:GetDescendants()) do UpdateInstanceTheme(inst) end
     UpdateInstanceTheme(ScreenGui)
 end
 
@@ -77,7 +75,7 @@ ApplyStyle(MainFrame, Color3.fromRGB(255, 0, 255), Color3.fromRGB(10, 5, 15))
 local MainScaler = Instance.new("UIScale", MainFrame)
 MainScaler.Scale = 1
 
--- DRAG LOGIC
+-- DRAG LOGIC (WITH UI SCALE SUPPORT)
 local DragHandle = Instance.new("Frame")
 DragHandle.Size = UDim2.new(1, -50, 0, 25)
 DragHandle.BackgroundTransparency = 1
@@ -101,7 +99,7 @@ UIS.InputChanged:Connect(function(input)
 end)
 
 local Title = Instance.new("TextLabel")
-Title.Text = "KIRIK HUB V42"
+Title.Text = "KIRIK HUB V43"
 Title.Size = UDim2.new(1, -60, 0, 25)
 Title.Position = UDim2.new(0, 10, 0, 0)
 Title.TextXAlignment = Enum.TextXAlignment.Left
@@ -207,7 +205,7 @@ end)
 local HomeTab = MakeTab("HOME", true)
 local WelcomeText = Instance.new("TextLabel", HomeTab)
 WelcomeText.Size = UDim2.new(1, 0, 1, 0)
-WelcomeText.Text = "KIRIK HUB V42\n\n[ FEATURE HIGHLIGHTS ]\n- Custom Themes & UI Resizing\n- Players: ESP, INF TP, Dynamic Part Targets\n- NPCs: Scan & Interact with game bots\n- Character: Speed, Gravity, Noclip\n- Flight: Mobile Support, Air Walk\n- Lag: Custom Chaos Chain System"
+WelcomeText.Text = "KIRIK HUB V43\n\n[ FEATURE HIGHLIGHTS ]\n- Ghost Invisibility: FE Invis + Item Use\n- Custom Themes & UI Resizing\n- Players: ESP, INF TP, Dynamic Part Targets\n- NPCs: Scan & Interact with game bots\n- Character: Speed, Gravity, Noclip\n- Flight: Mobile Support, Air Walk\n- Lag: Custom Chaos Chain System"
 WelcomeText.TextWrapped = true
 WelcomeText.TextYAlignment = Enum.TextYAlignment.Top
 ApplyStyle(WelcomeText, Color3.fromRGB(0, 255, 255), Color3.fromRGB(15, 15, 20))
@@ -260,6 +258,11 @@ local NpcList, _ = MakeScrollArea(NpcListWrapper)
 -- 4. CHARACTER TAB
 local CharTab = MakeTab("CHARACTER", false)
 local CharScroll, _ = MakeScrollArea(CharTab)
+
+local InvisBtn = Instance.new("TextButton", MakeRow(CharScroll))
+InvisBtn.Size = UDim2.new(1, 0, 1, 0)
+InvisBtn.Text = "INVISIBILITY (GHOST): OFF"
+ApplyStyle(InvisBtn, Color3.fromRGB(200, 0, 255))
 
 local function MakeCharStat(name, defaultVal, placeholder)
     local row = MakeRow(CharScroll)
@@ -561,51 +564,53 @@ updatePlayerList = function()
         end
     end
     
-    for i, spot in ipairs(savedSpots) do
-        local row = MakeRow(PlayerList)
-        local tpBtn = Instance.new("TextButton", row)
-        tpBtn.Size = UDim2.new(0.75, 0, 1, 0)
-        
-        if listMode == "INF TP" then
-            local isActive = (currentInfTpTarget == spot)
-            tpBtn.Text = spot.name .. (isActive and " [ON]" or "[OFF]")
-            ApplyStyle(tpBtn, isActive and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0))
-        else
-            tpBtn.Text = spot.name
-            ApplyStyle(tpBtn, Color3.fromRGB(0, 255, 100))
-        end
-        
-        local delBtn = Instance.new("TextButton", row)
-        delBtn.Size = UDim2.new(0.2, 0, 1, 0)
-        delBtn.Position = UDim2.new(0.8, 0, 0, 0)
-        delBtn.Text = "X"
-        ApplyStyle(delBtn, Color3.fromRGB(255, 0, 0))
-        
-        tpBtn.MouseButton1Click:Connect(function()
-            if listMode == "TP" then
-                local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-                if hrp then 
-                    if spot.part and spot.part.Parent then
-                        hrp.CFrame = spot.part.CFrame * CFrame.new(0, 3, 0)
-                    else
-                        hrp.CFrame = CFrame.new(spot.pos + Vector3.new(0, 3, 0))
-                    end
-                end
-            elseif listMode == "VIEW" then
-                if spot.part and spot.part.Parent then
-                    workspace.CurrentCamera.CameraSubject = spot.part
-                end
-            elseif listMode == "INF TP" then
-                if currentInfTpTarget == spot then stopInfTp() else startInfTp(spot) end
-                updatePlayerList()
+    if listMode == "TP" or listMode == "VIEW" or listMode == "INF TP" then
+        for i, spot in ipairs(savedSpots) do
+            local row = MakeRow(PlayerList)
+            local tpBtn = Instance.new("TextButton", row)
+            tpBtn.Size = UDim2.new(0.75, 0, 1, 0)
+            
+            if listMode == "INF TP" then
+                local isActive = (currentInfTpTarget == spot)
+                tpBtn.Text = spot.name .. (isActive and " [ON]" or " [OFF]")
+                ApplyStyle(tpBtn, isActive and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0))
+            else
+                tpBtn.Text = spot.name
+                ApplyStyle(tpBtn, Color3.fromRGB(0, 255, 100))
             end
-        end)
-        
-        delBtn.MouseButton1Click:Connect(function()
-            if currentInfTpTarget == spot then stopInfTp() end
-            table.remove(savedSpots, i)
-            updatePlayerList()
-        end)
+            
+            local delBtn = Instance.new("TextButton", row)
+            delBtn.Size = UDim2.new(0.2, 0, 1, 0)
+            delBtn.Position = UDim2.new(0.8, 0, 0, 0)
+            delBtn.Text = "X"
+            ApplyStyle(delBtn, Color3.fromRGB(255, 0, 0))
+            
+            tpBtn.MouseButton1Click:Connect(function()
+                if listMode == "TP" then
+                    local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                    if hrp then 
+                        if spot.part and spot.part.Parent then
+                            hrp.CFrame = spot.part.CFrame * CFrame.new(0, 3, 0)
+                        else
+                            hrp.CFrame = CFrame.new(spot.pos + Vector3.new(0, 3, 0))
+                        end
+                    end
+                elseif listMode == "VIEW" then
+                    if spot.part and spot.part.Parent then
+                        workspace.CurrentCamera.CameraSubject = spot.part
+                    end
+                elseif listMode == "INF TP" then
+                    if currentInfTpTarget == spot then stopInfTp() else startInfTp(spot) end
+                    updatePlayerList()
+                end
+            end)
+            
+            delBtn.MouseButton1Click:Connect(function()
+                if currentInfTpTarget == spot then stopInfTp() end
+                table.remove(savedSpots, i)
+                updatePlayerList()
+            end)
+        end
     end
 end
 
@@ -705,6 +710,94 @@ end)
 
 Players.PlayerAdded:Connect(updatePlayerList)
 Players.PlayerRemoving:Connect(updatePlayerList)
+
+-- GHOST INVISIBILITY (FE INVIS + GHOST STRIKE)
+local invisActive = false
+local realChar = nil
+local fakeChar = nil
+
+InvisBtn.MouseButton1Click:Connect(function()
+    invisActive = not invisActive
+    InvisBtn.Text = "INVISIBILITY (GHOST): " .. (invisActive and "ON" or "OFF")
+    ApplyStyle(InvisBtn, invisActive and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(200, 0, 255))
+    
+    if invisActive then
+        realChar = LocalPlayer.Character
+        if realChar then
+            realChar.Archivable = true
+            fakeChar = realChar:Clone()
+            fakeChar.Name = LocalPlayer.Name .. "_FakeGhost"
+            fakeChar.Parent = workspace
+            
+            local rHrp = realChar:FindFirstChild("HumanoidRootPart")
+            if rHrp then
+                rHrp.CFrame = rHrp.CFrame * CFrame.new(0, 500, 0)
+                rHrp.Anchored = true
+            end
+            
+            LocalPlayer.Character = fakeChar
+            workspace.CurrentCamera.CameraSubject = fakeChar:FindFirstChild("Humanoid")
+            
+            local fHum = fakeChar:FindFirstChild("Humanoid")
+            if fHum then
+                fHum.Died:Connect(function()
+                    if invisActive then InvisBtn.Text = "INVISIBILITY (GHOST): OFF" invisActive = false end
+                    LocalPlayer.Character = realChar
+                    if realChar:FindFirstChild("Humanoid") then realChar.Humanoid.Health = 0 end
+                end)
+            end
+        else
+            invisActive = false
+            InvisBtn.Text = "INVISIBILITY (GHOST): OFF"
+            ApplyStyle(InvisBtn, Color3.fromRGB(200, 0, 255))
+        end
+    else
+        if fakeChar and realChar then
+            local fHrp = fakeChar:FindFirstChild("HumanoidRootPart")
+            local rHrp = realChar:FindFirstChild("HumanoidRootPart")
+            if rHrp and fHrp then
+                rHrp.Anchored = false
+                rHrp.CFrame = fHrp.CFrame
+            end
+            LocalPlayer.Character = realChar
+            workspace.CurrentCamera.CameraSubject = realChar:FindFirstChild("Humanoid")
+            fakeChar:Destroy()
+            fakeChar = nil
+        end
+    end
+end)
+
+-- GHOST STRIKE SYNC
+RunService.RenderStepped:Connect(function()
+    if invisActive and realChar and fakeChar then
+        local fakeTool = fakeChar:FindFirstChildOfClass("Tool")
+        local realHum = realChar:FindFirstChildOfClass("Humanoid")
+        if fakeTool and realHum then
+            local realTool = LocalPlayer.Backpack:FindFirstChild(fakeTool.Name)
+            if realTool then realHum:EquipTool(realTool) end
+        elseif not fakeTool and realHum then
+            realHum:UnequipTools()
+        end
+    end
+end)
+
+UIS.InputBegan:Connect(function(input, gpe)
+    if invisActive and realChar and fakeChar and input.UserInputType == Enum.UserInputType.MouseButton1 and not gpe then
+        local rHrp = realChar:FindFirstChild("HumanoidRootPart")
+        local fHrp = fakeChar:FindFirstChild("HumanoidRootPart")
+        if rHrp and fHrp then
+            local skyPos = rHrp.CFrame
+            rHrp.Anchored = false
+            rHrp.CFrame = fHrp.CFrame
+            task.delay(0.05, function()
+                if invisActive and rHrp then
+                    rHrp.CFrame = skyPos
+                    rHrp.Anchored = true
+                end
+            end)
+        end
+    end
+end)
 
 -- LAG CHAIN LOGIC
 local lagChain = {{anchor = 0.2, free = 0.1}}
@@ -950,6 +1043,20 @@ local function ForceCleanup()
     FlyUI.Visible, PlatUI.Visible = false, false
     stopInfTp()
     workspace.Gravity = 196.2
+    
+    if invisActive then
+        invisActive = false
+        if fakeChar and realChar then
+            local fHrp = fakeChar:FindFirstChild("HumanoidRootPart")
+            local rHrp = realChar:FindFirstChild("HumanoidRootPart")
+            if rHrp and fHrp then rHrp.Anchored = false rHrp.CFrame = fHrp.CFrame end
+            LocalPlayer.Character = realChar
+            workspace.CurrentCamera.CameraSubject = realChar:FindFirstChild("Humanoid")
+            fakeChar:Destroy()
+            fakeChar = nil
+        end
+    end
+    
     for _, p in pairs(Players:GetPlayers()) do if p.Character and p.Character:FindFirstChild("LuxuryESP") then p.Character.LuxuryESP:Destroy() end end
     local char = LocalPlayer.Character local hum = char and char:FindFirstChild("Humanoid") local hrp = char and char:FindFirstChild("HumanoidRootPart")
     if hrp then if hrp:FindFirstChild("FlyBV") then hrp.FlyBV:Destroy() end if hrp:FindFirstChild("FlyBG") then hrp.FlyBG:Destroy() end hrp.Anchored = false end
