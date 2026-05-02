@@ -132,7 +132,7 @@ UIS.InputChanged:Connect(function(input)
 end)
 
 local Title = Instance.new("TextLabel")
-Title.Text = "KIRIK HUB V47"
+Title.Text = "KIRIK HUB V48"
 Title.Size = UDim2.new(1, -60, 0, 25)
 Title.Position = UDim2.new(0, 10, 0, 0)
 Title.TextXAlignment = Enum.TextXAlignment.Left
@@ -215,6 +215,7 @@ local function MakeScrollArea(parent)
     scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
     local layout = Instance.new("UIListLayout", scroll)
     layout.Padding = UDim.new(0, 5)
+    layout.SortOrder = Enum.SortOrder.LayoutOrder -- Ensure correct sorting for settings layout
     return scroll, layout
 end
 
@@ -250,7 +251,7 @@ local updateLagList, updatePlayerList, updateNpcList
 local HomeTab = MakeTab("HOME", true)
 local WelcomeText = Instance.new("TextLabel", HomeTab)
 WelcomeText.Size = UDim2.new(1, 0, 1, 0)
-WelcomeText.Text = "KIRIK HUB V47\n\n[ NEW FEATURES ]\n- Save System: Export & Import full configurations\n- Numeric Tab Order in Settings\n- UN-DIE: Auto-Ghost on low health\n- UN-VOID: Auto-Platform if falling\n- Ghost Invisibility, INF TP, Chaos Lag"
+WelcomeText.Text = "KIRIK HUB V48\n\n[ NEW FEATURES ]\n- Save System integrated in Settings\n- Direct Save to Clipboard\n- Auto-sync for Tab Order settings\n- UN-DIE: Auto-Ghost on low health\n- UN-VOID: Auto-Platform if falling\n- Ghost Invisibility, INF TP, Chaos Lag"
 WelcomeText.TextWrapped = true
 WelcomeText.TextYAlignment = Enum.TextYAlignment.Top
 ApplyStyle(WelcomeText, Color3.fromRGB(0, 255, 255), Color3.fromRGB(15, 15, 20))
@@ -400,16 +401,16 @@ LagListWrapper.Size = UDim2.new(1, 0, 1, -95)
 LagListWrapper.BackgroundTransparency = 1
 local LagList, _ = MakeScrollArea(LagListWrapper)
 
--- 7. SETTINGS TAB
+-- 7. SETTINGS TAB (Combined with Save)
 local SettingsTab = MakeTab("SETTINGS", false)
 local SettingsScroll, _ = MakeScrollArea(SettingsTab)
 
 local ShrinkRow = MakeRow(SettingsScroll)
+ShrinkRow.LayoutOrder = 1
 local ShrinkLbl = Instance.new("TextLabel", ShrinkRow)
 ShrinkLbl.Size = UDim2.new(0.65, 0, 1, 0)
 ShrinkLbl.Text = "SHRINK UI (Ex: 2 = 2x smaller)"
 ApplyStyle(ShrinkLbl, Color3.fromRGB(255, 255, 0))
-
 local ShrinkBox = Instance.new("TextBox", ShrinkRow)
 ShrinkBox.Size = UDim2.new(0.33, 0, 1, 0)
 ShrinkBox.Position = UDim2.new(0.67, 0, 0, 0)
@@ -417,42 +418,58 @@ ShrinkBox.Text = "1"
 ApplyStyle(ShrinkBox, Color3.fromRGB(255, 255, 0))
 
 local AfkRow = MakeRow(SettingsScroll)
+AfkRow.LayoutOrder = 2
 local AfkLbl = Instance.new("TextLabel", AfkRow)
 AfkLbl.Size = UDim2.new(0.65, 0, 1, 0)
 AfkLbl.Text = "AFK TIMEOUT (SEC)"
 ApplyStyle(AfkLbl, Color3.fromRGB(150, 150, 150))
-
 local AfkBox = Instance.new("TextBox", AfkRow)
 AfkBox.Size = UDim2.new(0.33, 0, 1, 0)
 AfkBox.Position = UDim2.new(0.67, 0, 0, 0)
 AfkBox.Text = "30"
 ApplyStyle(AfkBox, Color3.fromRGB(150, 150, 150))
 
-local ThemeLbl = Instance.new("TextLabel", MakeRow(SettingsScroll))
+local ThemeLblRow = MakeRow(SettingsScroll)
+ThemeLblRow.LayoutOrder = 3
+local ThemeLbl = Instance.new("TextLabel", ThemeLblRow)
 ThemeLbl.Size = UDim2.new(1, 0, 1, 0)
 ThemeLbl.Text = "--- THEMES ---"
 ApplyStyle(ThemeLbl, Color3.fromRGB(0, 255, 255))
 
-local NeonBtn = Instance.new("TextButton", MakeRow(SettingsScroll))
-NeonBtn.Size = UDim2.new(1, 0, 1, 0)
-NeonBtn.Text = "NEON (DEFAULT)"
-ApplyStyle(NeonBtn, Color3.fromRGB(255, 0, 255))
+local NeonRow = MakeRow(SettingsScroll) NeonRow.LayoutOrder = 4
+local NeonBtn = Instance.new("TextButton", NeonRow)
+NeonBtn.Size = UDim2.new(1, 0, 1, 0) NeonBtn.Text = "NEON (DEFAULT)" ApplyStyle(NeonBtn, Color3.fromRGB(255, 0, 255))
 
-local HackerBtn = Instance.new("TextButton", MakeRow(SettingsScroll))
-HackerBtn.Size = UDim2.new(1, 0, 1, 0)
-HackerBtn.Text = "HACKER (GREEN)"
-ApplyStyle(HackerBtn, Color3.fromRGB(0, 255, 0))
+local HackerRow = MakeRow(SettingsScroll) HackerRow.LayoutOrder = 5
+local HackerBtn = Instance.new("TextButton", HackerRow)
+HackerBtn.Size = UDim2.new(1, 0, 1, 0) HackerBtn.Text = "HACKER (GREEN)" ApplyStyle(HackerBtn, Color3.fromRGB(0, 255, 0))
 
-local BWBtn = Instance.new("TextButton", MakeRow(SettingsScroll))
-BWBtn.Size = UDim2.new(1, 0, 1, 0)
-BWBtn.Text = "BLACK & WHITE"
-ApplyStyle(BWBtn, Color3.fromRGB(255, 255, 255))
+local BWRow = MakeRow(SettingsScroll) BWRow.LayoutOrder = 6
+local BWBtn = Instance.new("TextButton", BWRow)
+BWBtn.Size = UDim2.new(1, 0, 1, 0) BWBtn.Text = "BLACK & WHITE" ApplyStyle(BWBtn, Color3.fromRGB(255, 255, 255))
 
 NeonBtn.MouseButton1Click:Connect(function() SetTheme("NEON") end)
 HackerBtn.MouseButton1Click:Connect(function() SetTheme("HACKER") end)
 BWBtn.MouseButton1Click:Connect(function() SetTheme("B&W") end)
 
-local TabOrderLbl = Instance.new("TextLabel", MakeRow(SettingsScroll))
+local SaveHeaderRow = MakeRow(SettingsScroll) SaveHeaderRow.LayoutOrder = 7
+local SaveHeaderLbl = Instance.new("TextLabel", SaveHeaderRow)
+SaveHeaderLbl.Size = UDim2.new(1, 0, 1, 0) SaveHeaderLbl.Text = "--- SAVE SYSTEM ---" ApplyStyle(SaveHeaderLbl, Color3.fromRGB(0, 255, 150))
+
+local GenSaveRow = MakeRow(SettingsScroll) GenSaveRow.LayoutOrder = 8
+local GenSaveBtn = Instance.new("TextButton", GenSaveRow)
+GenSaveBtn.Size = UDim2.new(1, 0, 1, 0) GenSaveBtn.Text = "GENERATE SAVE CODE (COPIES)" ApplyStyle(GenSaveBtn, Color3.fromRGB(0, 255, 0))
+
+local ImportBoxRow = MakeRow(SettingsScroll) ImportBoxRow.LayoutOrder = 9
+local ImportBox = Instance.new("TextBox", ImportBoxRow)
+ImportBox.Size = UDim2.new(1, 0, 1, 0) ImportBox.PlaceholderText = "PASTE HUB-Save-... CODE HERE" ImportBox.ClearTextOnFocus = false ApplyStyle(ImportBox, Color3.fromRGB(255, 150, 0))
+
+local LoadSaveRow = MakeRow(SettingsScroll) LoadSaveRow.LayoutOrder = 10
+local LoadSaveBtn = Instance.new("TextButton", LoadSaveRow)
+LoadSaveBtn.Size = UDim2.new(1, 0, 1, 0) LoadSaveBtn.Text = "LOAD SAVE CODE" ApplyStyle(LoadSaveBtn, Color3.fromRGB(255, 0, 0))
+
+local TabOrderLblRow = MakeRow(SettingsScroll) TabOrderLblRow.LayoutOrder = 11
+local TabOrderLbl = Instance.new("TextLabel", TabOrderLblRow)
 TabOrderLbl.Size = UDim2.new(1, 0, 1, 0)
 TabOrderLbl.Text = "--- TAB ORDER (NUMERIC) ---"
 ApplyStyle(TabOrderLbl, Color3.fromRGB(0, 255, 255))
@@ -460,6 +477,7 @@ ApplyStyle(TabOrderLbl, Color3.fromRGB(0, 255, 255))
 local OrderBoxes = {}
 for i, tBtn in ipairs(tabBtns) do
     local row = MakeRow(SettingsScroll)
+    row.LayoutOrder = 20 + i
     local lbl = Instance.new("TextLabel", row)
     lbl.Size = UDim2.new(0.65, 0, 1, 0)
     lbl.Text = "TAB: " .. tBtn.Text
@@ -469,10 +487,11 @@ for i, tBtn in ipairs(tabBtns) do
     box.Position = UDim2.new(0.67, 0, 0, 0)
     box.Text = tostring(tBtn.LayoutOrder)
     ApplyStyle(box, Color3.fromRGB(255, 100, 0))
-    table.insert(OrderBoxes, {btn = tBtn, box = box})
+    table.insert(OrderBoxes, {btn = tBtn, box = box, row = row})
 end
 
-local ApplyOrderBtn = Instance.new("TextButton", MakeRow(SettingsScroll))
+local ApplyOrderRow = MakeRow(SettingsScroll) ApplyOrderRow.LayoutOrder = 100
+local ApplyOrderBtn = Instance.new("TextButton", ApplyOrderRow)
 ApplyOrderBtn.Size = UDim2.new(1, 0, 1, 0)
 ApplyOrderBtn.Text = "APPLY TAB ORDER"
 ApplyStyle(ApplyOrderBtn, Color3.fromRGB(0, 255, 0))
@@ -481,45 +500,14 @@ local function ApplyTabOrders()
     for _, ob in ipairs(OrderBoxes) do
         ob.btn.LayoutOrder = tonumber(ob.box.Text) or ob.btn.LayoutOrder
     end
+    table.sort(OrderBoxes, function(a, b) return a.btn.LayoutOrder < b.btn.LayoutOrder end)
+    for i, ob in ipairs(OrderBoxes) do
+        ob.btn.LayoutOrder = i
+        ob.row.LayoutOrder = 20 + i
+        ob.box.Text = tostring(i)
+    end
 end
 ApplyOrderBtn.MouseButton1Click:Connect(ApplyTabOrders)
-
--- 8. SAVE TAB
-local SaveTab = MakeTab("SAVE", false)
-local SaveScroll, _ = MakeScrollArea(SaveTab)
-
-local ExportLbl = Instance.new("TextLabel", MakeRow(SaveScroll))
-ExportLbl.Size = UDim2.new(1, 0, 1, 0)
-ExportLbl.Text = "--- EXPORT SAVE ---"
-ApplyStyle(ExportLbl, Color3.fromRGB(0, 255, 255))
-
-local ExportBox = Instance.new("TextBox", MakeRow(SaveScroll))
-ExportBox.Size = UDim2.new(1, 0, 1, 0)
-ExportBox.PlaceholderText = "YOUR SAVE CODE WILL APPEAR HERE"
-ExportBox.TextEditable = false
-ExportBox.ClearTextOnFocus = false
-ApplyStyle(ExportBox, Color3.fromRGB(150, 150, 150))
-
-local GenSaveBtn = Instance.new("TextButton", MakeRow(SaveScroll))
-GenSaveBtn.Size = UDim2.new(1, 0, 1, 0)
-GenSaveBtn.Text = "GENERATE SAVE CODE"
-ApplyStyle(GenSaveBtn, Color3.fromRGB(0, 255, 0))
-
-local ImportLbl = Instance.new("TextLabel", MakeRow(SaveScroll))
-ImportLbl.Size = UDim2.new(1, 0, 1, 0)
-ImportLbl.Text = "--- IMPORT SAVE ---"
-ApplyStyle(ImportLbl, Color3.fromRGB(255, 0, 255))
-
-local ImportBox = Instance.new("TextBox", MakeRow(SaveScroll))
-ImportBox.Size = UDim2.new(1, 0, 1, 0)
-ImportBox.PlaceholderText = "PASTE HUB-Save-... CODE HERE"
-ImportBox.ClearTextOnFocus = false
-ApplyStyle(ImportBox, Color3.fromRGB(255, 150, 0))
-
-local LoadSaveBtn = Instance.new("TextButton", MakeRow(SaveScroll))
-LoadSaveBtn.Size = UDim2.new(1, 0, 1, 0)
-LoadSaveBtn.Text = "LOAD SAVE CODE"
-ApplyStyle(LoadSaveBtn, Color3.fromRGB(255, 0, 0))
 
 -- ==================== FLOATING MOBILE UI ====================
 local FlyUI = Instance.new("Frame", ScreenGui)
@@ -678,7 +666,15 @@ GenSaveBtn.MouseButton1Click:Connect(function()
         currentTheme, ShrinkBox.Text, AfkBox.Text, WsBox.Text, JpBox.Text, GravBox.Text,
         CFrameSpeedBox.Text, SpinBox.Text, tgs, tabsOrderStr, lagStr
     )
-    ExportBox.Text = "HUB-Save-" .. B64Encode(rawStr)
+    local saveCode = "HUB-Save-" .. B64Encode(rawStr)
+    
+    local success = pcall(function() setclipboard(saveCode) end)
+    if success then
+        GenSaveBtn.Text = "COPIED TO CLIPBOARD!"
+    else
+        GenSaveBtn.Text = "ERROR: CLIPBOARD UNSUPPORTED"
+    end
+    task.delay(2, function() GenSaveBtn.Text = "GENERATE SAVE CODE (COPIES)" end)
 end)
 
 LoadSaveBtn.MouseButton1Click:Connect(function()
@@ -729,6 +725,7 @@ LoadSaveBtn.MouseButton1Click:Connect(function()
         updateLagList()
         ImportBox.Text = ""
         ImportBox.PlaceholderText = "SUCCESSFULLY LOADED!"
+        task.delay(2, function() ImportBox.PlaceholderText = "PASTE HUB-Save-... CODE HERE" end)
     end
 end)
 
@@ -1183,13 +1180,8 @@ RunService.Heartbeat:Connect(function(dt)
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
     local hum = char and char:FindFirstChildOfClass("Humanoid")
     
-    if undieActive and not invisActive and hum and hum.Health > 0 and hum.Health <= (hum.MaxHealth * 0.25) then
-        ToggleInvis(true)
-    end
-    
-    if unvoidActive and not platActive and hrp then
-        if hrp.Position.Y < (workspace.FallenPartsDestroyHeight + 100) then TogglePlatform(true) hrp.Velocity = Vector3.new(0, 50, 0) end
-    end
+    if undieActive and not invisActive and hum and hum.Health > 0 and hum.Health <= (hum.MaxHealth * 0.25) then ToggleInvis(true) end
+    if unvoidActive and not platActive and hrp then if hrp.Position.Y < (workspace.FallenPartsDestroyHeight + 100) then TogglePlatform(true) hrp.Velocity = Vector3.new(0, 50, 0) end end
     
     if not infStabActive then return end
     if not hrp or not hum or hum.Health <= 0 then lagState = "FREE" lagTimer = 0 return end
