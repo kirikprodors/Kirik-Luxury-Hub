@@ -1,15 +1,27 @@
+local CoreGui
+pcall(function() CoreGui = gethui and gethui() end)
+if not CoreGui then pcall(function() CoreGui = game:GetService("CoreGui") end) end
+if not CoreGui then CoreGui = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui") end
+
+-- Удаление прошлых версий хаба, чтобы они не наслаивались
+for _, gui in pairs(CoreGui:GetChildren()) do
+    if gui.Name == "KirikLuxuryHub" then gui:Destroy() end
+end
+
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "KirikLuxuryHub"
-ScreenGui.Parent = game:GetService("CoreGui")
 ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = CoreGui
 
 local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
-local VirtualUser = game:GetService("VirtualUser")
 local Camera = workspace.CurrentCamera
+
+local VirtualUser
+pcall(function() VirtualUser = game:GetService("VirtualUser") end)
 
 -- THEME SYSTEM & ANIMATIONS
 local currentTheme = "NEON"
@@ -59,24 +71,16 @@ local function ApplyStyle(inst, strokeColor, bgColor, textColor)
 
     UpdateInstanceTheme(inst)
 
-    -- ADD ANIMATIONS TO BUTTONS
     if inst:IsA("TextButton") then
         local scale = Instance.new("UIScale", inst)
         scale.Scale = 1
-        
         inst.MouseEnter:Connect(function()
             local bg = inst.BackgroundColor3
             TweenService:Create(inst, TweenInfo.new(0.2), {BackgroundColor3 = Color3.new(math.clamp(bg.R+0.1,0,1), math.clamp(bg.G+0.1,0,1), math.clamp(bg.B+0.1,0,1))}):Play()
         end)
-        inst.MouseLeave:Connect(function()
-            UpdateInstanceTheme(inst) -- Revert to original
-        end)
-        inst.MouseButton1Down:Connect(function()
-            TweenService:Create(scale, TweenInfo.new(0.1), {Scale = 0.9}):Play()
-        end)
-        inst.MouseButton1Up:Connect(function()
-            TweenService:Create(scale, TweenInfo.new(0.1), {Scale = 1}):Play()
-        end)
+        inst.MouseLeave:Connect(function() UpdateInstanceTheme(inst) end)
+        inst.MouseButton1Down:Connect(function() TweenService:Create(scale, TweenInfo.new(0.1), {Scale = 0.9}):Play() end)
+        inst.MouseButton1Up:Connect(function() TweenService:Create(scale, TweenInfo.new(0.1), {Scale = 1}):Play() end)
     end
 end
 
@@ -190,7 +194,7 @@ UIS.InputChanged:Connect(function(input)
 end)
 
 local Title = Instance.new("TextLabel")
-Title.Text = "KIRIK HUB V50"
+Title.Text = "KIRIK HUB V51"
 Title.Size = UDim2.new(1, -60, 0, 25)
 Title.Position = UDim2.new(0, 10, 0, 0)
 Title.TextXAlignment = Enum.TextXAlignment.Left
@@ -330,7 +334,7 @@ local radarColors = {}
 local HomeTab = MakeTab("HOME", true)
 local WelcomeText = Instance.new("TextLabel", HomeTab)
 WelcomeText.Size = UDim2.new(1, 0, 1, 0)
-WelcomeText.Text = "KIRIK HUB V50 🔥\n\n[ V50 EXCLUSIVES ]\n- Aimbot (Hold Right-Click)\n- Map Radar (Custom Player Colors)\n- ESP+ (Shows Distance in Studs)\n- Replay System (Record & Watch)\n- Anti-AFK, Global Animations & UI Shrink\n- Search everything instantly"
+WelcomeText.Text = "KIRIK HUB V51 🔥\n\n[ V51 EXCLUSIVES ]\n- Aimbot (Hold Right-Click)\n- Map Radar & Replay System\n- Global Smooth Animations\n- ESP+ (Shows Distance in Studs)\n- Anti-AFK & Smart Minimize\n- Fixed Delta CoreGui Crashes"
 WelcomeText.TextWrapped = true
 WelcomeText.TextYAlignment = Enum.TextYAlignment.Top
 ApplyStyle(WelcomeText, Color3.fromRGB(0, 255, 255), Color3.fromRGB(15, 15, 20))
@@ -485,29 +489,21 @@ LagListWrapper.Size = UDim2.new(1, 0, 1, -95)
 LagListWrapper.BackgroundTransparency = 1
 local LagList, _ = MakeScrollArea(LagListWrapper)
 
--- 7. REPLAY TAB (NEW)
+-- 7. REPLAY TAB
 local ReplayTab = MakeTab("REPLAY", false)
 local ReplayScroll, _ = MakeScrollArea(ReplayTab)
 
 local RecordBtn = Instance.new("TextButton", MakeRow(ReplayScroll))
-RecordBtn.Size = UDim2.new(1, 0, 1, 0)
-RecordBtn.Text = "RECORD: OFF"
-ApplyStyle(RecordBtn, Color3.fromRGB(255, 50, 50))
+RecordBtn.Size = UDim2.new(1, 0, 1, 0) RecordBtn.Text = "RECORD: OFF" ApplyStyle(RecordBtn, Color3.fromRGB(255, 50, 50))
 
 local PlayReplayBtn = Instance.new("TextButton", MakeRow(ReplayScroll))
-PlayReplayBtn.Size = UDim2.new(1, 0, 1, 0)
-PlayReplayBtn.Text = "WATCH REPLAY"
-ApplyStyle(PlayReplayBtn, Color3.fromRGB(0, 255, 100))
+PlayReplayBtn.Size = UDim2.new(1, 0, 1, 0) PlayReplayBtn.Text = "WATCH REPLAY" ApplyStyle(PlayReplayBtn, Color3.fromRGB(0, 255, 100))
 
 local ClearReplayBtn = Instance.new("TextButton", MakeRow(ReplayScroll))
-ClearReplayBtn.Size = UDim2.new(1, 0, 1, 0)
-ClearReplayBtn.Text = "CLEAR DATA"
-ApplyStyle(ClearReplayBtn, Color3.fromRGB(255, 255, 0))
+ClearReplayBtn.Size = UDim2.new(1, 0, 1, 0) ClearReplayBtn.Text = "CLEAR DATA" ApplyStyle(ClearReplayBtn, Color3.fromRGB(255, 255, 0))
 
 local ReplayStatusLbl = Instance.new("TextLabel", MakeRow(ReplayScroll))
-ReplayStatusLbl.Size = UDim2.new(1, 0, 1, 0)
-ReplayStatusLbl.Text = "FRAMES RECORDED: 0"
-ApplyStyle(ReplayStatusLbl, Color3.fromRGB(0, 255, 255))
+ReplayStatusLbl.Size = UDim2.new(1, 0, 1, 0) ReplayStatusLbl.Text = "FRAMES RECORDED: 0" ApplyStyle(ReplayStatusLbl, Color3.fromRGB(0, 255, 255))
 
 -- 8. SETTINGS TAB
 local SettingsTab = MakeTab("SETTINGS", false)
@@ -521,9 +517,9 @@ ShrinkBox.Size = UDim2.new(0.33, 0, 1, 0) ShrinkBox.Position = UDim2.new(0.67, 0
 
 local AfkRow = MakeRow(SettingsScroll) AfkRow.LayoutOrder = 2
 local AfkLbl = Instance.new("TextLabel", AfkRow)
-AfkLbl.Size = UDim2.new(0.65, 0, 1, 0) AfkLbl.Text = "AFK TIMEOUT (SEC)" ApplyStyle(AfkLbl, Color3.fromRGB(150, 150, 150))
+AfkLbl.Size = UDim2.new(0.65, 0, 1, 0) AfkLbl.Text = "AFK TIMEOUT (0 = OFF)" ApplyStyle(AfkLbl, Color3.fromRGB(150, 150, 150))
 local AfkBox = Instance.new("TextBox", AfkRow)
-AfkBox.Size = UDim2.new(0.33, 0, 1, 0) AfkBox.Position = UDim2.new(0.67, 0, 0, 0) AfkBox.Text = "30" ApplyStyle(AfkBox, Color3.fromRGB(150, 150, 150))
+AfkBox.Size = UDim2.new(0.33, 0, 1, 0) AfkBox.Position = UDim2.new(0.67, 0, 0, 0) AfkBox.Text = "0" ApplyStyle(AfkBox, Color3.fromRGB(150, 150, 150))
 
 local AntiAfkBtn = Instance.new("TextButton", MakeRow(SettingsScroll)) AntiAfkBtn.Parent.LayoutOrder = 3
 AntiAfkBtn.Size = UDim2.new(1, 0, 1, 0) AntiAfkBtn.Text = "UN-AFK (NO DISCONNECT): OFF" ApplyStyle(AntiAfkBtn, Color3.fromRGB(0, 255, 255))
@@ -563,6 +559,7 @@ GenSaveBtn.Size = UDim2.new(1, 0, 1, 0) GenSaveBtn.Text = "GENERATE SAVE CODE (C
 
 local ImportBoxRow = MakeRow(SettingsScroll) ImportBoxRow.LayoutOrder = 13
 local ImportBox = Instance.new("TextBox", ImportBoxRow)
+ImportBox.Name = "KirikImportBox"
 ImportBox.Size = UDim2.new(1, 0, 1, 0) ImportBox.PlaceholderText = "PASTE HUB-Save-... CODE HERE" ImportBox.ClearTextOnFocus = false ApplyStyle(ImportBox, Color3.fromRGB(255, 150, 0))
 
 local LoadSaveBtn = Instance.new("TextButton", MakeRow(SettingsScroll)) LoadSaveBtn.Parent.LayoutOrder = 14
@@ -579,6 +576,7 @@ for i, tBtn in ipairs(tabBtns) do
     local lbl = Instance.new("TextLabel", row)
     lbl.Size = UDim2.new(0.65, 0, 1, 0) lbl.Text = "TAB: " .. tBtn.Text ApplyStyle(lbl, Color3.fromRGB(255, 100, 0))
     local box = Instance.new("TextBox", row)
+    box.Name = "KirikTabBox"
     box.Size = UDim2.new(0.33, 0, 1, 0) box.Position = UDim2.new(0.67, 0, 0, 0) box.Text = tostring(tBtn.LayoutOrder) ApplyStyle(box, Color3.fromRGB(255, 100, 0))
     table.insert(OrderBoxes, {btn = tBtn, box = box, row = row})
 end
@@ -627,7 +625,7 @@ PerformSearch = function()
                     else
                         local rowMatches = false
                         for _, el in ipairs(row:GetDescendants()) do
-                            if (el:IsA("TextLabel") or el:IsA("TextButton")) and el.Text ~= "" and el.Name ~= "KirikSearchBox" then
+                            if (el:IsA("TextLabel") or el:IsA("TextButton")) and el.Text ~= "" and el.Name ~= "KirikSearchBox" and el.Name ~= "KirikImportBox" and el.Name ~= "KirikTabBox" then
                                 if string.find(string.lower(el.Text), q) then rowMatches = true break end
                             end
                         end
@@ -725,6 +723,60 @@ local function ShowFailsafeMessage()
         msg:Destroy()
     end)
 end
+
+-- ==================== REPLAY SYSTEM ====================
+local replayRecording = false
+local isPlayingReplay = false
+local replayData = {}
+
+local function PlayReplay()
+    if #replayData == 0 then return end
+    isPlayingReplay = true
+    PlayReplayBtn.Text = "PLAYING..." ApplyStyle(PlayReplayBtn, Color3.fromRGB(0, 255, 255))
+    
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if hrp then hrp.Anchored = true end
+    
+    task.spawn(function()
+        for i = 1, #replayData do
+            if not isPlayingReplay then break end
+            if hrp then hrp.CFrame = replayData[i] end
+            RunService.RenderStepped:Wait()
+        end
+        isPlayingReplay = false
+        if hrp then hrp.Anchored = false end
+        PlayReplayBtn.Text = "WATCH REPLAY" ApplyStyle(PlayReplayBtn, Color3.fromRGB(0, 255, 100))
+    end)
+end
+
+RecordBtn.MouseButton1Click:Connect(function()
+    if isPlayingReplay then return end
+    replayRecording = not replayRecording
+    RecordBtn.Text = "RECORD: " .. (replayRecording and "ON" or "OFF")
+    ApplyStyle(RecordBtn, replayRecording and Color3.fromRGB(255, 0, 0) or Color3.fromRGB(255, 50, 50))
+end)
+
+PlayReplayBtn.MouseButton1Click:Connect(function()
+    if replayRecording then return end
+    if isPlayingReplay then isPlayingReplay = false else PlayReplay() end
+end)
+
+ClearReplayBtn.MouseButton1Click:Connect(function()
+    replayData = {}
+    ReplayStatusLbl.Text = "FRAMES RECORDED: 0"
+end)
+
+RunService.RenderStepped:Connect(function()
+    if replayRecording then
+        local char = LocalPlayer.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            table.insert(replayData, hrp.CFrame)
+            ReplayStatusLbl.Text = "FRAMES RECORDED: " .. #replayData
+        end
+    end
+end)
 
 -- ==================== STATE HELPERS & OVERLAY LOGIC ====================
 local function SetFPS(state)
@@ -1046,72 +1098,7 @@ WsBtn.MouseButton1Click:Connect(applyWS)
 JpBtn.MouseButton1Click:Connect(applyJP)
 GravBtn.MouseButton1Click:Connect(applyGrav)
 
--- ==================== REPLAY SYSTEM ====================
-local replayRecording = false
-local isPlayingReplay = false
-local replayData = {}
-
-local function PlayReplay()
-    if #replayData == 0 then return end
-    isPlayingReplay = true
-    PlayReplayBtn.Text = "PLAYING..."
-    ApplyStyle(PlayReplayBtn, Color3.fromRGB(0, 255, 255))
-    
-    local char = LocalPlayer.Character
-    local hrp = char and char:FindFirstChild("HumanoidRootPart")
-    if hrp then hrp.Anchored = true end
-    
-    task.spawn(function()
-        for i = 1, #replayData do
-            if not isPlayingReplay then break end
-            if hrp then hrp.CFrame = replayData[i] end
-            RunService.RenderStepped:Wait()
-        end
-        isPlayingReplay = false
-        if hrp then hrp.Anchored = false end
-        PlayReplayBtn.Text = "WATCH REPLAY"
-        ApplyStyle(PlayReplayBtn, Color3.fromRGB(0, 255, 100))
-    end)
-end
-
-RecordBtn.MouseButton1Click:Connect(function()
-    if isPlayingReplay then return end
-    replayRecording = not replayRecording
-    RecordBtn.Text = "RECORD: " .. (replayRecording and "ON" or "OFF")
-    ApplyStyle(RecordBtn, replayRecording and Color3.fromRGB(255, 0, 0) or Color3.fromRGB(255, 50, 50))
-end)
-
-PlayReplayBtn.MouseButton1Click:Connect(function()
-    if replayRecording then return end
-    if isPlayingReplay then isPlayingReplay = false else PlayReplay() end
-end)
-
-ClearReplayBtn.MouseButton1Click:Connect(function()
-    replayData = {}
-    ReplayStatusLbl.Text = "FRAMES RECORDED: 0"
-end)
-
-RunService.RenderStepped:Connect(function()
-    if replayRecording then
-        local char = LocalPlayer.Character
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        if hrp then
-            table.insert(replayData, hrp.CFrame)
-            ReplayStatusLbl.Text = "FRAMES RECORDED: " .. #replayData
-        end
-    end
-end)
-
 -- ==================== LOGIC & SYSTEMS ====================
-
-local listMode = "TP"
-local npcListMode = "TP"
-local savedSpots = {}
-local cachedNPCs = {}
-local spotCount = 0
-
-local currentInfTpTarget = nil
-local infTpConn = nil
 
 local function stopInfTp()
     if infTpConn then infTpConn:Disconnect() infTpConn = nil end
@@ -1159,7 +1146,6 @@ updatePlayerList = function()
             local row = MakeRow(PlayerList)
             local btn = Instance.new("TextButton", row)
             btn.Size = UDim2.new(0.8, 0, 1, 0)
-            
             if listMode == "INF TP" then
                 local isActive = (currentInfTpTarget == player)
                 btn.Text = player.DisplayName .. (isActive and " [ON]" or "[OFF]")
@@ -1169,9 +1155,7 @@ updatePlayerList = function()
             end
             
             local colorBtn = Instance.new("TextButton", row)
-            colorBtn.Size = UDim2.new(0.18, 0, 1, 0)
-            colorBtn.Position = UDim2.new(0.82, 0, 0, 0)
-            colorBtn.Text = "CLR"
+            colorBtn.Size = UDim2.new(0.18, 0, 1, 0) colorBtn.Position = UDim2.new(0.82, 0, 0, 0) colorBtn.Text = "CLR"
             local pColor = radarColors[player.UserId] or Color3.fromRGB(255, 0, 0)
             ApplyStyle(colorBtn, pColor)
             
@@ -1350,7 +1334,7 @@ AntiFlingBtn.MouseButton1Click:Connect(function()
     if hrp then hrp.Velocity = Vector3.zero hrp.RotVelocity = Vector3.zero hrp.Anchored = true task.wait(0.5) if hrp then hrp.Anchored = false end end
 end)
 
--- AIMBOT, ESP+, RADAR
+-- ESP & AIMBOT & RADAR UPDATE LOOP
 local function applyESP(p)
     if espActive then
         local char = p.Character
@@ -1374,7 +1358,6 @@ RunService.RenderStepped:Connect(function()
     local mChar = LocalPlayer.Character
     local mHrp = mChar and mChar:FindFirstChild("HumanoidRootPart")
     
-    -- ESP UPDATE
     if espActive and mHrp then
         for _, p in pairs(Players:GetPlayers()) do
             if p ~= LocalPlayer and p.Character then
@@ -1388,13 +1371,12 @@ RunService.RenderStepped:Connect(function()
         end
     end
 
-    -- RADAR UPDATE
     if radarActive and mHrp then
         for _, p in pairs(Players:GetPlayers()) do
             if p ~= LocalPlayer then
                 if not radarDots[p] then
                     local dot = Instance.new("Frame", RadarFrame)
-                    dot.Size = UDim2.new(0, 4, 0, 4) dot.BackgroundColor3 = radarColors[p.UserId] or Color3.fromRGB(255, 0, 0)
+                    dot.Size = UDim2.new(0, 6, 0, 6) dot.BackgroundColor3 = radarColors[p.UserId] or Color3.fromRGB(255, 0, 0)
                     Instance.new("UICorner", dot).CornerRadius = UDim.new(0.5, 0)
                     radarDots[p] = dot
                 end
@@ -1404,8 +1386,9 @@ RunService.RenderStepped:Connect(function()
                     radarDots[p].Visible = true
                     radarDots[p].BackgroundColor3 = radarColors[p.UserId] or Color3.fromRGB(255, 0, 0)
                     local offset = mHrp.CFrame:ToObjectSpace(tHrp.CFrame).Position
-                    local mapX = math.clamp(offset.X, -80, 80)
-                    local mapY = math.clamp(offset.Z, -80, 80)
+                    local scale = 1.5
+                    local mapX = math.clamp(offset.X * scale, -75, 75)
+                    local mapY = math.clamp(offset.Z * scale, -75, 75)
                     radarDots[p].Position = UDim2.new(0.5, mapX, 0.5, mapY)
                 else
                     radarDots[p].Visible = false
@@ -1414,7 +1397,6 @@ RunService.RenderStepped:Connect(function()
         end
     end
 
-    -- AIMBOT UPDATE
     if aimbotActive and UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) and mHrp then
         local closestDist = math.huge
         local closestHrp = nil
@@ -1424,25 +1406,23 @@ RunService.RenderStepped:Connect(function()
                 local screenPoint, onScreen = Camera:WorldToScreenPoint(tHrp.Position)
                 if onScreen then
                     local dist = (Vector2.new(screenPoint.X, screenPoint.Y) - Vector2.new(mouse.X, mouse.Y)).Magnitude
-                    if dist < closestDist then
-                        closestDist = dist
-                        closestHrp = tHrp
-                    end
+                    if dist < closestDist then closestDist = dist closestHrp = tHrp end
                 end
             end
         end
         if closestHrp then Camera.CFrame = CFrame.new(Camera.CFrame.Position, closestHrp.Position) end
     end
 end)
-
 Players.PlayerRemoving:Connect(function(p) if radarDots[p] then radarDots[p]:Destroy() radarDots[p] = nil end end)
 
--- ANTI AFK (UN-AFK)
+-- ANTI AFK
 LocalPlayer.Idled:Connect(function()
-    if antiAfkActive then
-        VirtualUser:Button2Down(Vector2.new(0,0), Camera.CFrame)
-        task.wait(1)
-        VirtualUser:Button2Up(Vector2.new(0,0), Camera.CFrame)
+    if antiAfkActive and VirtualUser then
+        pcall(function()
+            VirtualUser:Button2Down(Vector2.new(0,0), Camera.CFrame)
+            task.wait(1)
+            VirtualUser:Button2Up(Vector2.new(0,0), Camera.CFrame)
+        end)
     end
 end)
 
@@ -1462,9 +1442,9 @@ UIS.InputBegan:Connect(checkUIInteraction)
 UIS.InputChanged:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then checkUIInteraction(input) end end)
 
 local function ForceCleanup()
-    SetESP(false) SetUltraRun(false) SetNoclip(false) SetChaosLag(false) SetSpin(false) SetCFSpeed(false) SetFly(false) TogglePlatform(false) ToggleInvis(false) SetRadar(false) SetAimbot(false)
-    undieActive, unvoidActive = false, false
-    FlyUI.Visible, PlatUI.Visible, StatsFrame.Visible = false, false, false
+    SetESP(false) SetUltraRun(false) SetNoclip(false) SetChaosLag(false) SetSpin(false) SetCFSpeed(false) SetFly(false) TogglePlatform(false) ToggleInvis(false) SetFPS(false) SetPing(false) SetRadar(false) SetAimbot(false)
+    undieActive, unvoidActive, antiAfkActive = false, false, false
+    FlyUI.Visible, PlatUI.Visible, StatsFrame.Visible, RadarFrame.Visible = false, false, false, false
     stopInfTp() workspace.Gravity = 196.2
     
     local char = LocalPlayer.Character local hum = char and char:FindFirstChild("Humanoid") local hrp = char and char:FindFirstChild("HumanoidRootPart")
@@ -1475,7 +1455,8 @@ end
 task.spawn(function()
     while task.wait(1) do
         if not ScreenGui.Parent then break end
-        if tick() - lastActive > (tonumber(AfkBox.Text) or 30) then ForceCleanup() ScreenGui:Destroy() break end
+        local afkTimeout = tonumber(AfkBox.Text) or 0
+        if afkTimeout > 0 and tick() - lastActive > afkTimeout then ForceCleanup() ScreenGui:Destroy() break end
     end
 end)
 
@@ -1484,4 +1465,3 @@ CloseBtn.MouseButton1Click:Connect(function() ForceCleanup() ScreenGui:Destroy()
 
 updatePlayerList()
 updateLagList()
-
