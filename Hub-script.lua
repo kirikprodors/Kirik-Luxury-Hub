@@ -1,29 +1,14 @@
-local CoreGui
-pcall(function() CoreGui = gethui and gethui() end)
-if not CoreGui then pcall(function() CoreGui = game:GetService("CoreGui") end) end
-if not CoreGui then CoreGui = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui") end
-
--- Удаление прошлых версий хаба, чтобы они не наслаивались
-for _, gui in pairs(CoreGui:GetChildren()) do
-    if gui.Name == "KirikLuxuryHub" then gui:Destroy() end
-end
-
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "KirikLuxuryHub"
+ScreenGui.Parent = game:GetService("CoreGui")
 ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = CoreGui
 
 local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
-local Camera = workspace.CurrentCamera
 
-local VirtualUser
-pcall(function() VirtualUser = game:GetService("VirtualUser") end)
-
--- THEME SYSTEM & ANIMATIONS
+-- THEME SYSTEM
 local currentTheme = "NEON"
 
 local function UpdateInstanceTheme(inst)
@@ -70,18 +55,6 @@ local function ApplyStyle(inst, strokeColor, bgColor, textColor)
     stroke.ApplyStrokeMode = inst:IsA("TextLabel") and Enum.ApplyStrokeMode.Contextual or Enum.ApplyStrokeMode.Border
 
     UpdateInstanceTheme(inst)
-
-    if inst:IsA("TextButton") then
-        local scale = Instance.new("UIScale", inst)
-        scale.Scale = 1
-        inst.MouseEnter:Connect(function()
-            local bg = inst.BackgroundColor3
-            TweenService:Create(inst, TweenInfo.new(0.2), {BackgroundColor3 = Color3.new(math.clamp(bg.R+0.1,0,1), math.clamp(bg.G+0.1,0,1), math.clamp(bg.B+0.1,0,1))}):Play()
-        end)
-        inst.MouseLeave:Connect(function() UpdateInstanceTheme(inst) end)
-        inst.MouseButton1Down:Connect(function() TweenService:Create(scale, TweenInfo.new(0.1), {Scale = 0.9}):Play() end)
-        inst.MouseButton1Up:Connect(function() TweenService:Create(scale, TweenInfo.new(0.1), {Scale = 1}):Play() end)
-    end
 end
 
 local function SetTheme(themeName)
@@ -94,7 +67,7 @@ local function ApplyToggleStyle(btn, state, defColor)
     ApplyStyle(btn, state and Color3.fromRGB(0, 255, 0) or defColor)
 end
 
--- BASE64 SYSTEM
+-- BASE64 ENCODER/DECODER FOR SAVE SYSTEM
 local b64chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
 local function B64Encode(data)
     return ((data:gsub('.', function(x)
@@ -135,7 +108,7 @@ ApplyStyle(MainFrame, Color3.fromRGB(255, 0, 255), Color3.fromRGB(10, 5, 15))
 local MainScaler = Instance.new("UIScale", MainFrame)
 MainScaler.Scale = 1
 
--- STATS HUD
+-- STATS (FPS/PING) HUD OVERLAY
 local StatsFrame = Instance.new("Frame", ScreenGui)
 StatsFrame.Position = UDim2.new(1, -120, 0, 10)
 StatsFrame.Size = UDim2.new(0, 110, 0, 50)
@@ -148,27 +121,18 @@ StatsLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 StatsLayout.VerticalAlignment = Enum.VerticalAlignment.Center
 
 local PingLbl = Instance.new("TextLabel", StatsFrame)
-PingLbl.Size = UDim2.new(1, -10, 0.45, 0) PingLbl.Text = "PING: 0 ms" PingLbl.BackgroundTransparency = 1 PingLbl.Visible = false
+PingLbl.Size = UDim2.new(1, -10, 0.45, 0)
+PingLbl.Text = "PING: 0 ms"
+PingLbl.BackgroundTransparency = 1
+PingLbl.Visible = false
 ApplyStyle(PingLbl, Color3.fromRGB(255, 150, 0))
 
 local FpsLbl = Instance.new("TextLabel", StatsFrame)
-FpsLbl.Size = UDim2.new(1, -10, 0.45, 0) FpsLbl.Text = "FPS: 0" FpsLbl.BackgroundTransparency = 1 FpsLbl.Visible = false
+FpsLbl.Size = UDim2.new(1, -10, 0.45, 0)
+FpsLbl.Text = "FPS: 0"
+FpsLbl.BackgroundTransparency = 1
+FpsLbl.Visible = false
 ApplyStyle(FpsLbl, Color3.fromRGB(0, 255, 100))
-
--- RADAR MAP HUD
-local RadarFrame = Instance.new("Frame", ScreenGui)
-RadarFrame.Position = UDim2.new(1, -180, 1, -180)
-RadarFrame.Size = UDim2.new(0, 160, 0, 160)
-RadarFrame.Visible = false
-RadarFrame.ClipsDescendants = true
-ApplyStyle(RadarFrame, Color3.fromRGB(0, 255, 255), Color3.fromRGB(10, 10, 15))
-Instance.new("UICorner", RadarFrame).CornerRadius = UDim.new(0.5, 0)
-
-local RadarCenter = Instance.new("Frame", RadarFrame)
-RadarCenter.Size = UDim2.new(0, 6, 0, 6)
-RadarCenter.Position = UDim2.new(0.5, -3, 0.5, -3)
-RadarCenter.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-Instance.new("UICorner", RadarCenter).CornerRadius = UDim.new(0.5, 0)
 
 -- DRAG LOGIC
 local DragHandle = Instance.new("Frame")
@@ -194,7 +158,7 @@ UIS.InputChanged:Connect(function(input)
 end)
 
 local Title = Instance.new("TextLabel")
-Title.Text = "KIRIK HUB V51"
+Title.Text = "KIRIK HUB V49"
 Title.Size = UDim2.new(1, -60, 0, 25)
 Title.Position = UDim2.new(0, 10, 0, 0)
 Title.TextXAlignment = Enum.TextXAlignment.Left
@@ -225,11 +189,11 @@ local SideLayout = Instance.new("UIListLayout", Sidebar)
 SideLayout.Padding = UDim.new(0, 5)
 SideLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
+-- SEARCH BOX
 local SearchBox = Instance.new("TextBox", Sidebar)
-SearchBox.Name = "KirikSearchBox"
 SearchBox.Size = UDim2.new(1, 0, 0, 25)
 SearchBox.PlaceholderText = "SEARCH..."
-SearchBox.LayoutOrder = -1
+SearchBox.LayoutOrder = -1 -- Always on top of tabs
 ApplyStyle(SearchBox, Color3.fromRGB(255, 255, 255), Color3.fromRGB(20, 20, 30))
 
 local TabContainer = Instance.new("Frame", MainFrame)
@@ -298,35 +262,23 @@ end
 local minimized = false
 MinBtn.MouseButton1Click:Connect(function()
     minimized = not minimized
-    if minimized then
-        TweenService:Create(MainFrame, TweenInfo.new(0.4, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out), {Size = UDim2.new(0, 150, 0, 25)}):Play()
-        Sidebar.Visible = false
-        TabContainer.Visible = false
-        MinBtn.Text = "+"
-    else
-        TweenService:Create(MainFrame, TweenInfo.new(0.4, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out), {Size = UDim2.new(0, 450, 0, 300)}):Play()
-        task.delay(0.2, function()
-            if not minimized then
-                Sidebar.Visible = true
-                TabContainer.Visible = true
-            end
-        end)
-        MinBtn.Text = "-"
-    end
+    Sidebar.Visible = not minimized
+    TabContainer.Visible = not minimized
+    MinBtn.Text = minimized and "+" or "-"
+    MainFrame.Size = minimized and UDim2.new(0, 450, 0, 25) or UDim2.new(0, 450, 0, 300)
 end)
 
 -- GLOBAL STATES
 local espActive, ultraRunActive, noclipActive = false, false, false
 local invisActive, undieActive, platActive, unvoidActive = false, false, false, false
 local flying, infStabActive, cfSpeedActive, spinActive = false, false, false, false
-local fpsActive, pingActive, radarActive, aimbotActive, antiAfkActive = false, false, false, false, false
+local fpsActive, pingActive = false, false
 
 -- STATE SETTERS
 local ToggleInvis, TogglePlatform, SetFly, SetUltraRun, SetNoclip
 local ApplyShrink
 local updateLagList, updatePlayerList, updateNpcList
 local PerformSearch
-local radarColors = {}
 
 -- ==================== TABS CREATION ====================
 
@@ -334,7 +286,7 @@ local radarColors = {}
 local HomeTab = MakeTab("HOME", true)
 local WelcomeText = Instance.new("TextLabel", HomeTab)
 WelcomeText.Size = UDim2.new(1, 0, 1, 0)
-WelcomeText.Text = "KIRIK HUB V51 🔥\n\n[ V51 EXCLUSIVES ]\n- Aimbot (Hold Right-Click)\n- Map Radar & Replay System\n- Global Smooth Animations\n- ESP+ (Shows Distance in Studs)\n- Anti-AFK & Smart Minimize\n- Fixed Delta CoreGui Crashes"
+WelcomeText.Text = "KIRIK HUB V49\n\n[ NEW FEATURES ]\n- Global Live Search (Top Left)\n- FPS & PING Overlay HUD\n- Direct Save to Clipboard\n- UN-DIE: Auto-Ghost on low health\n- UN-VOID: Auto-Platform if falling\n- Ghost Invisibility, INF TP, Chaos Lag"
 WelcomeText.TextWrapped = true
 WelcomeText.TextYAlignment = Enum.TextYAlignment.Top
 ApplyStyle(WelcomeText, Color3.fromRGB(0, 255, 255), Color3.fromRGB(15, 15, 20))
@@ -344,14 +296,9 @@ local PlayersTab = MakeTab("PLAYERS", false)
 local PTopLayout = Instance.new("UIListLayout", PlayersTab)
 PTopLayout.Padding = UDim.new(0, 5)
 
-local AimbotBtn = Instance.new("TextButton", MakeRow(PlayersTab))
-AimbotBtn.Size = UDim2.new(1, 0, 1, 0)
-AimbotBtn.Text = "AIMBOT: OFF (Hold RMB)"
-ApplyStyle(AimbotBtn, Color3.fromRGB(255, 0, 0))
-
 local EspBtn = Instance.new("TextButton", MakeRow(PlayersTab))
 EspBtn.Size = UDim2.new(1, 0, 1, 0)
-EspBtn.Text = "ESP+: OFF (Box + Distance)"
+EspBtn.Text = "ESP: OFF"
 ApplyStyle(EspBtn, Color3.fromRGB(0, 255, 100))
 
 local ModeBtn = Instance.new("TextButton", MakeRow(PlayersTab))
@@ -365,7 +312,7 @@ AddTpBtn.Text = "ADD CUSTOM TP PART"
 ApplyStyle(AddTpBtn, Color3.fromRGB(0, 150, 255))
 
 local PlayerListWrapper = Instance.new("Frame", PlayersTab)
-PlayerListWrapper.Size = UDim2.new(1, 0, 1, -125)
+PlayerListWrapper.Size = UDim2.new(1, 0, 1, -95)
 PlayerListWrapper.BackgroundTransparency = 1
 local PlayerList, _ = MakeScrollArea(PlayerListWrapper)
 
@@ -489,83 +436,70 @@ LagListWrapper.Size = UDim2.new(1, 0, 1, -95)
 LagListWrapper.BackgroundTransparency = 1
 local LagList, _ = MakeScrollArea(LagListWrapper)
 
--- 7. REPLAY TAB
-local ReplayTab = MakeTab("REPLAY", false)
-local ReplayScroll, _ = MakeScrollArea(ReplayTab)
-
-local RecordBtn = Instance.new("TextButton", MakeRow(ReplayScroll))
-RecordBtn.Size = UDim2.new(1, 0, 1, 0) RecordBtn.Text = "RECORD: OFF" ApplyStyle(RecordBtn, Color3.fromRGB(255, 50, 50))
-
-local PlayReplayBtn = Instance.new("TextButton", MakeRow(ReplayScroll))
-PlayReplayBtn.Size = UDim2.new(1, 0, 1, 0) PlayReplayBtn.Text = "WATCH REPLAY" ApplyStyle(PlayReplayBtn, Color3.fromRGB(0, 255, 100))
-
-local ClearReplayBtn = Instance.new("TextButton", MakeRow(ReplayScroll))
-ClearReplayBtn.Size = UDim2.new(1, 0, 1, 0) ClearReplayBtn.Text = "CLEAR DATA" ApplyStyle(ClearReplayBtn, Color3.fromRGB(255, 255, 0))
-
-local ReplayStatusLbl = Instance.new("TextLabel", MakeRow(ReplayScroll))
-ReplayStatusLbl.Size = UDim2.new(1, 0, 1, 0) ReplayStatusLbl.Text = "FRAMES RECORDED: 0" ApplyStyle(ReplayStatusLbl, Color3.fromRGB(0, 255, 255))
-
--- 8. SETTINGS TAB
+-- 7. SETTINGS TAB (Combined with Save)
 local SettingsTab = MakeTab("SETTINGS", false)
 local SettingsScroll, _ = MakeScrollArea(SettingsTab)
 
 local ShrinkRow = MakeRow(SettingsScroll) ShrinkRow.LayoutOrder = 1
 local ShrinkLbl = Instance.new("TextLabel", ShrinkRow)
-ShrinkLbl.Size = UDim2.new(0.65, 0, 1, 0) ShrinkLbl.Text = "SHRINK UI (Ex: 2 = 2x)" ApplyStyle(ShrinkLbl, Color3.fromRGB(255, 255, 0))
+ShrinkLbl.Size = UDim2.new(0.65, 0, 1, 0)
+ShrinkLbl.Text = "SHRINK UI (Ex: 2 = 2x smaller)"
+ApplyStyle(ShrinkLbl, Color3.fromRGB(255, 255, 0))
 local ShrinkBox = Instance.new("TextBox", ShrinkRow)
-ShrinkBox.Size = UDim2.new(0.33, 0, 1, 0) ShrinkBox.Position = UDim2.new(0.67, 0, 0, 0) ShrinkBox.Text = "1" ApplyStyle(ShrinkBox, Color3.fromRGB(255, 255, 0))
+ShrinkBox.Size = UDim2.new(0.33, 0, 1, 0)
+ShrinkBox.Position = UDim2.new(0.67, 0, 0, 0)
+ShrinkBox.Text = "1"
+ApplyStyle(ShrinkBox, Color3.fromRGB(255, 255, 0))
 
 local AfkRow = MakeRow(SettingsScroll) AfkRow.LayoutOrder = 2
 local AfkLbl = Instance.new("TextLabel", AfkRow)
-AfkLbl.Size = UDim2.new(0.65, 0, 1, 0) AfkLbl.Text = "AFK TIMEOUT (0 = OFF)" ApplyStyle(AfkLbl, Color3.fromRGB(150, 150, 150))
+AfkLbl.Size = UDim2.new(0.65, 0, 1, 0)
+AfkLbl.Text = "AFK TIMEOUT (SEC)"
+ApplyStyle(AfkLbl, Color3.fromRGB(150, 150, 150))
 local AfkBox = Instance.new("TextBox", AfkRow)
-AfkBox.Size = UDim2.new(0.33, 0, 1, 0) AfkBox.Position = UDim2.new(0.67, 0, 0, 0) AfkBox.Text = "0" ApplyStyle(AfkBox, Color3.fromRGB(150, 150, 150))
+AfkBox.Size = UDim2.new(0.33, 0, 1, 0)
+AfkBox.Position = UDim2.new(0.67, 0, 0, 0)
+AfkBox.Text = "30"
+ApplyStyle(AfkBox, Color3.fromRGB(150, 150, 150))
 
-local AntiAfkBtn = Instance.new("TextButton", MakeRow(SettingsScroll)) AntiAfkBtn.Parent.LayoutOrder = 3
-AntiAfkBtn.Size = UDim2.new(1, 0, 1, 0) AntiAfkBtn.Text = "UN-AFK (NO DISCONNECT): OFF" ApplyStyle(AntiAfkBtn, Color3.fromRGB(0, 255, 255))
-
-local RadarBtn = Instance.new("TextButton", MakeRow(SettingsScroll)) RadarBtn.Parent.LayoutOrder = 4
-RadarBtn.Size = UDim2.new(1, 0, 1, 0) RadarBtn.Text = "RADAR MAP: OFF" ApplyStyle(RadarBtn, Color3.fromRGB(0, 200, 255))
-
-local FpsBtn = Instance.new("TextButton", MakeRow(SettingsScroll)) FpsBtn.Parent.LayoutOrder = 5
+local FpsBtn = Instance.new("TextButton", MakeRow(SettingsScroll)) FpsBtn.Parent.LayoutOrder = 3
 FpsBtn.Size = UDim2.new(1, 0, 1, 0) FpsBtn.Text = "FPS HUD: OFF" ApplyStyle(FpsBtn, Color3.fromRGB(0, 255, 100))
 
-local PingBtn = Instance.new("TextButton", MakeRow(SettingsScroll)) PingBtn.Parent.LayoutOrder = 6
+local PingBtn = Instance.new("TextButton", MakeRow(SettingsScroll)) PingBtn.Parent.LayoutOrder = 4
 PingBtn.Size = UDim2.new(1, 0, 1, 0) PingBtn.Text = "PING HUD: OFF" ApplyStyle(PingBtn, Color3.fromRGB(255, 150, 0))
 
-local ThemeLblRow = MakeRow(SettingsScroll) ThemeLblRow.LayoutOrder = 7
+local ThemeLblRow = MakeRow(SettingsScroll) ThemeLblRow.LayoutOrder = 5
 local ThemeLbl = Instance.new("TextLabel", ThemeLblRow)
 ThemeLbl.Size = UDim2.new(1, 0, 1, 0) ThemeLbl.Text = "--- THEMES ---" ApplyStyle(ThemeLbl, Color3.fromRGB(0, 255, 255))
 
-local NeonBtn = Instance.new("TextButton", MakeRow(SettingsScroll)) NeonBtn.Parent.LayoutOrder = 8
+local NeonBtn = Instance.new("TextButton", MakeRow(SettingsScroll)) NeonBtn.Parent.LayoutOrder = 6
 NeonBtn.Size = UDim2.new(1, 0, 1, 0) NeonBtn.Text = "NEON (DEFAULT)" ApplyStyle(NeonBtn, Color3.fromRGB(255, 0, 255))
 
-local HackerBtn = Instance.new("TextButton", MakeRow(SettingsScroll)) HackerBtn.Parent.LayoutOrder = 9
+local HackerBtn = Instance.new("TextButton", MakeRow(SettingsScroll)) HackerBtn.Parent.LayoutOrder = 7
 HackerBtn.Size = UDim2.new(1, 0, 1, 0) HackerBtn.Text = "HACKER (GREEN)" ApplyStyle(HackerBtn, Color3.fromRGB(0, 255, 0))
 
-local BWBtn = Instance.new("TextButton", MakeRow(SettingsScroll)) BWBtn.Parent.LayoutOrder = 10
+local BWBtn = Instance.new("TextButton", MakeRow(SettingsScroll)) BWBtn.Parent.LayoutOrder = 8
 BWBtn.Size = UDim2.new(1, 0, 1, 0) BWBtn.Text = "BLACK & WHITE" ApplyStyle(BWBtn, Color3.fromRGB(255, 255, 255))
 
 NeonBtn.MouseButton1Click:Connect(function() SetTheme("NEON") end)
 HackerBtn.MouseButton1Click:Connect(function() SetTheme("HACKER") end)
 BWBtn.MouseButton1Click:Connect(function() SetTheme("B&W") end)
 
-local SaveHeaderRow = MakeRow(SettingsScroll) SaveHeaderRow.LayoutOrder = 11
+local SaveHeaderRow = MakeRow(SettingsScroll) SaveHeaderRow.LayoutOrder = 9
 local SaveHeaderLbl = Instance.new("TextLabel", SaveHeaderRow)
 SaveHeaderLbl.Size = UDim2.new(1, 0, 1, 0) SaveHeaderLbl.Text = "--- SAVE SYSTEM ---" ApplyStyle(SaveHeaderLbl, Color3.fromRGB(0, 255, 150))
 
-local GenSaveBtn = Instance.new("TextButton", MakeRow(SettingsScroll)) GenSaveBtn.Parent.LayoutOrder = 12
+local GenSaveBtn = Instance.new("TextButton", MakeRow(SettingsScroll)) GenSaveBtn.Parent.LayoutOrder = 10
 GenSaveBtn.Size = UDim2.new(1, 0, 1, 0) GenSaveBtn.Text = "GENERATE SAVE CODE (COPIES)" ApplyStyle(GenSaveBtn, Color3.fromRGB(0, 255, 0))
 
-local ImportBoxRow = MakeRow(SettingsScroll) ImportBoxRow.LayoutOrder = 13
+local ImportBoxRow = MakeRow(SettingsScroll) ImportBoxRow.LayoutOrder = 11
 local ImportBox = Instance.new("TextBox", ImportBoxRow)
-ImportBox.Name = "KirikImportBox"
 ImportBox.Size = UDim2.new(1, 0, 1, 0) ImportBox.PlaceholderText = "PASTE HUB-Save-... CODE HERE" ImportBox.ClearTextOnFocus = false ApplyStyle(ImportBox, Color3.fromRGB(255, 150, 0))
 
-local LoadSaveBtn = Instance.new("TextButton", MakeRow(SettingsScroll)) LoadSaveBtn.Parent.LayoutOrder = 14
+local LoadSaveBtn = Instance.new("TextButton", MakeRow(SettingsScroll)) LoadSaveBtn.Parent.LayoutOrder = 12
 LoadSaveBtn.Size = UDim2.new(1, 0, 1, 0) LoadSaveBtn.Text = "LOAD SAVE CODE" ApplyStyle(LoadSaveBtn, Color3.fromRGB(255, 0, 0))
 
-local TabOrderLblRow = MakeRow(SettingsScroll) TabOrderLblRow.LayoutOrder = 15
+local TabOrderLblRow = MakeRow(SettingsScroll) TabOrderLblRow.LayoutOrder = 13
 local TabOrderLbl = Instance.new("TextLabel", TabOrderLblRow)
 TabOrderLbl.Size = UDim2.new(1, 0, 1, 0) TabOrderLbl.Text = "--- TAB ORDER (NUMERIC) ---" ApplyStyle(TabOrderLbl, Color3.fromRGB(0, 255, 255))
 
@@ -574,16 +508,22 @@ for i, tBtn in ipairs(tabBtns) do
     local row = MakeRow(SettingsScroll)
     row.LayoutOrder = 20 + i
     local lbl = Instance.new("TextLabel", row)
-    lbl.Size = UDim2.new(0.65, 0, 1, 0) lbl.Text = "TAB: " .. tBtn.Text ApplyStyle(lbl, Color3.fromRGB(255, 100, 0))
+    lbl.Size = UDim2.new(0.65, 0, 1, 0)
+    lbl.Text = "TAB: " .. tBtn.Text
+    ApplyStyle(lbl, Color3.fromRGB(255, 100, 0))
     local box = Instance.new("TextBox", row)
-    box.Name = "KirikTabBox"
-    box.Size = UDim2.new(0.33, 0, 1, 0) box.Position = UDim2.new(0.67, 0, 0, 0) box.Text = tostring(tBtn.LayoutOrder) ApplyStyle(box, Color3.fromRGB(255, 100, 0))
+    box.Size = UDim2.new(0.33, 0, 1, 0)
+    box.Position = UDim2.new(0.67, 0, 0, 0)
+    box.Text = tostring(tBtn.LayoutOrder)
+    ApplyStyle(box, Color3.fromRGB(255, 100, 0))
     table.insert(OrderBoxes, {btn = tBtn, box = box, row = row})
 end
 
 local ApplyOrderRow = MakeRow(SettingsScroll) ApplyOrderRow.LayoutOrder = 100
 local ApplyOrderBtn = Instance.new("TextButton", ApplyOrderRow)
-ApplyOrderBtn.Size = UDim2.new(1, 0, 1, 0) ApplyOrderBtn.Text = "APPLY TAB ORDER" ApplyStyle(ApplyOrderBtn, Color3.fromRGB(0, 255, 0))
+ApplyOrderBtn.Size = UDim2.new(1, 0, 1, 0)
+ApplyOrderBtn.Text = "APPLY TAB ORDER"
+ApplyStyle(ApplyOrderBtn, Color3.fromRGB(0, 255, 0))
 
 local function ApplyTabOrders()
     for _, ob in ipairs(OrderBoxes) do ob.btn.LayoutOrder = tonumber(ob.box.Text) or ob.btn.LayoutOrder end
@@ -625,8 +565,11 @@ PerformSearch = function()
                     else
                         local rowMatches = false
                         for _, el in ipairs(row:GetDescendants()) do
-                            if (el:IsA("TextLabel") or el:IsA("TextButton")) and el.Text ~= "" and el.Name ~= "KirikSearchBox" and el.Name ~= "KirikImportBox" and el.Name ~= "KirikTabBox" then
-                                if string.find(string.lower(el.Text), q) then rowMatches = true break end
+                            if (el:IsA("TextLabel") or el:IsA("TextButton") or el:IsA("TextBox")) and el.Text ~= "" then
+                                if string.find(string.lower(el.Text), q) then
+                                    rowMatches = true
+                                    break
+                                end
                             end
                         end
                         row.Visible = rowMatches
@@ -674,10 +617,17 @@ FlyUI.Visible = false
 local FlyScaler = Instance.new("UIScale", FlyUI)
 
 local FlyUpBtn = Instance.new("TextButton", FlyUI)
-FlyUpBtn.Size = UDim2.new(1, 0, 0.45, 0) FlyUpBtn.Text = "UP" ApplyStyle(FlyUpBtn, Color3.fromRGB(0, 255, 255)) FlyUpBtn.BackgroundTransparency = 0.5
+FlyUpBtn.Size = UDim2.new(1, 0, 0.45, 0)
+FlyUpBtn.Text = "UP"
+ApplyStyle(FlyUpBtn, Color3.fromRGB(0, 255, 255))
+FlyUpBtn.BackgroundTransparency = 0.5
 
 local FlyDownBtn = Instance.new("TextButton", FlyUI)
-FlyDownBtn.Size = UDim2.new(1, 0, 0.45, 0) FlyDownBtn.Position = UDim2.new(0, 0, 0.55, 0) FlyDownBtn.Text = "DOWN" ApplyStyle(FlyDownBtn, Color3.fromRGB(0, 255, 255)) FlyDownBtn.BackgroundTransparency = 0.5
+FlyDownBtn.Size = UDim2.new(1, 0, 0.45, 0)
+FlyDownBtn.Position = UDim2.new(0, 0, 0.55, 0)
+FlyDownBtn.Text = "DOWN"
+ApplyStyle(FlyDownBtn, Color3.fromRGB(0, 255, 255))
+FlyDownBtn.BackgroundTransparency = 0.5
 
 local PlatUI = Instance.new("Frame", ScreenGui)
 PlatUI.Size = UDim2.new(0, 60, 0, 50)
@@ -687,14 +637,19 @@ PlatUI.Visible = false
 local PlatScaler = Instance.new("UIScale", PlatUI)
 
 local PlatDownBtn = Instance.new("TextButton", PlatUI)
-PlatDownBtn.Size = UDim2.new(1, 0, 1, 0) PlatDownBtn.Text = "DOWN" ApplyStyle(PlatDownBtn, Color3.fromRGB(0, 255, 255)) PlatDownBtn.BackgroundTransparency = 0.5
+PlatDownBtn.Size = UDim2.new(1, 0, 1, 0)
+PlatDownBtn.Text = "DOWN"
+ApplyStyle(PlatDownBtn, Color3.fromRGB(0, 255, 255))
+PlatDownBtn.BackgroundTransparency = 0.5
 
 local upPressed, downPressed, platDownPressed = false, false, false
 local function HookMobileBtn(btn, stateVarName)
     btn.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.Touch or i.UserInputType == Enum.UserInputType.MouseButton1 then if stateVarName == "up" then upPressed = true elseif stateVarName == "down" then downPressed = true else platDownPressed = true end end end)
     btn.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.Touch or i.UserInputType == Enum.UserInputType.MouseButton1 then if stateVarName == "up" then upPressed = false elseif stateVarName == "down" then downPressed = false else platDownPressed = false end end end)
 end
-HookMobileBtn(FlyUpBtn, "up") HookMobileBtn(FlyDownBtn, "down") HookMobileBtn(PlatDownBtn, "plat")
+HookMobileBtn(FlyUpBtn, "up")
+HookMobileBtn(FlyDownBtn, "down")
+HookMobileBtn(PlatDownBtn, "plat")
 
 ApplyShrink = function()
     local factor = tonumber(ShrinkBox.Text)
@@ -713,70 +668,23 @@ ShrinkBox.FocusLost:Connect(ApplyShrink)
 
 local function ShowFailsafeMessage()
     local msg = Instance.new("TextLabel", ScreenGui)
-    msg.Size = UDim2.new(1, 0, 0, 50) msg.Position = UDim2.new(0, 0, 0.5, -25) msg.BackgroundTransparency = 1
+    msg.Size = UDim2.new(1, 0, 0, 50)
+    msg.Position = UDim2.new(0, 0, 0.5, -25)
+    msg.BackgroundTransparency = 1
     msg.Text = "Sorry, we were trying to keep you from falling."
-    msg.TextColor3 = Color3.fromRGB(255, 50, 50) msg.Font = Enum.Font.GothamBold msg.TextScaled = true msg.ZIndex = 1000
-    local stroke = Instance.new("UIStroke", msg) stroke.Thickness = 2 stroke.Color = Color3.new(0, 0, 0)
+    msg.TextColor3 = Color3.fromRGB(255, 50, 50)
+    msg.Font = Enum.Font.GothamBold
+    msg.TextScaled = true
+    msg.ZIndex = 1000
+    local stroke = Instance.new("UIStroke", msg)
+    stroke.Thickness = 2
+    stroke.Color = Color3.new(0, 0, 0)
     task.spawn(function()
         task.wait(3)
         for i = 0, 1, 0.1 do msg.TextTransparency = i stroke.Transparency = i task.wait(0.05) end
         msg:Destroy()
     end)
 end
-
--- ==================== REPLAY SYSTEM ====================
-local replayRecording = false
-local isPlayingReplay = false
-local replayData = {}
-
-local function PlayReplay()
-    if #replayData == 0 then return end
-    isPlayingReplay = true
-    PlayReplayBtn.Text = "PLAYING..." ApplyStyle(PlayReplayBtn, Color3.fromRGB(0, 255, 255))
-    
-    local char = LocalPlayer.Character
-    local hrp = char and char:FindFirstChild("HumanoidRootPart")
-    if hrp then hrp.Anchored = true end
-    
-    task.spawn(function()
-        for i = 1, #replayData do
-            if not isPlayingReplay then break end
-            if hrp then hrp.CFrame = replayData[i] end
-            RunService.RenderStepped:Wait()
-        end
-        isPlayingReplay = false
-        if hrp then hrp.Anchored = false end
-        PlayReplayBtn.Text = "WATCH REPLAY" ApplyStyle(PlayReplayBtn, Color3.fromRGB(0, 255, 100))
-    end)
-end
-
-RecordBtn.MouseButton1Click:Connect(function()
-    if isPlayingReplay then return end
-    replayRecording = not replayRecording
-    RecordBtn.Text = "RECORD: " .. (replayRecording and "ON" or "OFF")
-    ApplyStyle(RecordBtn, replayRecording and Color3.fromRGB(255, 0, 0) or Color3.fromRGB(255, 50, 50))
-end)
-
-PlayReplayBtn.MouseButton1Click:Connect(function()
-    if replayRecording then return end
-    if isPlayingReplay then isPlayingReplay = false else PlayReplay() end
-end)
-
-ClearReplayBtn.MouseButton1Click:Connect(function()
-    replayData = {}
-    ReplayStatusLbl.Text = "FRAMES RECORDED: 0"
-end)
-
-RunService.RenderStepped:Connect(function()
-    if replayRecording then
-        local char = LocalPlayer.Character
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        if hrp then
-            table.insert(replayData, hrp.CFrame)
-            ReplayStatusLbl.Text = "FRAMES RECORDED: " .. #replayData
-        end
-    end
-end)
 
 -- ==================== STATE HELPERS & OVERLAY LOGIC ====================
 local function SetFPS(state)
@@ -797,50 +705,24 @@ local function SetPing(state)
 end
 PingBtn.MouseButton1Click:Connect(function() SetPing(not pingActive) end)
 
-local function SetRadar(state)
-    radarActive = state
-    ApplyToggleStyle(RadarBtn, radarActive, Color3.fromRGB(0, 200, 255))
-    RadarBtn.Text = "RADAR MAP: " .. (radarActive and "ON" or "OFF")
-    RadarFrame.Visible = radarActive
-end
-RadarBtn.MouseButton1Click:Connect(function() SetRadar(not radarActive) end)
-
-local function SetAntiAfk(state)
-    antiAfkActive = state
-    ApplyToggleStyle(AntiAfkBtn, antiAfkActive, Color3.fromRGB(0, 255, 255))
-    AntiAfkBtn.Text = "UN-AFK (NO DISCONNECT): " .. (antiAfkActive and "ON" or "OFF")
-end
-AntiAfkBtn.MouseButton1Click:Connect(function() SetAntiAfk(not antiAfkActive) end)
-
-local function SetAimbot(state)
-    aimbotActive = state
-    ApplyToggleStyle(AimbotBtn, aimbotActive, Color3.fromRGB(255, 0, 0))
-    AimbotBtn.Text = "AIMBOT: " .. (aimbotActive and "ON" or "OFF") .. " (Hold RMB)"
-end
-AimbotBtn.MouseButton1Click:Connect(function() SetAimbot(not aimbotActive) end)
-
 local fpsTimer, frames = 0, 0
 RunService.RenderStepped:Connect(function(dt)
-    frames = frames + 1 fpsTimer = fpsTimer + dt
+    frames = frames + 1
+    fpsTimer = fpsTimer + dt
     if fpsTimer >= 1 then
         if fpsActive then FpsLbl.Text = "FPS: " .. frames end
-        frames = 0 fpsTimer = 0
+        frames, fpsTimer = 0, 0
     end
-    if pingActive then PingLbl.Text = "PING: " .. math.floor(LocalPlayer:GetNetworkPing() * 1000) .. " ms" end
+    if pingActive then
+        PingLbl.Text = "PING: " .. math.floor(LocalPlayer:GetNetworkPing() * 1000) .. " ms"
+    end
 end)
 
 local function SetESP(state)
     espActive = state
     ApplyToggleStyle(EspBtn, espActive, Color3.fromRGB(0, 255, 100))
-    EspBtn.Text = "ESP+: " .. (espActive and "ON" or "OFF")
-    if not state then 
-        for _, p in pairs(Players:GetPlayers()) do 
-            if p.Character then 
-                if p.Character:FindFirstChild("LuxuryESP") then p.Character.LuxuryESP:Destroy() end 
-                if p.Character:FindFirstChild("LuxuryESPDist") then p.Character.LuxuryESPDist:Destroy() end 
-            end 
-        end 
-    end
+    EspBtn.Text = "ESP: " .. (espActive and "ON" or "OFF")
+    if not state then for _, p in pairs(Players:GetPlayers()) do if p.Character and p.Character:FindFirstChild("LuxuryESP") then p.Character.LuxuryESP:Destroy() end end end
 end
 
 local function SetUltraRun(state)
@@ -898,12 +780,11 @@ local function applyGrav() workspace.Gravity = tonumber(GravBox.Text) or 196.2 e
 local lagChain = {{anchor = 0.2, free = 0.1}}
 
 GenSaveBtn.MouseButton1Click:Connect(function()
-    local tgs = string.format("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d",
+    local tgs = string.format("%d%d%d%d%d%d%d%d%d%d%d%d%d",
         espActive and 1 or 0, ultraRunActive and 1 or 0, noclipActive and 1 or 0,
         invisActive and 1 or 0, undieActive and 1 or 0, flying and 1 or 0,
         platActive and 1 or 0, unvoidActive and 1 or 0, infStabActive and 1 or 0,
-        cfSpeedActive and 1 or 0, spinActive and 1 or 0, fpsActive and 1 or 0, 
-        pingActive and 1 or 0, radarActive and 1 or 0, antiAfkActive and 1 or 0
+        cfSpeedActive and 1 or 0, spinActive and 1 or 0, fpsActive and 1 or 0, pingActive and 1 or 0
     )
     local tabsOrderStr = ""
     for i, ob in ipairs(OrderBoxes) do tabsOrderStr = tabsOrderStr .. tostring(ob.btn.LayoutOrder) .. (i == #OrderBoxes and "" or ",") end
@@ -939,10 +820,19 @@ LoadSaveBtn.MouseButton1Click:Connect(function()
         SpinBox.Text = p[8]
 
         local t = p[9]
-        SetESP(t:sub(1,1)=="1") SetUltraRun(t:sub(2,2)=="1") SetNoclip(t:sub(3,3)=="1") ToggleInvis(t:sub(4,4)=="1")
-        SetUndie(t:sub(5,5)=="1") SetFly(t:sub(6,6)=="1") TogglePlatform(t:sub(7,7)=="1") SetUnvoid(t:sub(8,8)=="1")
-        SetChaosLag(t:sub(9,9)=="1") SetCFSpeed(t:sub(10,10)=="1") SetSpin(t:sub(11,11)=="1") SetFPS(t:sub(12,12)=="1")
-        SetPing(t:sub(13,13)=="1") SetRadar(t:sub(14,14)=="1") SetAntiAfk(t:sub(15,15)=="1")
+        SetESP(t:sub(1,1)=="1")
+        SetUltraRun(t:sub(2,2)=="1")
+        SetNoclip(t:sub(3,3)=="1")
+        ToggleInvis(t:sub(4,4)=="1")
+        SetUndie(t:sub(5,5)=="1")
+        SetFly(t:sub(6,6)=="1")
+        TogglePlatform(t:sub(7,7)=="1")
+        SetUnvoid(t:sub(8,8)=="1")
+        SetChaosLag(t:sub(9,9)=="1")
+        SetCFSpeed(t:sub(10,10)=="1")
+        SetSpin(t:sub(11,11)=="1")
+        SetFPS(t:sub(12,12)=="1")
+        SetPing(t:sub(13,13)=="1")
 
         local tOrd = string.split(p[10], ",")
         for i, v in ipairs(tOrd) do if OrderBoxes[i] then OrderBoxes[i].box.Text = v end end
@@ -952,11 +842,16 @@ LoadSaveBtn.MouseButton1Click:Connect(function()
         if p[11] ~= "" then
             local pairs = string.split(p[11], ",")
             for _, pr in ipairs(pairs) do
-                local vals = string.split(pr, ":") table.insert(lagChain, {anchor=tonumber(vals[1]) or 0.2, free=tonumber(vals[2]) or 0.1})
+                local vals = string.split(pr, ":")
+                table.insert(lagChain, {anchor=tonumber(vals[1]) or 0.2, free=tonumber(vals[2]) or 0.1})
             end
-        else lagChain = {{anchor=0.2, free=0.1}} end
+        else
+            lagChain = {{anchor=0.2, free=0.1}}
+        end
         updateLagList()
-        ImportBox.Text = "" ImportBox.PlaceholderText = "SUCCESSFULLY LOADED!" task.delay(2, function() ImportBox.PlaceholderText = "PASTE HUB-Save-... CODE HERE" end)
+        ImportBox.Text = ""
+        ImportBox.PlaceholderText = "SUCCESSFULLY LOADED!"
+        task.delay(2, function() ImportBox.PlaceholderText = "PASTE HUB-Save-... CODE HERE" end)
     end
 end)
 
@@ -1145,7 +1040,7 @@ updatePlayerList = function()
         if player ~= LocalPlayer then
             local row = MakeRow(PlayerList)
             local btn = Instance.new("TextButton", row)
-            btn.Size = UDim2.new(0.8, 0, 1, 0)
+            btn.Size = UDim2.new(1, 0, 1, 0)
             if listMode == "INF TP" then
                 local isActive = (currentInfTpTarget == player)
                 btn.Text = player.DisplayName .. (isActive and " [ON]" or "[OFF]")
@@ -1153,21 +1048,6 @@ updatePlayerList = function()
             else
                 btn.Text = player.DisplayName ApplyStyle(btn, Color3.fromRGB(0, 200, 255))
             end
-            
-            local colorBtn = Instance.new("TextButton", row)
-            colorBtn.Size = UDim2.new(0.18, 0, 1, 0) colorBtn.Position = UDim2.new(0.82, 0, 0, 0) colorBtn.Text = "CLR"
-            local pColor = radarColors[player.UserId] or Color3.fromRGB(255, 0, 0)
-            ApplyStyle(colorBtn, pColor)
-            
-            local colors = {Color3.fromRGB(255, 0, 0), Color3.fromRGB(0, 255, 0), Color3.fromRGB(0, 100, 255), Color3.fromRGB(255, 255, 0), Color3.fromRGB(255, 0, 255)}
-            colorBtn.MouseButton1Click:Connect(function()
-                local idx = 1
-                for i, c in ipairs(colors) do if c == pColor then idx = i + 1 break end end
-                if idx > #colors then idx = 1 end
-                radarColors[player.UserId] = colors[idx]
-                updatePlayerList()
-            end)
-
             btn.MouseButton1Click:Connect(function()
                 if listMode == "TP" then
                     local pChar = player.Character if pChar and pChar:FindFirstChild("HumanoidRootPart") then LocalPlayer.Character.HumanoidRootPart.CFrame = pChar.HumanoidRootPart.CFrame end
@@ -1334,97 +1214,17 @@ AntiFlingBtn.MouseButton1Click:Connect(function()
     if hrp then hrp.Velocity = Vector3.zero hrp.RotVelocity = Vector3.zero hrp.Anchored = true task.wait(0.5) if hrp then hrp.Anchored = false end end
 end)
 
--- ESP & AIMBOT & RADAR UPDATE LOOP
-local function applyESP(p)
+-- ESP
+local function applyESP(char)
     if espActive then
-        local char = p.Character
-        if char and char:FindFirstChild("HumanoidRootPart") then
-            if not char:FindFirstChild("LuxuryESP") then
-                local hl = Instance.new("Highlight", char) hl.Name = "LuxuryESP" hl.FillColor = Color3.fromRGB(0, 255, 255) hl.OutlineColor = Color3.fromRGB(255, 0, 255)
-            end
-            if not char:FindFirstChild("LuxuryESPDist") then
-                local bg = Instance.new("BillboardGui", char) bg.Name = "LuxuryESPDist" bg.AlwaysOnTop = true bg.Size = UDim2.new(0, 100, 0, 50) bg.StudsOffset = Vector3.new(0, 3, 0)
-                local txt = Instance.new("TextLabel", bg) txt.Size = UDim2.new(1,0,1,0) txt.BackgroundTransparency = 1 txt.TextColor3 = Color3.fromRGB(0, 255, 255) txt.Font = Enum.Font.GothamBold txt.TextScaled = true
-                local str = Instance.new("UIStroke", txt) str.Thickness = 2
-            end
+        task.wait(0.5)
+        if not char:FindFirstChild("LuxuryESP") then
+            local hl = Instance.new("Highlight", char) hl.Name = "LuxuryESP" hl.FillColor = Color3.fromRGB(0, 255, 255) hl.OutlineColor = Color3.fromRGB(255, 0, 255)
         end
     end
 end
-Players.PlayerAdded:Connect(function(p) p.CharacterAdded:Connect(function() task.wait(0.5) applyESP(p) end) end)
-for _, p in pairs(Players:GetPlayers()) do p.CharacterAdded:Connect(function() task.wait(0.5) applyESP(p) end) end
-
-local radarDots = {}
-RunService.RenderStepped:Connect(function()
-    local mChar = LocalPlayer.Character
-    local mHrp = mChar and mChar:FindFirstChild("HumanoidRootPart")
-    
-    if espActive and mHrp then
-        for _, p in pairs(Players:GetPlayers()) do
-            if p ~= LocalPlayer and p.Character then
-                local tHrp = p.Character:FindFirstChild("HumanoidRootPart")
-                local distGui = p.Character:FindFirstChild("LuxuryESPDist")
-                if tHrp and distGui then
-                    local dist = math.floor((mHrp.Position - tHrp.Position).Magnitude)
-                    distGui.TextLabel.Text = p.Name .. "\n[" .. dist .. "]"
-                end
-            end
-        end
-    end
-
-    if radarActive and mHrp then
-        for _, p in pairs(Players:GetPlayers()) do
-            if p ~= LocalPlayer then
-                if not radarDots[p] then
-                    local dot = Instance.new("Frame", RadarFrame)
-                    dot.Size = UDim2.new(0, 6, 0, 6) dot.BackgroundColor3 = radarColors[p.UserId] or Color3.fromRGB(255, 0, 0)
-                    Instance.new("UICorner", dot).CornerRadius = UDim.new(0.5, 0)
-                    radarDots[p] = dot
-                end
-                local tChar = p.Character
-                local tHrp = tChar and tChar:FindFirstChild("HumanoidRootPart")
-                if tHrp then
-                    radarDots[p].Visible = true
-                    radarDots[p].BackgroundColor3 = radarColors[p.UserId] or Color3.fromRGB(255, 0, 0)
-                    local offset = mHrp.CFrame:ToObjectSpace(tHrp.CFrame).Position
-                    local scale = 1.5
-                    local mapX = math.clamp(offset.X * scale, -75, 75)
-                    local mapY = math.clamp(offset.Z * scale, -75, 75)
-                    radarDots[p].Position = UDim2.new(0.5, mapX, 0.5, mapY)
-                else
-                    radarDots[p].Visible = false
-                end
-            end
-        end
-    end
-
-    if aimbotActive and UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) and mHrp then
-        local closestDist = math.huge
-        local closestHrp = nil
-        for _, p in pairs(Players:GetPlayers()) do
-            if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") and p.Character:FindFirstChild("Humanoid").Health > 0 then
-                local tHrp = p.Character.HumanoidRootPart
-                local screenPoint, onScreen = Camera:WorldToScreenPoint(tHrp.Position)
-                if onScreen then
-                    local dist = (Vector2.new(screenPoint.X, screenPoint.Y) - Vector2.new(mouse.X, mouse.Y)).Magnitude
-                    if dist < closestDist then closestDist = dist closestHrp = tHrp end
-                end
-            end
-        end
-        if closestHrp then Camera.CFrame = CFrame.new(Camera.CFrame.Position, closestHrp.Position) end
-    end
-end)
-Players.PlayerRemoving:Connect(function(p) if radarDots[p] then radarDots[p]:Destroy() radarDots[p] = nil end end)
-
--- ANTI AFK
-LocalPlayer.Idled:Connect(function()
-    if antiAfkActive and VirtualUser then
-        pcall(function()
-            VirtualUser:Button2Down(Vector2.new(0,0), Camera.CFrame)
-            task.wait(1)
-            VirtualUser:Button2Up(Vector2.new(0,0), Camera.CFrame)
-        end)
-    end
-end)
+Players.PlayerAdded:Connect(function(p) p.CharacterAdded:Connect(applyESP) end)
+for _, p in pairs(Players:GetPlayers()) do p.CharacterAdded:Connect(applyESP) end
 
 -- AFK CLEANUP
 local lastActive = tick()
@@ -1442,11 +1242,10 @@ UIS.InputBegan:Connect(checkUIInteraction)
 UIS.InputChanged:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then checkUIInteraction(input) end end)
 
 local function ForceCleanup()
-    SetESP(false) SetUltraRun(false) SetNoclip(false) SetChaosLag(false) SetSpin(false) SetCFSpeed(false) SetFly(false) TogglePlatform(false) ToggleInvis(false) SetFPS(false) SetPing(false) SetRadar(false) SetAimbot(false)
-    undieActive, unvoidActive, antiAfkActive = false, false, false
-    FlyUI.Visible, PlatUI.Visible, StatsFrame.Visible, RadarFrame.Visible = false, false, false, false
+    SetESP(false) SetUltraRun(false) SetNoclip(false) SetChaosLag(false) SetSpin(false) SetCFSpeed(false) SetFly(false) TogglePlatform(false) ToggleInvis(false)
+    undieActive, unvoidActive = false, false
+    FlyUI.Visible, PlatUI.Visible = false, false
     stopInfTp() workspace.Gravity = 196.2
-    
     local char = LocalPlayer.Character local hum = char and char:FindFirstChild("Humanoid") local hrp = char and char:FindFirstChild("HumanoidRootPart")
     if hrp then if hrp:FindFirstChild("FlyBV") then hrp.FlyBV:Destroy() end if hrp:FindFirstChild("FlyBG") then hrp.FlyBG:Destroy() end hrp.Anchored = false end
     if hum then hum.PlatformStand = false hum.WalkSpeed = 16 hum.UseJumpPower = true hum.JumpPower = 50 for _, track in pairs(hum:GetPlayingAnimationTracks()) do track:AdjustSpeed(1) end workspace.CurrentCamera.CameraSubject = hum end
@@ -1455,8 +1254,7 @@ end
 task.spawn(function()
     while task.wait(1) do
         if not ScreenGui.Parent then break end
-        local afkTimeout = tonumber(AfkBox.Text) or 0
-        if afkTimeout > 0 and tick() - lastActive > afkTimeout then ForceCleanup() ScreenGui:Destroy() break end
+        if tick() - lastActive > (tonumber(AfkBox.Text) or 30) then ForceCleanup() ScreenGui:Destroy() break end
     end
 end)
 
