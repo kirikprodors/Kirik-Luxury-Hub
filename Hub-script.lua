@@ -1268,8 +1268,8 @@ end
 task.spawn(function()
     while task.wait(1) do
         if not ScreenGui.Parent then break end
-        local afkTimeout = tonumber(AfkBox.Text) or 0
-        if afkTimeout > 0 and tick() - lastActive > afkTimeout then ForceCleanup() ScreenGui:Destroy() break end
+        local afkTimeout = tonumber(AfkBox.Text) or 30
+        if afkTimeout > 30 and tick() - lastActive > afkTimeout then ForceCleanup() ScreenGui:Destroy() break end
     end
 end)
 
