@@ -7,6 +7,7 @@ local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local TS = game:GetService("TweenService")
+local VirtualUser = game:GetService("VirtualUser")
 local LocalPlayer = Players.LocalPlayer
 
 -- ==================== GLOBAL REGISTRY ====================
@@ -310,6 +311,7 @@ local espActive, ultraRunActive, noclipActive = false, false, false
 local invisActive, undieActive, platActive, unvoidActive = false, false, false, false
 local flying, infStabActive, cfSpeedActive, spinActive = false, false, false, false
 local fpsActive, pingActive = false, false
+local aimbotActive, antiAfkActive = false, false
 
 local listMode, npcListMode = "TP", "TP"
 local cachedNPCs, savedSpots = {}, {}
@@ -318,16 +320,17 @@ local lagState, lagTimer, lagIndex = "FREE", 0, 1
 local currentInfTpTarget, infTpConn, flyConn, platConn = nil, nil, nil, nil
 
 local ToggleInvis, TogglePlatform, SetFly, SetUltraRun, SetNoclip, SetUndie, SetUnvoid
-local SetChaosLag, SetCFSpeed, SetSpin, SetESP
+local SetChaosLag, SetCFSpeed, SetSpin, SetESP, SetAimbot, SetAntiAfk
 local ApplyShrink
 local updateLagList, updatePlayerList, updateNpcList
 local PerformSearch
+local GetClosestPlayerToCursor
 
 -- ==================== UI CONSTRUCTION ====================
 local HomeTab = MakeTab("HOME", true)
 local WelcomeText = Instance.new("TextLabel", HomeTab)
 WelcomeText.Size = UDim2.new(1, 0, 1, 0)
-WelcomeText.Text = "KIRIK HUB V49\n\n[ NEW FEATURES ]\n- Global Live Search\n- Fully Animated Themes & Minimizer\n- Memory Safe Auto-Cleanup\n- Ghost Invisibility & Chaos Lag"
+WelcomeText.Text = "KIRIK HUB V49\n\n[ NEW FEATURES ]\n- Aimbot (Hold RMB)\n- Anti-AFK (Bypass Kicks)\n- Fully Animated Themes\n- Ghost Invisibility & Chaos Lag"
 WelcomeText.TextWrapped = true
 WelcomeText.TextYAlignment = Enum.TextYAlignment.Top
 ApplyStyle(WelcomeText, Color3.fromRGB(0, 255, 255), Color3.fromRGB(15, 15, 20))
@@ -335,10 +338,11 @@ ApplyStyle(WelcomeText, Color3.fromRGB(0, 255, 255), Color3.fromRGB(15, 15, 20))
 local PlayersTab = MakeTab("PLAYERS", false)
 local PTopLayout = Instance.new("UIListLayout", PlayersTab)
 PTopLayout.Padding = UDim.new(0, 5)
+local AimbotBtn = Instance.new("TextButton", MakeRow(PlayersTab)) AimbotBtn.Size = UDim2.new(1, 0, 1, 0) AimbotBtn.Text = "AIMBOT: OFF (HOLD RMB)" ApplyStyle(AimbotBtn, Color3.fromRGB(255, 50, 50))
 local EspBtn = Instance.new("TextButton", MakeRow(PlayersTab)) EspBtn.Size = UDim2.new(1, 0, 1, 0) EspBtn.Text = "ESP: OFF" ApplyStyle(EspBtn, Color3.fromRGB(0, 255, 100))
 local ModeBtn = Instance.new("TextButton", MakeRow(PlayersTab)) ModeBtn.Size = UDim2.new(1, 0, 1, 0) ModeBtn.Text = "LIST MODE: TP" ApplyStyle(ModeBtn, Color3.fromRGB(255, 0, 255))
 local AddTpBtn = Instance.new("TextButton", MakeRow(PlayersTab)) AddTpBtn.Size = UDim2.new(1, 0, 1, 0) AddTpBtn.Text = "ADD CUSTOM TP PART" ApplyStyle(AddTpBtn, Color3.fromRGB(0, 150, 255))
-local PlayerListWrapper = Instance.new("Frame", PlayersTab) PlayerListWrapper.Size = UDim2.new(1, 0, 1, -95) PlayerListWrapper.BackgroundTransparency = 1
+local PlayerListWrapper = Instance.new("Frame", PlayersTab) PlayerListWrapper.Size = UDim2.new(1, 0, 1, -125) PlayerListWrapper.BackgroundTransparency = 1
 local PlayerList, _ = MakeScrollArea(PlayerListWrapper)
 
 local NpcsTab = MakeTab("NPCs", false)
@@ -393,30 +397,31 @@ local ShrinkLbl = Instance.new("TextLabel", ShrinkRow) ShrinkLbl.Size = UDim2.ne
 local ShrinkBox = Instance.new("TextBox", ShrinkRow) ShrinkBox.Size = UDim2.new(0.33, 0, 1, 0) ShrinkBox.Position = UDim2.new(0.67, 0, 0, 0) ShrinkBox.Text = "1" ApplyStyle(ShrinkBox, Color3.fromRGB(255, 255, 0))
 
 local AfkRow = MakeRow(SettingsScroll) AfkRow.LayoutOrder = 2
-local AfkLbl = Instance.new("TextLabel", AfkRow) AfkLbl.Size = UDim2.new(0.65, 0, 1, 0) AfkLbl.Text = "AFK TIMEOUT (SEC)" ApplyStyle(AfkLbl, Color3.fromRGB(150, 150, 150))
+local AfkLbl = Instance.new("TextLabel", AfkRow) AfkLbl.Size = UDim2.new(0.65, 0, 1, 0) AfkLbl.Text = "UI AUTOCLOSE (SEC)" ApplyStyle(AfkLbl, Color3.fromRGB(150, 150, 150))
 local AfkBox = Instance.new("TextBox", AfkRow) AfkBox.Size = UDim2.new(0.33, 0, 1, 0) AfkBox.Position = UDim2.new(0.67, 0, 0, 0) AfkBox.Text = "9999" ApplyStyle(AfkBox, Color3.fromRGB(150, 150, 150))
 
-local FpsBtn = Instance.new("TextButton", MakeRow(SettingsScroll)) FpsBtn.Parent.LayoutOrder = 3 FpsBtn.Size = UDim2.new(1, 0, 1, 0) FpsBtn.Text = "FPS HUD: OFF" ApplyStyle(FpsBtn, Color3.fromRGB(0, 255, 100))
-local PingBtn = Instance.new("TextButton", MakeRow(SettingsScroll)) PingBtn.Parent.LayoutOrder = 4 PingBtn.Size = UDim2.new(1, 0, 1, 0) PingBtn.Text = "PING HUD: OFF" ApplyStyle(PingBtn, Color3.fromRGB(255, 150, 0))
+local AntiAfkBtn = Instance.new("TextButton", MakeRow(SettingsScroll)) AntiAfkBtn.Parent.LayoutOrder = 3 AntiAfkBtn.Size = UDim2.new(1, 0, 1, 0) AntiAfkBtn.Text = "ROBLOX ANTI-AFK: OFF" ApplyStyle(AntiAfkBtn, Color3.fromRGB(0, 200, 255))
+local FpsBtn = Instance.new("TextButton", MakeRow(SettingsScroll)) FpsBtn.Parent.LayoutOrder = 4 FpsBtn.Size = UDim2.new(1, 0, 1, 0) FpsBtn.Text = "FPS HUD: OFF" ApplyStyle(FpsBtn, Color3.fromRGB(0, 255, 100))
+local PingBtn = Instance.new("TextButton", MakeRow(SettingsScroll)) PingBtn.Parent.LayoutOrder = 5 PingBtn.Size = UDim2.new(1, 0, 1, 0) PingBtn.Text = "PING HUD: OFF" ApplyStyle(PingBtn, Color3.fromRGB(255, 150, 0))
 
-local ThemeLblRow = MakeRow(SettingsScroll) ThemeLblRow.LayoutOrder = 5
+local ThemeLblRow = MakeRow(SettingsScroll) ThemeLblRow.LayoutOrder = 6
 local ThemeLbl = Instance.new("TextLabel", ThemeLblRow) ThemeLbl.Size = UDim2.new(1, 0, 1, 0) ThemeLbl.Text = "--- THEMES ---" ApplyStyle(ThemeLbl, Color3.fromRGB(0, 255, 255))
-local NeonBtn = Instance.new("TextButton", MakeRow(SettingsScroll)) NeonBtn.Parent.LayoutOrder = 6 NeonBtn.Size = UDim2.new(1, 0, 1, 0) NeonBtn.Text = "NEON (DEFAULT)" ApplyStyle(NeonBtn, Color3.fromRGB(255, 0, 255))
-local HackerBtn = Instance.new("TextButton", MakeRow(SettingsScroll)) HackerBtn.Parent.LayoutOrder = 7 HackerBtn.Size = UDim2.new(1, 0, 1, 0) HackerBtn.Text = "HACKER (GREEN)" ApplyStyle(HackerBtn, Color3.fromRGB(0, 255, 0))
-local BWBtn = Instance.new("TextButton", MakeRow(SettingsScroll)) BWBtn.Parent.LayoutOrder = 8 BWBtn.Size = UDim2.new(1, 0, 1, 0) BWBtn.Text = "BLACK & WHITE" ApplyStyle(BWBtn, Color3.fromRGB(255, 255, 255))
+local NeonBtn = Instance.new("TextButton", MakeRow(SettingsScroll)) NeonBtn.Parent.LayoutOrder = 7 NeonBtn.Size = UDim2.new(1, 0, 1, 0) NeonBtn.Text = "NEON (DEFAULT)" ApplyStyle(NeonBtn, Color3.fromRGB(255, 0, 255))
+local HackerBtn = Instance.new("TextButton", MakeRow(SettingsScroll)) HackerBtn.Parent.LayoutOrder = 8 HackerBtn.Size = UDim2.new(1, 0, 1, 0) HackerBtn.Text = "HACKER (GREEN)" ApplyStyle(HackerBtn, Color3.fromRGB(0, 255, 0))
+local BWBtn = Instance.new("TextButton", MakeRow(SettingsScroll)) BWBtn.Parent.LayoutOrder = 9 BWBtn.Size = UDim2.new(1, 0, 1, 0) BWBtn.Text = "BLACK & WHITE" ApplyStyle(BWBtn, Color3.fromRGB(255, 255, 255))
 
 NeonBtn.MouseButton1Click:Connect(function() SetTheme("NEON") end)
 HackerBtn.MouseButton1Click:Connect(function() SetTheme("HACKER") end)
 BWBtn.MouseButton1Click:Connect(function() SetTheme("B&W") end)
 
-local SaveHeaderRow = MakeRow(SettingsScroll) SaveHeaderRow.LayoutOrder = 9
+local SaveHeaderRow = MakeRow(SettingsScroll) SaveHeaderRow.LayoutOrder = 10
 local SaveHeaderLbl = Instance.new("TextLabel", SaveHeaderRow) SaveHeaderLbl.Size = UDim2.new(1, 0, 1, 0) SaveHeaderLbl.Text = "--- SAVE SYSTEM ---" ApplyStyle(SaveHeaderLbl, Color3.fromRGB(0, 255, 150))
-local GenSaveBtn = Instance.new("TextButton", MakeRow(SettingsScroll)) GenSaveBtn.Parent.LayoutOrder = 10 GenSaveBtn.Size = UDim2.new(1, 0, 1, 0) GenSaveBtn.Text = "GENERATE SAVE CODE" ApplyStyle(GenSaveBtn, Color3.fromRGB(0, 255, 0))
-local ImportBoxRow = MakeRow(SettingsScroll) ImportBoxRow.LayoutOrder = 11
+local GenSaveBtn = Instance.new("TextButton", MakeRow(SettingsScroll)) GenSaveBtn.Parent.LayoutOrder = 11 GenSaveBtn.Size = UDim2.new(1, 0, 1, 0) GenSaveBtn.Text = "GENERATE SAVE CODE" ApplyStyle(GenSaveBtn, Color3.fromRGB(0, 255, 0))
+local ImportBoxRow = MakeRow(SettingsScroll) ImportBoxRow.LayoutOrder = 12
 local ImportBox = Instance.new("TextBox", ImportBoxRow) ImportBox.Size = UDim2.new(1, 0, 1, 0) ImportBox.PlaceholderText = "PASTE HUB-Save-... CODE HERE" ImportBox.ClearTextOnFocus = false ApplyStyle(ImportBox, Color3.fromRGB(255, 150, 0))
-local LoadSaveBtn = Instance.new("TextButton", MakeRow(SettingsScroll)) LoadSaveBtn.Parent.LayoutOrder = 12 LoadSaveBtn.Size = UDim2.new(1, 0, 1, 0) LoadSaveBtn.Text = "LOAD SAVE CODE" ApplyStyle(LoadSaveBtn, Color3.fromRGB(255, 0, 0))
+local LoadSaveBtn = Instance.new("TextButton", MakeRow(SettingsScroll)) LoadSaveBtn.Parent.LayoutOrder = 13 LoadSaveBtn.Size = UDim2.new(1, 0, 1, 0) LoadSaveBtn.Text = "LOAD SAVE CODE" ApplyStyle(LoadSaveBtn, Color3.fromRGB(255, 0, 0))
 
-local TabOrderLblRow = MakeRow(SettingsScroll) TabOrderLblRow.LayoutOrder = 13
+local TabOrderLblRow = MakeRow(SettingsScroll) TabOrderLblRow.LayoutOrder = 14
 local TabOrderLbl = Instance.new("TextLabel", TabOrderLblRow) TabOrderLbl.Size = UDim2.new(1, 0, 1, 0) TabOrderLbl.Text = "--- TAB ORDER ---" ApplyStyle(TabOrderLbl, Color3.fromRGB(0, 255, 255))
 
 local OrderBoxes = {}
@@ -534,6 +539,8 @@ end
 ShrinkBox.FocusLost:Connect(ApplyShrink)
 
 -- ==================== STATE SETTERS ====================
+SetAimbot = function(state) aimbotActive = state ApplyToggleStyle(AimbotBtn, aimbotActive, Color3.fromRGB(255, 50, 50)) AimbotBtn.Text = "AIMBOT: " .. (aimbotActive and "ON (HOLD RMB)" or "OFF") end
+SetAntiAfk = function(state) antiAfkActive = state ApplyToggleStyle(AntiAfkBtn, antiAfkActive, Color3.fromRGB(0, 200, 255)) AntiAfkBtn.Text = "ROBLOX ANTI-AFK: " .. (antiAfkActive and "ON" or "OFF") end
 local function SetFPS(state) fpsActive = state ApplyToggleStyle(FpsBtn, fpsActive, Color3.fromRGB(0, 255, 100)) FpsBtn.Text = "FPS HUD: " .. (fpsActive and "ON" or "OFF") FpsLbl.Visible = fpsActive StatsFrame.Visible = fpsActive or pingActive end
 local function SetPing(state) pingActive = state ApplyToggleStyle(PingBtn, pingActive, Color3.fromRGB(255, 150, 0)) PingBtn.Text = "PING HUD: " .. (pingActive and "ON" or "OFF") PingLbl.Visible = pingActive StatsFrame.Visible = fpsActive or pingActive end
 
@@ -554,6 +561,8 @@ local function applyWS() local h = LocalPlayer.Character and LocalPlayer.Charact
 local function applyJP() local h = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") if h then h.UseJumpPower = true h.JumpPower = tonumber(JpBox.Text) or 50 end end
 local function applyGrav() workspace.Gravity = tonumber(GravBox.Text) or 196.2 end
 
+AimbotBtn.MouseButton1Click:Connect(function() SetAimbot(not aimbotActive) end)
+AntiAfkBtn.MouseButton1Click:Connect(function() SetAntiAfk(not antiAfkActive) end)
 FpsBtn.MouseButton1Click:Connect(function() SetFPS(not fpsActive) end)
 PingBtn.MouseButton1Click:Connect(function() SetPing(not pingActive) end)
 EspBtn.MouseButton1Click:Connect(function() SetESP(not espActive) end)
@@ -570,7 +579,7 @@ WsBtn.MouseButton1Click:Connect(applyWS) JpBtn.MouseButton1Click:Connect(applyJP
 local lagChain = {{anchor = 0.2, free = 0.1}}
 
 GenSaveBtn.MouseButton1Click:Connect(function()
-    local tgs = string.format("%d%d%d%d%d%d%d%d%d%d%d%d%d", espActive and 1 or 0, ultraRunActive and 1 or 0, noclipActive and 1 or 0, invisActive and 1 or 0, undieActive and 1 or 0, flying and 1 or 0, platActive and 1 or 0, unvoidActive and 1 or 0, infStabActive and 1 or 0, cfSpeedActive and 1 or 0, spinActive and 1 or 0, fpsActive and 1 or 0, pingActive and 1 or 0)
+    local tgs = string.format("%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d", espActive and 1 or 0, ultraRunActive and 1 or 0, noclipActive and 1 or 0, invisActive and 1 or 0, undieActive and 1 or 0, flying and 1 or 0, platActive and 1 or 0, unvoidActive and 1 or 0, infStabActive and 1 or 0, cfSpeedActive and 1 or 0, spinActive and 1 or 0, fpsActive and 1 or 0, pingActive and 1 or 0, aimbotActive and 1 or 0, antiAfkActive and 1 or 0)
     local orderData = {} for i, ob in ipairs(OrderBoxes) do table.insert(orderData, tostring(ob.btn.LayoutOrder)) end
     local tabsOrderStr = table.concat(orderData, ",")
     local lagStr = "" for i, l in ipairs(lagChain) do lagStr = lagStr .. tostring(l.anchor) .. ":" .. tostring(l.free) .. (i == #lagChain and "" or ",") end
@@ -588,11 +597,20 @@ LoadSaveBtn.MouseButton1Click:Connect(function()
         SetTheme(p[1]) ShrinkBox.Text = p[2] ApplyShrink() AfkBox.Text = p[3] WsBox.Text = p[4] applyWS() JpBox.Text = p[5] applyJP() GravBox.Text = p[6] applyGrav() CFrameSpeedBox.Text = p[7] SpinBox.Text = p[8]
         local t = p[9]
         SetESP(t:sub(1,1)=="1") SetUltraRun(t:sub(2,2)=="1") SetNoclip(t:sub(3,3)=="1") ToggleInvis(t:sub(4,4)=="1") SetUndie(t:sub(5,5)=="1") SetFly(t:sub(6,6)=="1") TogglePlatform(t:sub(7,7)=="1") SetUnvoid(t:sub(8,8)=="1") SetChaosLag(t:sub(9,9)=="1") SetCFSpeed(t:sub(10,10)=="1") SetSpin(t:sub(11,11)=="1") SetFPS(t:sub(12,12)=="1") SetPing(t:sub(13,13)=="1")
+        if #t >= 15 then SetAimbot(t:sub(14,14)=="1") SetAntiAfk(t:sub(15,15)=="1") end
         local tOrd = string.split(p[10], ",") for i, v in ipairs(tOrd) do if OrderBoxes[i] then OrderBoxes[i].box.Text = v end end ApplyTabOrders()
         lagChain = {} if p[11] ~= "" then for _, pr in ipairs(string.split(p[11], ",")) do local vals = string.split(pr, ":") table.insert(lagChain, {anchor=tonumber(vals[1]) or 0.2, free=tonumber(vals[2]) or 0.1}) end else lagChain = {{anchor=0.2, free=0.1}} end
         updateLagList() ImportBox.Text = "" ImportBox.PlaceholderText = "SUCCESSFULLY LOADED!" task.delay(2, function() ImportBox.PlaceholderText = "PASTE HUB-Save-... CODE HERE" end)
     end
 end)
+
+-- ==================== ANTI AFK HOOK ====================
+AddServiceConn(LocalPlayer.Idled:Connect(function()
+    if antiAfkActive then
+        VirtualUser:CaptureController()
+        VirtualUser:ClickButton2(Vector2.new())
+    end
+end))
 
 -- ==================== INVISIBILITY & PLATFORM & FLY ====================
 local realChar, fakeChar, isStriking, platPart, platFails, platFailTime = nil, nil, false, nil, 0, 0
@@ -669,6 +687,30 @@ end
 FlyBtn.MouseButton1Click:Connect(function() SetFly(not flying) end)
 
 -- ==================== TARGETING & LOGIC LOOPS ====================
+GetClosestPlayerToCursor = function()
+    local closestDist = math.huge
+    local closestPart = nil
+    local mousePos = UIS:GetMouseLocation()
+    
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer and p.Character then
+            local targetPart = p.Character:FindFirstChild("Head") or p.Character:FindFirstChild("HumanoidRootPart")
+            local hum = p.Character:FindFirstChildOfClass("Humanoid")
+            if targetPart and hum and hum.Health > 0 then
+                local screenPos, onScreen = workspace.CurrentCamera:WorldToViewportPoint(targetPart.Position)
+                if onScreen then
+                    local dist = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
+                    if dist < closestDist then
+                        closestDist = dist
+                        closestPart = targetPart
+                    end
+                end
+            end
+        end
+    end
+    return closestPart
+end
+
 local function stopInfTp() if infTpConn then infTpConn:Disconnect() infTpConn = nil end currentInfTpTarget = nil end
 local function startInfTp(target)
     stopInfTp() currentInfTpTarget = target
@@ -793,6 +835,16 @@ AddServiceConn(RunService.Heartbeat:Connect(function(dt)
     end
 end))
 
+AddServiceConn(RunService.RenderStepped:Connect(function()
+    -- Aimbot Camera Update Hook
+    if aimbotActive and UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
+        local targetPart = GetClosestPlayerToCursor()
+        if targetPart then
+            workspace.CurrentCamera.CFrame = CFrame.lookAt(workspace.CurrentCamera.CFrame.Position, targetPart.Position)
+        end
+    end
+end))
+
 AddServiceConn(RunService.Stepped:Connect(function()
     local char = LocalPlayer.Character
     local hum = char and char:FindFirstChildOfClass("Humanoid")
@@ -836,7 +888,7 @@ AddServiceConn(UIS.InputBegan:Connect(checkUIInteraction))
 AddServiceConn(UIS.InputChanged:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then checkUIInteraction(input) end end))
 
 local function ForceCleanup()
-    SetESP(false) SetUltraRun(false) SetNoclip(false) SetChaosLag(false) SetSpin(false) SetCFSpeed(false) SetFly(false) TogglePlatform(false) ToggleInvis(false)
+    SetESP(false) SetUltraRun(false) SetNoclip(false) SetChaosLag(false) SetSpin(false) SetCFSpeed(false) SetFly(false) TogglePlatform(false) ToggleInvis(false) SetAimbot(false) SetAntiAfk(false)
     undieActive, unvoidActive = false, false if FlyUI then FlyUI.Visible = false end if PlatUI then PlatUI.Visible = false end
     stopInfTp() workspace.Gravity = 196.2
     
