@@ -75,7 +75,7 @@ local currentInfTpTarget, infTpConn, flyConn, platConn = nil, nil, nil, nil
 local realChar, fakeChar, platPart = nil, nil, nil
 local platFails, platFailTime = 0, 0
 
--- ==================== FORWARD DECLARATIONS ====================
+-- ==================== FORWARD DECLARATIONS (STRICT MODE SECURITY) ====================
 local AimbotBtn, EspBtn, ModeBtn, AddTpBtn, PlayerListWrapper, PlayerList
 local NpcModeBtn, NpcRefreshBtn, NpcListWrapper, NpcList
 local InvisBtn, UndieBtn, InfJumpBtn, ClickTpBtn, WsBtn, WsBox, JpBtn, JpBox, GravBtn, GravBox
@@ -86,8 +86,9 @@ local ShrinkRow, ShrinkLbl, ShrinkBox, AfkRow, AfkLbl, AfkBox
 local AntiAfkBtn, FpsBtn, PingBtn, ThemeLblRow, ThemeLbl, NeonBtn, HackerBtn, BWBtn
 local SaveHeaderRow, SaveHeaderLbl, GenSaveBtn, ImportBoxRow, ImportBox, LoadSaveBtn
 local TabOrderLblRow, TabOrderLbl, ApplyOrderBtn
-local FpsLbl, PingLbl, StatsFrame, MainScaler, FlyScaler, PlatScaler, FlyUI, PlatUI
-local MainFrame, Sidebar, TabContainer, SearchBox
+local FpsLbl, PingLbl, StatsFrame, StatsLayout, MainScaler, FlyScaler, PlatScaler, FlyUI, PlatUI
+local FlyUpBtn, FlyDownBtn, PlatDownBtn
+local MainFrame, Sidebar, TabContainer, SearchBox, SideLayout
 local DragHandle, Title, MinBtn, CloseBtn, WelcomeText, HomeTab, PlayersTab, NpcsTab
 local CharTab, CharScroll, FlyTab, FlyScroll, LagTab, SettingsTab, SettingsScroll
 local PTopLayout, NTopLayout, LagTopLayout
@@ -328,22 +329,35 @@ FpsLbl.BackgroundTransparency = 1
 FpsLbl.Visible = false
 ApplyStyle(FpsLbl, Color3.fromRGB(0, 255, 100))
 
--- Dragging Logic
+-- Dragging Logic (Fixed reliable events for mobile)
 DragHandle = Instance.new("Frame")
 DragHandle.Size = UDim2.new(1, -50, 0, 25)
 DragHandle.BackgroundTransparency = 1
 DragHandle.Parent = MainFrame
 
-local dragging, dragInput, dragStart, startPos
+local dragging = false
+local dragInput, dragStart, startPos
+
 AddServiceConn(DragHandle.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true dragStart = input.Position startPos = MainFrame.Position
-        input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end)
+        dragging = true 
+        dragStart = input.Position 
+        startPos = MainFrame.Position
     end
 end))
-AddServiceConn(DragHandle.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then dragInput = input end
+
+AddServiceConn(UIS.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = false
+    end
 end))
+
+AddServiceConn(DragHandle.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then 
+        dragInput = input 
+    end
+end))
+
 AddServiceConn(UIS.InputChanged:Connect(function(input)
     if input == dragInput and dragging then
         local delta = input.Position - dragStart
@@ -1265,13 +1279,17 @@ CloseBtn.MouseButton1Click:Connect(function() ForceCleanup() ScreenGui:Destroy()
 
 -- Initial UI Setup & Parenting
 local function AssignParent()
-    local coreGui
-    pcall(function() coreGui = game:GetService("CoreGui") end)
-    if coreGui then
-        local ok = pcall(function() ScreenGui.Parent = coreGui end)
-        if not ok then ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui", 15) end
-    else
-        ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui", 15)
+    local success, _ = pcall(function()
+        ScreenGui.Parent = game:GetService("CoreGui")
+    end)
+    
+    if not success or ScreenGui.Parent == nil then
+        local PlayerGui = LocalPlayer:FindFirstChildOfClass("PlayerGui") or LocalPlayer:WaitForChild("PlayerGui", 5)
+        if PlayerGui then
+            ScreenGui.Parent = PlayerGui
+        else
+            ScreenGui.Parent = LocalPlayer:FindFirstChild("PlayerScripts") or game:GetService("StarterGui")
+        end
     end
 end
 AssignParent()
