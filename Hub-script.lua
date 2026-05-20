@@ -410,7 +410,7 @@ GetClosestPlayerToCursor = function()
     local camera = workspace.CurrentCamera
     if not camera then return nil end
     
-    -- Mobile screen center support
+    -- Mobile screen center support fallback
     if mousePos == Vector2.new(0, 0) then
         mousePos = camera.ViewportSize / 2
     end
@@ -597,6 +597,75 @@ PerformSearch = function()
     end
 end
 
+-- Helper functions for Mobile Hook
+local function HookMobileBtn(btn, stateVarName)
+    btn.InputBegan:Connect(function(i) 
+        if i.UserInputType == Enum.UserInputType.Touch or i.UserInputType == Enum.UserInputType.MouseButton1 then 
+            if stateVarName == "up" then upPressed = true 
+            elseif stateVarName == "down" then downPressed = true 
+            else platDownPressed = true end 
+        end 
+    end)
+    btn.InputEnded:Connect(function(i) 
+        if i.UserInputType == Enum.UserInputType.Touch or i.UserInputType == Enum.UserInputType.MouseButton1 then 
+            if stateVarName == "up" then upPressed = false 
+            elseif stateVarName == "down" then downPressed = false 
+            else platDownPressed = false end 
+        end 
+    end)
+end
+
+local function MakeTab(name, isDefault)
+    local btn = Instance.new("TextButton", Sidebar)
+    btn.Size = UDim2.new(1, 0, 0, 25)
+    btn.Text = name
+    btn.LayoutOrder = #tabBtns + 1
+    ApplyStyle(btn, Color3.fromRGB(0, 150, 255), Color3.fromRGB(15, 15, 20))
+    
+    local page = Instance.new("Frame", TabContainer)
+    page.Size = UDim2.new(1, 0, 1, 0)
+    page.BackgroundTransparency = 1
+    page.Visible = isDefault
+    
+    table.insert(tabs, page)
+    table.insert(tabBtns, btn)
+    
+    btn.MouseButton1Click:Connect(function()
+        for _, t in ipairs(tabs) do t.Visible = false end
+        for _, b in ipairs(tabBtns) do 
+            b:SetAttribute("NeonStroke", Color3.fromRGB(0, 150, 255))
+            b:SetAttribute("NeonBg", Color3.fromRGB(15, 15, 20))
+            UpdateInstanceTheme(b)
+        end
+        page.Visible = true
+        btn:SetAttribute("NeonStroke", Color3.fromRGB(255, 0, 255))
+        btn:SetAttribute("NeonBg", Color3.fromRGB(30, 20, 40))
+        UpdateInstanceTheme(btn)
+    end)
+    
+    if isDefault then 
+        btn:SetAttribute("NeonStroke", Color3.fromRGB(255, 0, 255))
+        btn:SetAttribute("NeonBg", Color3.fromRGB(30, 20, 40))
+        UpdateInstanceTheme(btn)
+    end
+    return page
+end
+
+updateLagList = function()
+    if not LagList then return end
+    for _, c in pairs(LagList:GetChildren()) do if c:IsA("Frame") then c:Destroy() end end
+    for i, preset in ipairs(lagChain) do
+        local row = MakeRow(LagList)
+        local aBox = Instance.new("TextBox", row) aBox.Size = UDim2.new(0.38, 0, 1, 0) aBox.Text = tostring(preset.anchor) ApplyStyle(aBox, Color3.fromRGB(255, 0, 150))
+        local fBox = Instance.new("TextBox", row) fBox.Size = UDim2.new(0.38, 0, 1, 0) fBox.Position = UDim2.new(0.42, 0, 0, 0) fBox.Text = tostring(preset.free) ApplyStyle(fBox, Color3.fromRGB(0, 255, 150))
+        local dBtn = Instance.new("TextButton", row) dBtn.Size = UDim2.new(0.16, 0, 1, 0) dBtn.Position = UDim2.new(0.84, 0, 0, 0) dBtn.Text = "-" ApplyStyle(dBtn, Color3.fromRGB(255, 0, 0))
+        aBox.FocusLost:Connect(function() preset.anchor = math.max(0, tonumber(aBox.Text) or preset.anchor) aBox.Text = tostring(preset.anchor) end)
+        fBox.FocusLost:Connect(function() preset.free = math.max(0, tonumber(fBox.Text) or preset.free) fBox.Text = tostring(preset.free) end)
+        dBtn.MouseButton1Click:Connect(function() table.remove(lagChain, i) updateLagList() end)
+    end
+    PerformSearch()
+end
+
 -- ==================== UI CONSTRUCTION ====================
 MainFrame = Instance.new("Frame")
 MainFrame.Parent = ScreenGui
@@ -691,7 +760,7 @@ SideLayout.SortOrder = Enum.SortOrder.LayoutOrder
 SearchBox = Instance.new("TextBox", Sidebar)
 SearchBox.Size = UDim2.new(1, 0, 0, 25)
 SearchBox.PlaceholderText = "SEARCH..."
-SearchBox.Text = "" -- Explicit clean
+SearchBox.Text = "" 
 SearchBox.LayoutOrder = -1
 ApplyStyle(SearchBox, Color3.fromRGB(255, 255, 255), Color3.fromRGB(20, 20, 30))
 
@@ -729,7 +798,7 @@ end)
 HomeTab = MakeTab("HOME", true)
 WelcomeText = Instance.new("TextLabel", HomeTab)
 WelcomeText.Size = UDim2.new(1, 0, 1, 0)
-WelcomeText.Text = "KIRIK HUB V49\n\n[ NEW FEATURES ]\n- Aimbot (Hold RMB on PC orLOCK Button on Mobile)\n- Anti-AFK (Bypass Idle Kicks)\n- Fully Animated Themes\n- Ghost Invisibility & Chaos Lag"
+WelcomeText.Text = "KIRIK HUB V49\n\n[ NEW FEATURES ]\n- Aimbot (Hold RMB on PC or LOCK Button on Mobile)\n- Anti-AFK (Bypass Idle Kicks)\n- Fully Animated Themes\n- Ghost Invisibility & Chaos Lag"
 WelcomeText.TextWrapped = true
 WelcomeText.TextYAlignment = Enum.TextYAlignment.Top
 ApplyStyle(WelcomeText, Color3.fromRGB(0, 255, 255), Color3.fromRGB(15, 15, 20))
@@ -796,7 +865,7 @@ ShrinkLbl = Instance.new("TextLabel", ShrinkRow) ShrinkLbl.Size = UDim2.new(0.65
 ShrinkBox = Instance.new("TextBox", ShrinkRow) ShrinkBox.Size = UDim2.new(0.33, 0, 1, 0) ShrinkBox.Position = UDim2.new(0.67, 0, 0, 0) ShrinkBox.Text = "1" ApplyStyle(ShrinkBox, Color3.fromRGB(255, 255, 0))
 
 AfkRow = MakeRow(SettingsScroll) AfkRow.LayoutOrder = 2
-local AfkLbl = Instance.new("TextLabel", AfkRow) AfkLbl.Size = UDim2.new(0.65, 0, 1, 0) AfkLbl.Text = "UI AUTOCLOSE (SEC)" ApplyStyle(AfkLbl, Color3.fromRGB(150, 150, 150))
+AfkLbl = Instance.new("TextLabel", AfkRow) AfkLbl.Size = UDim2.new(0.65, 0, 1, 0) AfkLbl.Text = "UI AUTOCLOSE (SEC)" ApplyStyle(AfkLbl, Color3.fromRGB(150, 150, 150))
 AfkBox = Instance.new("TextBox", AfkRow) AfkBox.Size = UDim2.new(0.33, 0, 1, 0) AfkBox.Position = UDim2.new(0.67, 0, 0, 0) AfkBox.Text = "9999" ApplyStyle(AfkBox, Color3.fromRGB(150, 150, 150))
 
 AntiAfkBtn = Instance.new("TextButton", MakeRow(SettingsScroll)) AntiAfkBtn.Parent.LayoutOrder = 3 AntiAfkBtn.Size = UDim2.new(1, 0, 1, 0) AntiAfkBtn.Text = "ROBLOX ANTI-AFK: OFF" ApplyStyle(AntiAfkBtn, Color3.fromRGB(0, 200, 255))
@@ -827,8 +896,7 @@ for i, tBtn in ipairs(tabBtns) do
     table.insert(OrderBoxes, {btn = tBtn, box = box, row = row})
 end
 
-ApplyOrderRow = MakeRow(SettingsScroll) ApplyOrderRow.LayoutOrder = 100
-ApplyOrderBtn = Instance.new("TextButton", ApplyOrderRow) ApplyOrderBtn.Size = UDim2.new(1, 0, 1, 0) ApplyOrderBtn.Text = "APPLY TAB ORDER" ApplyStyle(ApplyOrderBtn, Color3.fromRGB(0, 255, 0))
+ApplyOrderBtn = Instance.new("TextButton", MakeRow(SettingsScroll)) ApplyOrderBtn.Parent.LayoutOrder = 100 ApplyOrderBtn.Size = UDim2.new(1, 0, 1, 0) ApplyOrderBtn.Text = "APPLY TAB ORDER" ApplyStyle(ApplyOrderBtn, Color3.fromRGB(0, 255, 0))
 
 -- ==================== FLOATING MOBILE UI (AIM & OTHERS) ====================
 FlyUI = Instance.new("Frame", ScreenGui) FlyUI.Size = UDim2.new(0, 60, 0, 120) FlyUI.Position = UDim2.new(1, -70, 0.5, -60) FlyUI.BackgroundTransparency = 1 FlyUI.Visible = false
@@ -1077,7 +1145,7 @@ end)
 UnviewBtn.MouseButton1Click:Connect(function() local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") if hum then workspace.CurrentCamera.CameraSubject = hum end end)
 CloseBtn.MouseButton1Click:Connect(function() ForceCleanup() ScreenGui:Destroy() end)
 
--- Initial UI Setup
+-- Initial UI Setup & Parenting
 AssignParent()
 updatePlayerList() 
 updateLagList()
