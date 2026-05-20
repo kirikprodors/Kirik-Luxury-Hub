@@ -1,6 +1,5 @@
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "KirikLuxuryHub"
-ScreenGui.Parent = game:GetService("CoreGui")
 ScreenGui.ResetOnSpawn = false
 
 local UIS = game:GetService("UserInputService")
@@ -16,6 +15,22 @@ local function AddServiceConn(conn)
     table.insert(ServiceConnections, conn)
     return conn
 end
+
+-- Safe Parent Assignment (CoreGui with PlayerGui fallback)
+local function AssignParent()
+    local success = pcall(function()
+        ScreenGui.Parent = game:GetService("CoreGui")
+    end)
+    if not success then
+        local playerGui = LocalPlayer:WaitForChild("PlayerGui", 10)
+        if playerGui then
+            ScreenGui.Parent = playerGui
+        else
+            ScreenGui.Parent = game:GetService("StarterGui")
+        end
+    end
+end
+AssignParent()
 
 -- ==================== THEME SYSTEM ====================
 local currentTheme = "NEON"
@@ -57,7 +72,7 @@ local function ApplyStyle(inst, strokeColor, bgColor, textColor)
     if inst:IsA("TextButton") or inst:IsA("TextBox") or inst:IsA("TextLabel") then
         inst.Font = Enum.Font.GothamBold
         inst.TextScaled = true
-        if inst:IsA("TextBox") then inst.Text = "" end -- Fix core TextBox default bug
+        if inst:IsA("TextBox") then inst.Text = "" end -- Clean default TextBox naming
     end
     
     local corner = inst:FindFirstChild("UICorner") or Instance.new("UICorner", inst)
@@ -216,6 +231,7 @@ SideLayout.SortOrder = Enum.SortOrder.LayoutOrder
 local SearchBox = Instance.new("TextBox", Sidebar)
 SearchBox.Size = UDim2.new(1, 0, 0, 25)
 SearchBox.PlaceholderText = "SEARCH..."
+SearchBox.Text = "" -- Explicitly clear default TextBox text
 SearchBox.LayoutOrder = -1
 ApplyStyle(SearchBox, Color3.fromRGB(255, 255, 255), Color3.fromRGB(20, 20, 30))
 
@@ -418,7 +434,7 @@ local SaveHeaderRow = MakeRow(SettingsScroll) SaveHeaderRow.LayoutOrder = 10
 local SaveHeaderLbl = Instance.new("TextLabel", SaveHeaderRow) SaveHeaderLbl.Size = UDim2.new(1, 0, 1, 0) SaveHeaderLbl.Text = "--- SAVE SYSTEM ---" ApplyStyle(SaveHeaderLbl, Color3.fromRGB(0, 255, 150))
 local GenSaveBtn = Instance.new("TextButton", MakeRow(SettingsScroll)) GenSaveBtn.Parent.LayoutOrder = 11 GenSaveBtn.Size = UDim2.new(1, 0, 1, 0) GenSaveBtn.Text = "GENERATE SAVE CODE" ApplyStyle(GenSaveBtn, Color3.fromRGB(0, 255, 0))
 local ImportBoxRow = MakeRow(SettingsScroll) ImportBoxRow.LayoutOrder = 12
-local ImportBox = Instance.new("TextBox", ImportBoxRow) ImportBox.Size = UDim2.new(1, 0, 1, 0) ImportBox.PlaceholderText = "PASTE HUB-Save-... CODE HERE" ImportBox.ClearTextOnFocus = false ApplyStyle(ImportBox, Color3.fromRGB(255, 150, 0))
+local ImportBox = Instance.new("TextBox", ImportBoxRow) ImportBox.Size = UDim2.new(1, 0, 1, 0) ImportBox.PlaceholderText = "PASTE HUB-Save-... CODE HERE" ImportBox.Text = "" ImportBox.ClearTextOnFocus = false ApplyStyle(ImportBox, Color3.fromRGB(255, 150, 0))
 local LoadSaveBtn = Instance.new("TextButton", MakeRow(SettingsScroll)) LoadSaveBtn.Parent.LayoutOrder = 13 LoadSaveBtn.Size = UDim2.new(1, 0, 1, 0) LoadSaveBtn.Text = "LOAD SAVE CODE" ApplyStyle(LoadSaveBtn, Color3.fromRGB(255, 0, 0))
 
 local TabOrderLblRow = MakeRow(SettingsScroll) TabOrderLblRow.LayoutOrder = 14
@@ -559,7 +575,7 @@ SetSpin = function(state) if spinActive == state then return end spinActive = st
 
 local function applyWS() local h = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") if h then h.WalkSpeed = tonumber(WsBox.Text) or 16 end end
 local function applyJP() local h = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") if h then h.UseJumpPower = true h.JumpPower = tonumber(JpBox.Text) or 50 end end
-local function applyGrav() workspace.Gravity = tonumber(GravBox.Text) or 196.2 end
+local function applyGrav() pcall(function() workspace.Gravity = tonumber(GravBox.Text) or 196.2 end) end
 
 AimbotBtn.MouseButton1Click:Connect(function() SetAimbot(not aimbotActive) end)
 AntiAfkBtn.MouseButton1Click:Connect(function() SetAntiAfk(not antiAfkActive) end)
@@ -592,7 +608,8 @@ end)
 
 LoadSaveBtn.MouseButton1Click:Connect(function()
     local str = ImportBox.Text if not str:match("^HUB%-Save%-") then return end
-    local p = string.split(B64Decode(str:sub(10)), "|")
+    local decoded = B64Decode(str:sub(10))
+    local p = string.split(decoded, "|")
     if #p >= 11 then
         SetTheme(p[1]) ShrinkBox.Text = p[2] ApplyShrink() AfkBox.Text = p[3] WsBox.Text = p[4] applyWS() JpBox.Text = p[5] applyJP() GravBox.Text = p[6] applyGrav() CFrameSpeedBox.Text = p[7] SpinBox.Text = p[8]
         local t = p[9]
@@ -607,8 +624,10 @@ end)
 -- ==================== ANTI AFK HOOK ====================
 AddServiceConn(LocalPlayer.Idled:Connect(function()
     if antiAfkActive then
-        VirtualUser:CaptureController()
-        VirtualUser:ClickButton2(Vector2.new())
+        pcall(function()
+            VirtualUser:CaptureController()
+            VirtualUser:ClickButton2(Vector2.new(0, 0))
+        end)
     end
 end))
 
@@ -691,13 +710,15 @@ GetClosestPlayerToCursor = function()
     local closestDist = math.huge
     local closestPart = nil
     local mousePos = UIS:GetMouseLocation()
+    local camera = workspace.CurrentCamera
+    if not camera then return nil end
     
     for _, p in pairs(Players:GetPlayers()) do
         if p ~= LocalPlayer and p.Character then
             local targetPart = p.Character:FindFirstChild("Head") or p.Character:FindFirstChild("HumanoidRootPart")
             local hum = p.Character:FindFirstChildOfClass("Humanoid")
             if targetPart and hum and hum.Health > 0 then
-                local screenPos, onScreen = workspace.CurrentCamera:WorldToViewportPoint(targetPart.Position)
+                local screenPos, onScreen = camera:WorldToViewportPoint(targetPart.Position)
                 if onScreen then
                     local dist = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
                     if dist < closestDist then
@@ -727,8 +748,13 @@ local function startInfTp(target)
             if currentInfTpTarget.part and currentInfTpTarget.part.Parent then tCF = currentInfTpTarget.part.CFrame * CFrame.new(0, 3, 0) valid = true
             else tCF = CFrame.new(currentInfTpTarget.pos + Vector3.new(0, 3, 0)) valid = true end
         end
-        if valid and tCF then local mH = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") if mH then mH.CFrame = tCF end
-        else stopInfTp() updatePlayerList() updateNpcList() end
+        if valid and tCF then 
+            local mChar = LocalPlayer.Character
+            local mH = mChar and mChar:FindFirstChild("HumanoidRootPart") 
+            if mH then mH.CFrame = tCF end
+        else 
+            stopInfTp() updatePlayerList() updateNpcList() 
+        end
     end)
 end
 
@@ -740,9 +766,17 @@ updatePlayerList = function()
             if listMode == "INF TP" then local act = (currentInfTpTarget == player) btn.Text = player.DisplayName .. (act and " [ON]" or "[OFF]") ApplyStyle(btn, act and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0))
             else btn.Text = player.DisplayName ApplyStyle(btn, Color3.fromRGB(0, 200, 255)) end
             btn.MouseButton1Click:Connect(function()
-                if listMode == "TP" then local pH = player.Character and player.Character:FindFirstChild("HumanoidRootPart") if pH and LocalPlayer.Character.HumanoidRootPart then LocalPlayer.Character.HumanoidRootPart.CFrame = pH.CFrame end
-                elseif listMode == "VIEW" then if player.Character and player.Character:FindFirstChild("Humanoid") then workspace.CurrentCamera.CameraSubject = player.Character.Humanoid end
-                elseif listMode == "INF TP" then if currentInfTpTarget == player then stopInfTp() else startInfTp(player) end updatePlayerList() updateNpcList() end
+                if listMode == "TP" then 
+                    local pChar = player.Character
+                    local pH = pChar and pChar:FindFirstChild("HumanoidRootPart") 
+                    local mChar = LocalPlayer.Character
+                    local mHrp = mChar and mChar:FindFirstChild("HumanoidRootPart")
+                    if pH and mHrp then mHrp.CFrame = pH.CFrame end
+                elseif listMode == "VIEW" then 
+                    if player.Character and player.Character:FindFirstChild("Humanoid") then workspace.CurrentCamera.CameraSubject = player.Character.Humanoid end
+                elseif listMode == "INF TP" then 
+                    if currentInfTpTarget == player then stopInfTp() else startInfTp(player) end updatePlayerList() updateNpcList() 
+                end
             end)
         end
     end
@@ -752,9 +786,14 @@ updatePlayerList = function()
             local act = (currentInfTpTarget == spot) tpBtn.Text = spot.name .. (act and " [ON]" or " [OFF]") ApplyStyle(tpBtn, act and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(0, 255, 100))
             local delBtn = Instance.new("TextButton", row) delBtn.Size = UDim2.new(0.2, 0, 1, 0) delBtn.Position = UDim2.new(0.8, 0, 0, 0) delBtn.Text = "X" ApplyStyle(delBtn, Color3.fromRGB(255, 0, 0))
             tpBtn.MouseButton1Click:Connect(function()
-                if listMode == "TP" then local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") if hrp then hrp.CFrame = spot.part and spot.part.Parent and (spot.part.CFrame * CFrame.new(0, 3, 0)) or CFrame.new(spot.pos + Vector3.new(0, 3, 0)) end
-                elseif listMode == "VIEW" then if spot.part and spot.part.Parent then workspace.CurrentCamera.CameraSubject = spot.part end
-                elseif listMode == "INF TP" then if currentInfTpTarget == spot then stopInfTp() else startInfTp(spot) end updatePlayerList() end
+                if listMode == "TP" then 
+                    local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") 
+                    if hrp then hrp.CFrame = spot.part and spot.part.Parent and (spot.part.CFrame * CFrame.new(0, 3, 0)) or CFrame.new(spot.pos + Vector3.new(0, 3, 0)) end
+                elseif listMode == "VIEW" then 
+                    if spot.part and spot.part.Parent then workspace.CurrentCamera.CameraSubject = spot.part end
+                elseif listMode == "INF TP" then 
+                    if currentInfTpTarget == spot then stopInfTp() else startInfTp(spot) end updatePlayerList() 
+                end
             end)
             delBtn.MouseButton1Click:Connect(function() if currentInfTpTarget == spot then stopInfTp() end table.remove(savedSpots, i) updatePlayerList() end)
         end
@@ -769,9 +808,16 @@ updateNpcList = function()
             local row = MakeRow(NpcList) local btn = Instance.new("TextButton", row) btn.Size = UDim2.new(1, 0, 1, 0)
             local act = (currentInfTpTarget == npc) btn.Text = npc.Name .. (act and " [ON]" or "[OFF]") ApplyStyle(btn, act and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 100, 0))
             btn.MouseButton1Click:Connect(function()
-                if npcListMode == "TP" then local hrp = npc:FindFirstChild("HumanoidRootPart") if hrp and LocalPlayer.Character.HumanoidRootPart then LocalPlayer.Character.HumanoidRootPart.CFrame = hrp.CFrame * CFrame.new(0, 0, 3) end
-                elseif npcListMode == "VIEW" then local hum = npc:FindFirstChildOfClass("Humanoid") if hum then workspace.CurrentCamera.CameraSubject = hum end
-                elseif npcListMode == "INF TP" then if currentInfTpTarget == npc then stopInfTp() else startInfTp(npc) end updateNpcList() updatePlayerList() end
+                if npcListMode == "TP" then 
+                    local hrp = npc:FindFirstChild("HumanoidRootPart") 
+                    local mChar = LocalPlayer.Character
+                    local mHrp = mChar and mChar:FindFirstChild("HumanoidRootPart")
+                    if hrp and mHrp then mHrp.CFrame = hrp.CFrame * CFrame.new(0, 0, 3) end
+                elseif npcListMode == "VIEW" then 
+                    local hum = npc:FindFirstChildOfClass("Humanoid") if hum then workspace.CurrentCamera.CameraSubject = hum end
+                elseif npcListMode == "INF TP" then 
+                    if currentInfTpTarget == npc then stopInfTp() else startInfTp(npc) end updateNpcList() updatePlayerList() 
+                end
             end)
         end
     end
@@ -890,11 +936,11 @@ AddServiceConn(UIS.InputChanged:Connect(function(input) if input.UserInputType =
 local function ForceCleanup()
     SetESP(false) SetUltraRun(false) SetNoclip(false) SetChaosLag(false) SetSpin(false) SetCFSpeed(false) SetFly(false) TogglePlatform(false) ToggleInvis(false) SetAimbot(false) SetAntiAfk(false)
     undieActive, unvoidActive = false, false if FlyUI then FlyUI.Visible = false end if PlatUI then PlatUI.Visible = false end
-    stopInfTp() workspace.Gravity = 196.2
+    stopInfTp() pcall(function() workspace.Gravity = 196.2 end)
     
     local char = LocalPlayer.Character local hum = char and char:FindFirstChild("Humanoid") local hrp = char and char:FindFirstChild("HumanoidRootPart")
     if hrp then if hrp:FindFirstChild("FlyBV") then hrp.FlyBV:Destroy() end if hrp:FindFirstChild("FlyBG") then hrp.FlyBG:Destroy() end hrp.Anchored = false end
-    if hum then hum.PlatformStand = false hum.WalkSpeed = 16 hum.UseJumpPower = true hum.JumpPower = 50 for _, track in pairs(hum:GetPlayingAnimationTracks()) do track:AdjustSpeed(1) end workspace.CurrentCamera.CameraSubject = hum end
+    if hum then hum.PlatformStand = false hum.WalkSpeed = 16 hum.UseJumpPower = true hum.JumpPower = 50 for _, track in pairs(hum:GetPlayingAnimationTracks()) do track:AdjustSpeed(1) end pcall(function() workspace.CurrentCamera.CameraSubject = hum end) end
     
     for _, conn in ipairs(ServiceConnections) do if conn.Connected then conn:Disconnect() end end
     for _, p in pairs(Players:GetPlayers()) do if p.Character and p.Character:FindFirstChild("LuxuryESP") then p.Character.LuxuryESP:Destroy() end end
