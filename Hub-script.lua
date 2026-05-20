@@ -61,7 +61,8 @@ local fpsActive, pingActive = false, false
 local aimbotActive, antiAfkActive = false, false
 
 local upPressed, downPressed, platDownPressed = false, false, false
-local aimTarget = nil -- Holds the current locked player for smooth aiming
+local aimTarget = nil 
+local isStriking = false
 
 local listMode, npcListMode = "TP", "TP"
 local cachedNPCs, savedSpots = {}, {}
@@ -69,6 +70,8 @@ local spotCount = 0
 local lagState, lagTimer, lagIndex = "FREE", 0, 1
 local lagChain = {{anchor = 0.2, free = 0.1}}
 local currentInfTpTarget, infTpConn, flyConn, platConn = nil, nil, nil, nil
+local realChar, fakeChar, platPart = nil, nil, nil
+local platFails, platFailTime = 0, 0
 
 -- ==================== FORWARD DECLARATIONS ====================
 local AimbotBtn, EspBtn, ModeBtn, AddTpBtn, PlayerListWrapper, PlayerList
@@ -525,7 +528,7 @@ HookMobileBtn(PlatDownBtn, "plat")
 -- ==================== STATE SETTERS LOGIC IMPLEMENTATION ====================
 SetAimbot = function(state) 
     aimbotActive = state 
-    aimTarget = nil -- Reset target when toggled
+    aimTarget = nil
     ApplyToggleStyle(AimbotBtn, aimbotActive, Color3.fromRGB(255, 50, 50)) 
     if AimbotBtn then AimbotBtn.Text = "AIMBOT: " .. (aimbotActive and "ON" or "OFF") end
 end
@@ -960,7 +963,7 @@ PerformSearch = function()
     end
 end
 
--- ==================== EVENTS & CONNECTIONS ====================
+-- ==================== CENTRAL EVENT BINDINGS ====================
 AddServiceConn(SearchBox:GetPropertyChangedSignal("Text"):Connect(function() PerformSearch() end))
 ShrinkBox.FocusLost:Connect(function() ApplyShrink() end)
 
@@ -968,6 +971,7 @@ NeonBtn.MouseButton1Click:Connect(function() SetTheme("NEON") end)
 HackerBtn.MouseButton1Click:Connect(function() SetTheme("HACKER") end)
 BWBtn.MouseButton1Click:Connect(function() SetTheme("B&W") end)
 
+-- All Toggles
 AimbotBtn.MouseButton1Click:Connect(function() SetAimbot(not aimbotActive) end)
 AntiAfkBtn.MouseButton1Click:Connect(function() SetAntiAfk(not antiAfkActive) end)
 FpsBtn.MouseButton1Click:Connect(function() SetFPS(not fpsActive) end)
@@ -980,6 +984,9 @@ UnvoidBtn.MouseButton1Click:Connect(function() SetUnvoid(not unvoidActive) end)
 InfStabBtn.MouseButton1Click:Connect(function() SetChaosLag(not infStabActive) end)
 CFrameSpeedBtn.MouseButton1Click:Connect(function() SetCFSpeed(not cfSpeedActive) end)
 SpinBtn.MouseButton1Click:Connect(function() SetSpin(not spinActive) end)
+InvisBtn.MouseButton1Click:Connect(function() ToggleInvis(not invisActive) end)
+FlyBtn.MouseButton1Click:Connect(function() SetFly(not flying) end)
+PlatformBtn.MouseButton1Click:Connect(function() TogglePlatform(not platActive) end)
 
 WsBtn.MouseButton1Click:Connect(function() applyWS() end) 
 JpBtn.MouseButton1Click:Connect(function() applyJP() end) 
@@ -1121,15 +1128,15 @@ AddServiceConn(RunService.Heartbeat:Connect(function(dt)
 end))
 
 AddServiceConn(RunService.RenderStepped:Connect(function()
-    -- Smooth Aimbot Camera Update Hook
     if aimbotActive then
         if not aimTarget or not aimTarget.Parent or not aimTarget:FindFirstChild("Humanoid") or aimTarget.Humanoid.Health <= 0 then
             aimTarget = GetClosestPlayerToCursor()
         end
         local camera = workspace.CurrentCamera
         if aimTarget and camera then
-            local lookCFrame = CFrame.lookAt(camera.CFrame.Position, aimTarget.Position)
-            camera.CFrame = camera.CFrame:Lerp(lookCFrame, 0.15) -- Smooth aiming via Lerp, stops screen tearing
+            local targetPos = aimTarget.Position
+            local lookCFrame = CFrame.lookAt(camera.CFrame.Position, targetPos)
+            camera.CFrame = camera.CFrame:Lerp(lookCFrame, 0.15)
         end
     else
         aimTarget = nil
@@ -1156,15 +1163,6 @@ AddServiceConn(UIS.InputBegan:Connect(function(input, gpe)
         if rHrp and fHrp then rHrp.CFrame = fHrp.CFrame end task.delay(0.1, function() isStriking = false end)
     end
 end))
-
-AddServiceConn(Players.PlayerAdded:Connect(function(p) 
-    AddServiceConn(p.CharacterAdded:Connect(function(char) if espActive then task.wait(0.5) applyESPToPlayer(p) end end)) 
-    updatePlayerList() 
-end))
-AddServiceConn(Players.PlayerRemoving:Connect(updatePlayerList))
-for _, p in pairs(Players:GetPlayers()) do 
-    AddServiceConn(p.CharacterAdded:Connect(function(char) if espActive then task.wait(0.5) applyESPToPlayer(p) end end)) 
-end
 
 local lastActive = tick()
 local function checkUIInteraction(input)
