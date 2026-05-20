@@ -8,7 +8,6 @@ local LocalPlayer = Players.LocalPlayer
 local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local TS = game:GetService("TweenService")
-local PathfindingService = game:GetService("PathfindingService")
 
 -- Safe VirtualUser fetch
 local VirtualUser = nil
@@ -36,10 +35,6 @@ local function CleanOldInstances()
             local old = pg:FindFirstChild("KirikLuxuryHub")
             if old then old:Destroy() end
         end
-    end)
-    pcall(function()
-        local pf = workspace:FindFirstChild("LuxuryESP_Paths")
-        if pf then pf:Destroy() end
     end)
 end
 CleanOldInstances()
@@ -69,6 +64,7 @@ local infJumpActive, clickTpActive = false, false
 local upPressed, downPressed, platDownPressed = false, false, false
 local aimTarget = nil 
 local isStriking = false
+local currentTpTween = nil
 
 local listMode, npcListMode = "TP", "TP"
 local cachedNPCs, savedSpots = {}, {}
@@ -78,14 +74,13 @@ local lagChain = {{anchor = 0.2, free = 0.1}}
 local currentInfTpTarget, infTpConn, flyConn, platConn = nil, nil, nil, nil
 local realChar, fakeChar, platPart = nil, nil, nil
 local platFails, platFailTime = 0, 0
-local currentTpTween = nil
 
 -- ==================== FORWARD DECLARATIONS ====================
 local AimbotBtn, EspBtn, ModeBtn, AddTpBtn, PlayerListWrapper, PlayerList
 local NpcModeBtn, NpcRefreshBtn, NpcListWrapper, NpcList
-local InvisBtn, UndieBtn, InfJumpBtn, WsBtn, WsBox, JpBtn, JpBox, GravBtn, GravBox
+local InvisBtn, UndieBtn, InfJumpBtn, ClickTpBtn, WsBtn, WsBox, JpBtn, JpBox, GravBtn, GravBox
 local CFrameSpeedBtn, CFrameSpeedBox, SpinBtn, SpinBox, UltraRunBtn, NoclipBtn, UnviewBtn
-local FlyRow, FlyBtn, FlySpeedBox, PlatformBtn, UnvoidBtn, ClickTpBtn
+local FlyRow, FlyBtn, FlySpeedBox, PlatformBtn, UnvoidBtn
 local AntiFlingBtn, InfStabBtn, AddLagBtn, LagListWrapper, LagList
 local ShrinkRow, ShrinkLbl, ShrinkBox, AfkRow, AfkLbl, AfkBox
 local AntiAfkBtn, FpsBtn, PingBtn, ThemeLblRow, ThemeLbl, NeonBtn, HackerBtn, BWBtn
@@ -101,7 +96,8 @@ local OrderBoxes = {}
 local tabs, tabBtns = {}, {}
 
 local ToggleInvis, TogglePlatform, SetFly, SetUltraRun, SetNoclip, SetUndie, SetUnvoid
-local SetChaosLag, SetCFSpeed, SetSpin, SetESP, SetAimbot, SetAntiAfk, SetInfJump, SetClickTp
+local SetChaosLag, SetCFSpeed, SetSpin, SetESP, SetAimbot, SetAntiAfk
+local SetInfJump, SetClickTp
 local ApplyShrink, PerformSearch, GetClosestPlayerToCursor
 local updateLagList, updatePlayerList, updateNpcList
 
@@ -427,7 +423,7 @@ end)
 HomeTab = MakeTab("HOME", true)
 WelcomeText = Instance.new("TextLabel", HomeTab)
 WelcomeText.Size = UDim2.new(1, 0, 1, 0)
-WelcomeText.Text = "KIRIK HUB V51\n\n[ V51 FEATURES ]\n- Infinite Jump (Char Tab)\n- Click To Teleport (Move Tab)\n- Advanced Pathfinding ESP Tracers\n- Smooth Lerp Aimbot Toggle"
+WelcomeText.Text = "KIRIK HUB V51\n\n[ V51 FEATURES ]\n- Infinite Jump & Animated Click-TP\n- Aimbot Toggle (Smooth Tracking)\n- Enhanced ESP (Live Stud Distance)\n- Anti-AFK & Extreme Lag Options"
 WelcomeText.TextWrapped = true
 WelcomeText.TextYAlignment = Enum.TextYAlignment.Top
 ApplyStyle(WelcomeText, Color3.fromRGB(0, 255, 255), Color3.fromRGB(15, 15, 20))
@@ -435,7 +431,7 @@ ApplyStyle(WelcomeText, Color3.fromRGB(0, 255, 255), Color3.fromRGB(15, 15, 20))
 PlayersTab = MakeTab("PLAYERS", false)
 PTopLayout = Instance.new("UIListLayout", PlayersTab) PTopLayout.Padding = UDim.new(0, 5)
 AimbotBtn = Instance.new("TextButton", MakeRow(PlayersTab)) AimbotBtn.Size = UDim2.new(1, 0, 1, 0) AimbotBtn.Text = "AIMBOT: OFF" ApplyStyle(AimbotBtn, Color3.fromRGB(255, 50, 50))
-EspBtn = Instance.new("TextButton", MakeRow(PlayersTab)) EspBtn.Size = UDim2.new(1, 0, 1, 0) EspBtn.Text = "ESP + TRACERS: OFF" ApplyStyle(EspBtn, Color3.fromRGB(0, 255, 100))
+EspBtn = Instance.new("TextButton", MakeRow(PlayersTab)) EspBtn.Size = UDim2.new(1, 0, 1, 0) EspBtn.Text = "ESP: OFF" ApplyStyle(EspBtn, Color3.fromRGB(0, 255, 100))
 ModeBtn = Instance.new("TextButton", MakeRow(PlayersTab)) ModeBtn.Size = UDim2.new(1, 0, 1, 0) ModeBtn.Text = "LIST MODE: TP" ApplyStyle(ModeBtn, Color3.fromRGB(255, 0, 255))
 AddTpBtn = Instance.new("TextButton", MakeRow(PlayersTab)) AddTpBtn.Size = UDim2.new(1, 0, 1, 0) AddTpBtn.Text = "ADD CUSTOM TP PART" ApplyStyle(AddTpBtn, Color3.fromRGB(0, 150, 255))
 PlayerListWrapper = Instance.new("Frame", PlayersTab) PlayerListWrapper.Size = UDim2.new(1, 0, 1, -125) PlayerListWrapper.BackgroundTransparency = 1
@@ -452,25 +448,26 @@ CharTab = MakeTab("CHARACTER", false)
 CharScroll, _ = MakeScrollArea(CharTab)
 InvisBtn = Instance.new("TextButton", MakeRow(CharScroll)) InvisBtn.Size = UDim2.new(1, 0, 1, 0) InvisBtn.Text = "INVISIBILITY (GHOST): OFF" ApplyStyle(InvisBtn, Color3.fromRGB(200, 0, 255))
 UndieBtn = Instance.new("TextButton", MakeRow(CharScroll)) UndieBtn.Size = UDim2.new(1, 0, 1, 0) UndieBtn.Text = "UN-DIE: OFF" ApplyStyle(UndieBtn, Color3.fromRGB(200, 50, 50))
-InfJumpBtn = Instance.new("TextButton", MakeRow(CharScroll)) InfJumpBtn.Size = UDim2.new(1, 0, 1, 0) InfJumpBtn.Text = "INF JUMP: OFF" ApplyStyle(InfJumpBtn, Color3.fromRGB(255, 150, 0))
+InfJumpBtn = Instance.new("TextButton", MakeRow(CharScroll)) InfJumpBtn.Size = UDim2.new(1, 0, 1, 0) InfJumpBtn.Text = "INFINITE JUMP: OFF" ApplyStyle(InfJumpBtn, Color3.fromRGB(0, 255, 150))
+ClickTpBtn = Instance.new("TextButton", MakeRow(CharScroll)) ClickTpBtn.Size = UDim2.new(1, 0, 1, 0) ClickTpBtn.Text = "CLICK TELEPORT: OFF" ApplyStyle(ClickTpBtn, Color3.fromRGB(255, 150, 0))
 
 WsBtn, WsBox = MakeCharStat("SPEED", 16, "WS", CharScroll)
 JpBtn, JpBox = MakeCharStat("JUMP", 50, "JP", CharScroll)
 GravBtn, GravBox = MakeCharStat("GRAVITY", 196.2, "GR", CharScroll)
 CFrameSpeedBtn, CFrameSpeedBox = MakeCharStat("CF SPEED", 2, "Spd", CharScroll)
 SpinBtn, SpinBox = MakeCharStat("SPIN", 50, "Spd", CharScroll)
+
 UltraRunBtn = Instance.new("TextButton", MakeRow(CharScroll)) UltraRunBtn.Size = UDim2.new(1, 0, 1, 0) UltraRunBtn.Text = "ULTRA RUN: OFF" ApplyStyle(UltraRunBtn, Color3.fromRGB(255, 80, 0))
 NoclipBtn = Instance.new("TextButton", MakeRow(CharScroll)) NoclipBtn.Size = UDim2.new(1, 0, 1, 0) NoclipBtn.Text = "NOCLIP: OFF" ApplyStyle(NoclipBtn, Color3.fromRGB(0, 255, 200))
 UnviewBtn = Instance.new("TextButton", MakeRow(CharScroll)) UnviewBtn.Size = UDim2.new(1, 0, 1, 0) UnviewBtn.Text = "RESET CAMERA" ApplyStyle(UnviewBtn, Color3.fromRGB(150, 150, 255))
 
-FlyTab = MakeTab("MOVEMENT", false)
+FlyTab = MakeTab("FLIGHT", false)
 FlyScroll, _ = MakeScrollArea(FlyTab)
 FlyRow = MakeRow(FlyScroll)
 FlyBtn = Instance.new("TextButton", FlyRow) FlyBtn.Size = UDim2.new(0.65, 0, 1, 0) FlyBtn.Text = "FLY: OFF" ApplyStyle(FlyBtn, Color3.fromRGB(255, 0, 255))
 FlySpeedBox = Instance.new("TextBox", FlyRow) FlySpeedBox.Size = UDim2.new(0.33, 0, 1, 0) FlySpeedBox.Position = UDim2.new(0.67, 0, 0, 0) FlySpeedBox.Text = "50" ApplyStyle(FlySpeedBox, Color3.fromRGB(255, 0, 255))
 PlatformBtn = Instance.new("TextButton", MakeRow(FlyScroll)) PlatformBtn.Size = UDim2.new(1, 0, 1, 0) PlatformBtn.Text = "PLATFORM: OFF" ApplyStyle(PlatformBtn, Color3.fromRGB(0, 150, 255))
 UnvoidBtn = Instance.new("TextButton", MakeRow(FlyScroll)) UnvoidBtn.Size = UDim2.new(1, 0, 1, 0) UnvoidBtn.Text = "UN-VOID: OFF" ApplyStyle(UnvoidBtn, Color3.fromRGB(50, 50, 255))
-ClickTpBtn = Instance.new("TextButton", MakeRow(FlyScroll)) ClickTpBtn.Size = UDim2.new(1, 0, 1, 0) ClickTpBtn.Text = "CLICK TP: OFF" ApplyStyle(ClickTpBtn, Color3.fromRGB(0, 255, 255))
 
 LagTab = MakeTab("LAG", false)
 LagTopLayout = Instance.new("UIListLayout", LagTab) LagTopLayout.Padding = UDim.new(0, 5)
@@ -543,16 +540,16 @@ SetAimbot = function(state)
     if AimbotBtn then AimbotBtn.Text = "AIMBOT: " .. (aimbotActive and "ON" or "OFF") end
 end
 
-SetInfJump = function(state)
-    infJumpActive = state
-    ApplyToggleStyle(InfJumpBtn, infJumpActive, Color3.fromRGB(255, 150, 0))
-    if InfJumpBtn then InfJumpBtn.Text = "INF JUMP: " .. (infJumpActive and "ON" or "OFF") end
+SetInfJump = function(state) 
+    infJumpActive = state 
+    ApplyToggleStyle(InfJumpBtn, infJumpActive, Color3.fromRGB(0, 255, 150)) 
+    if InfJumpBtn then InfJumpBtn.Text = "INFINITE JUMP: " .. (infJumpActive and "ON" or "OFF") end
 end
 
-SetClickTp = function(state)
-    clickTpActive = state
-    ApplyToggleStyle(ClickTpBtn, clickTpActive, Color3.fromRGB(0, 255, 255))
-    if ClickTpBtn then ClickTpBtn.Text = "CLICK TP: " .. (clickTpActive and "ON" or "OFF") end
+SetClickTp = function(state) 
+    clickTpActive = state 
+    ApplyToggleStyle(ClickTpBtn, clickTpActive, Color3.fromRGB(255, 150, 0)) 
+    if ClickTpBtn then ClickTpBtn.Text = "CLICK TELEPORT: " .. (clickTpActive and "ON" or "OFF") end
 end
 
 SetAntiAfk = function(state) 
@@ -613,7 +610,7 @@ SetESP = function(state)
     if espActive == state then return end
     espActive = state 
     ApplyToggleStyle(EspBtn, espActive, Color3.fromRGB(0, 255, 100)) 
-    if EspBtn then EspBtn.Text = "ESP + TRACERS: " .. (espActive and "ON" or "OFF") end
+    if EspBtn then EspBtn.Text = "ESP: " .. (espActive and "ON" or "OFF") end
     if state then
         for _, p in pairs(Players:GetPlayers()) do 
             if p ~= LocalPlayer then applyESPToPlayer(p) end 
@@ -630,8 +627,6 @@ SetESP = function(state)
                 end
             end 
         end 
-        local pf = workspace:FindFirstChild("LuxuryESP_Paths")
-        if pf then pf:Destroy() end
     end
 end
 
@@ -995,6 +990,7 @@ NeonBtn.MouseButton1Click:Connect(function() SetTheme("NEON") end)
 HackerBtn.MouseButton1Click:Connect(function() SetTheme("HACKER") end)
 BWBtn.MouseButton1Click:Connect(function() SetTheme("B&W") end)
 
+-- All Toggles
 AimbotBtn.MouseButton1Click:Connect(function() SetAimbot(not aimbotActive) end)
 AntiAfkBtn.MouseButton1Click:Connect(function() SetAntiAfk(not antiAfkActive) end)
 FpsBtn.MouseButton1Click:Connect(function() SetFPS(not fpsActive) end)
@@ -1086,42 +1082,6 @@ LoadSaveBtn.MouseButton1Click:Connect(function()
 end)
 
 -- ==================== CENTRALIZED LOOPS ====================
-AddServiceConn(UIS.JumpRequest:Connect(function()
-    if infJumpActive then
-        local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-        if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
-    end
-end))
-
-AddServiceConn(UIS.InputBegan:Connect(function(input, gpe)
-    if clickTpActive and not gpe and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
-        local pos = input.Position
-        local camera = workspace.CurrentCamera
-        local ray = camera:ViewportPointToRay(pos.X, pos.Y)
-        local params = RaycastParams.new()
-        params.FilterType = Enum.RaycastFilterType.Exclude
-        local excludeList = {LocalPlayer.Character}
-        local pf = workspace:FindFirstChild("LuxuryESP_Paths")
-        if pf then table.insert(excludeList, pf) end
-        params.FilterDescendantsInstances = excludeList
-        
-        local result = workspace:Raycast(ray.Origin, ray.Direction * 2000, params)
-        if result then
-            local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-            if hrp then
-                if currentTpTween then currentTpTween:Cancel() end
-                local targetCFrame = CFrame.new(result.Position + Vector3.new(0, 3.5, 0))
-                local dist = (hrp.Position - result.Position).Magnitude
-                local tInfo = TweenInfo.new(math.clamp(dist / 150, 0.1, 1.5), Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-                hrp.Anchored = true
-                currentTpTween = TS:Create(hrp, tInfo, {CFrame = targetCFrame})
-                currentTpTween:Play()
-                currentTpTween.Completed:Connect(function() hrp.Anchored = false end)
-            end
-        end
-    end
-end))
-
 AddServiceConn(LocalPlayer.Idled:Connect(function()
     if antiAfkActive and VirtualUser then
         pcall(function()
@@ -1131,66 +1091,13 @@ AddServiceConn(LocalPlayer.Idled:Connect(function()
     end
 end))
 
--- Pathfinding Daemon for Tracers
-task.spawn(function()
-    while task.wait(1) do
-        if espActive then
-            local pathFolder = workspace:FindFirstChild("LuxuryESP_Paths")
-            if not pathFolder then
-                pathFolder = Instance.new("Folder", workspace)
-                pathFolder.Name = "LuxuryESP_Paths"
-            end
-            
-            local lChar = LocalPlayer.Character
-            local lHrp = lChar and lChar:FindFirstChild("HumanoidRootPart")
-            
-            if lHrp then
-                for _, p in pairs(Players:GetPlayers()) do
-                    if p ~= LocalPlayer and p.Character then
-                        local tHrp = p.Character:FindFirstChild("HumanoidRootPart")
-                        if tHrp then
-                            task.spawn(function()
-                                local path = PathfindingService:CreatePath({AgentRadius = 2, AgentHeight = 5, AgentCanJump = true})
-                                local s, _ = pcall(function() path:ComputeAsync(lHrp.Position, tHrp.Position) end)
-                                
-                                local pFolder = pathFolder:FindFirstChild(p.Name)
-                                if not pFolder then
-                                    pFolder = Instance.new("Folder", pathFolder)
-                                    pFolder.Name = p.Name
-                                end
-                                pFolder:ClearAllChildren()
-
-                                if s and path.Status == Enum.PathStatus.Success then
-                                    local waypoints = path:GetWaypoints()
-                                    for i = 1, #waypoints - 1 do
-                                        local wp1 = waypoints[i].Position
-                                        local wp2 = waypoints[i+1].Position
-                                        local dist = (wp1 - wp2).Magnitude
-                                        local part = Instance.new("Part")
-                                        part.Size = Vector3.new(0.2, 0.2, dist)
-                                        part.CFrame = CFrame.lookAt(wp1, wp2) * CFrame.new(0, 0, -dist/2)
-                                        part.Anchored = true
-                                        part.CanCollide = false
-                                        part.CanQuery = false
-                                        part.CanTouch = false
-                                        part.CastShadow = false
-                                        part.Material = Enum.Material.Neon
-                                        part.Color = Color3.fromRGB(0, 255, 255)
-                                        part.Transparency = 0.5
-                                        part.Parent = pFolder
-                                    end
-                                end
-                            end)
-                        end
-                    end
-                end
-            end
-        else
-            local pf = workspace:FindFirstChild("LuxuryESP_Paths")
-            if pf then pf:Destroy() end
-        end
+AddServiceConn(UIS.JumpRequest:Connect(function()
+    if infJumpActive then
+        local char = LocalPlayer.Character
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
     end
-end)
+end))
 
 local fpsTimer, frames = 0, 0
 AddServiceConn(RunService.Heartbeat:Connect(function(dt)
@@ -1205,6 +1112,7 @@ AddServiceConn(RunService.Heartbeat:Connect(function(dt)
     if undieActive and not invisActive and hum and hum.Health > 0 and hum.Health <= (hum.MaxHealth * 0.25) then ToggleInvis(true) end
     if unvoidActive and not platActive and hrp then if hrp.Position.Y < (workspace.FallenPartsDestroyHeight + 100) then TogglePlatform(true) hrp.Velocity = Vector3.new(0, 50, 0) end end
 
+    -- ESP Distance Updater
     if espActive and hrp then
         for _, p in pairs(Players:GetPlayers()) do
             if p ~= LocalPlayer and p.Character then
@@ -1280,9 +1188,35 @@ AddServiceConn(RunService.Stepped:Connect(function()
 end))
 
 AddServiceConn(UIS.InputBegan:Connect(function(input, gpe)
-    if invisActive and realChar and fakeChar and input.UserInputType == Enum.UserInputType.MouseButton1 and not gpe then
+    if invisActive and realChar and fakeChar and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and not gpe then
         isStriking = true local rHrp, fHrp = realChar:FindFirstChild("HumanoidRootPart"), fakeChar:FindFirstChild("HumanoidRootPart")
         if rHrp and fHrp then rHrp.CFrame = fHrp.CFrame end task.delay(0.1, function() isStriking = false end)
+    end
+    
+    -- Click Teleport Animation Logic
+    if clickTpActive and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and not gpe then
+        local camera = workspace.CurrentCamera
+        local unitRay = camera:ViewportPointToRay(input.Position.X, input.Position.Y)
+        local raycastParams = RaycastParams.new()
+        raycastParams.FilterDescendantsInstances = {LocalPlayer.Character, fakeChar, platPart, FlyUI, PlatUI, MainFrame}
+        raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+        local result = workspace:Raycast(unitRay.Origin, unitRay.Direction * 1000, raycastParams)
+        
+        if result then
+            local char = LocalPlayer.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                if currentTpTween then currentTpTween:Cancel() end
+                hrp.Anchored = true
+                local dist = (hrp.Position - result.Position).Magnitude
+                local duration = math.clamp(dist / 300, 0.15, 1.0)
+                currentTpTween = TS:Create(hrp, TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CFrame = CFrame.new(result.Position + Vector3.new(0, 3, 0))})
+                currentTpTween:Play()
+                currentTpTween.Completed:Connect(function()
+                    if not infStabActive or lagState == "FREE" then hrp.Anchored = false end
+                end)
+            end
+        end
     end
 end))
 
@@ -1303,7 +1237,6 @@ local function ForceCleanup()
     SetESP(false) SetUltraRun(false) SetNoclip(false) SetChaosLag(false) SetSpin(false) SetCFSpeed(false) SetFly(false) TogglePlatform(false) ToggleInvis(false) SetAimbot(false) SetAntiAfk(false) SetInfJump(false) SetClickTp(false)
     undieActive, unvoidActive = false, false if FlyUI then FlyUI.Visible = false end if PlatUI then PlatUI.Visible = false end
     stopInfTp() pcall(function() workspace.Gravity = 196.2 end)
-    if currentTpTween then currentTpTween:Cancel() end
     
     local char = LocalPlayer.Character local hum = char and char:FindFirstChild("Humanoid") local hrp = char and char:FindFirstChild("HumanoidRootPart")
     if hrp then if hrp:FindFirstChild("FlyBV") then hrp.FlyBV:Destroy() end if hrp:FindFirstChild("FlyBG") then hrp.FlyBG:Destroy() end hrp.Anchored = false end
@@ -1317,7 +1250,6 @@ local function ForceCleanup()
             if head then local bgui = head:FindFirstChild("LuxuryESP_Text") if bgui then bgui:Destroy() end end
         end 
     end
-    local pf = workspace:FindFirstChild("LuxuryESP_Paths") if pf then pf:Destroy() end
 end
 
 task.spawn(function()
