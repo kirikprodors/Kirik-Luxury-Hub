@@ -9,7 +9,7 @@ local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local TS = game:GetService("TweenService")
 
--- Safe VirtualUser fetch (Some mobile executors sandbox this service)
+-- Safe VirtualUser fetch
 local VirtualUser = nil
 pcall(function()
     VirtualUser = game:GetService("VirtualUser")
@@ -60,7 +60,8 @@ local flying, infStabActive, cfSpeedActive, spinActive = false, false, false, fa
 local fpsActive, pingActive = false, false
 local aimbotActive, antiAfkActive = false, false
 
-local aimPressed, upPressed, downPressed, platDownPressed = false, false, false, false
+local upPressed, downPressed, platDownPressed = false, false, false
+local aimTarget = nil -- Holds the current locked player for smooth aiming
 
 local listMode, npcListMode = "TP", "TP"
 local cachedNPCs, savedSpots = {}, {}
@@ -81,7 +82,7 @@ local AntiAfkBtn, FpsBtn, PingBtn, ThemeLblRow, ThemeLbl, NeonBtn, HackerBtn, BW
 local SaveHeaderRow, SaveHeaderLbl, GenSaveBtn, ImportBoxRow, ImportBox, LoadSaveBtn
 local TabOrderLblRow, TabOrderLbl, ApplyOrderBtn
 local FpsLbl, PingLbl, StatsFrame, MainScaler, FlyScaler, PlatScaler, FlyUI, PlatUI
-local AimUI, AimScaler, AimBtnMobile, MainFrame, Sidebar, TabContainer, SearchBox
+local MainFrame, Sidebar, TabContainer, SearchBox
 local DragHandle, Title, MinBtn, CloseBtn, WelcomeText, HomeTab, PlayersTab, NpcsTab
 local CharTab, CharScroll, FlyTab, FlyScroll, LagTab, SettingsTab, SettingsScroll
 local PTopLayout, NTopLayout, LagTopLayout
@@ -89,7 +90,6 @@ local PTopLayout, NTopLayout, LagTopLayout
 local OrderBoxes = {}
 local tabs, tabBtns = {}, {}
 
--- Declare logical function signatures before UI references them
 local ToggleInvis, TogglePlatform, SetFly, SetUltraRun, SetNoclip, SetUndie, SetUnvoid
 local SetChaosLag, SetCFSpeed, SetSpin, SetESP, SetAimbot, SetAntiAfk
 local ApplyShrink, PerformSearch, GetClosestPlayerToCursor
@@ -147,12 +147,8 @@ local function UpdateInstanceTheme(inst)
     end
 
     TS:Create(inst, TweenInfo.new(0.3, Enum.EasingStyle.Sine), {BackgroundColor3 = targetBg}):Play()
-    
     local stroke = inst:FindFirstChildWhichIsA("UIStroke")
-    if stroke then 
-        TS:Create(stroke, TweenInfo.new(0.3, Enum.EasingStyle.Sine), {Color = targetStroke}):Play() 
-    end
-    
+    if stroke then TS:Create(stroke, TweenInfo.new(0.3, Enum.EasingStyle.Sine), {Color = targetStroke}):Play() end
     if inst:IsA("TextLabel") or inst:IsA("TextButton") or inst:IsA("TextBox") then
         TS:Create(inst, TweenInfo.new(0.3, Enum.EasingStyle.Sine), {TextColor3 = targetText}):Play()
     end
@@ -168,15 +164,12 @@ local function ApplyStyle(inst, strokeColor, bgColor, textColor)
         inst.Font = Enum.Font.GothamBold
         inst.TextScaled = true
         if inst:IsA("TextBox") then
-            if inst.Text == "TextBox" or inst.Text == "" then
-                inst.Text = ""
-            end
+            if inst.Text == "TextBox" or inst.Text == "" then inst.Text = "" end
         end
     end
     
     local corner = inst:FindFirstChild("UICorner") or Instance.new("UICorner", inst)
     corner.CornerRadius = UDim.new(0, 4)
-    
     local stroke = inst:FindFirstChild("UIStroke") or Instance.new("UIStroke", inst)
     stroke.Thickness = inst:IsA("TextLabel") and 1 or 1.5 
     stroke.ApplyStrokeMode = inst:IsA("TextLabel") and Enum.ApplyStrokeMode.Contextual or Enum.ApplyStrokeMode.Border
@@ -192,7 +185,6 @@ local function ApplyStyle(inst, strokeColor, bgColor, textColor)
             TS:Create(stroke, TweenInfo.new(0.2), {Thickness = 1.5}):Play()
         end)
     end
-
     UpdateInstanceTheme(inst)
 end
 
@@ -234,14 +226,12 @@ local function MakeCharStat(name, defaultVal, placeholder, parentContainer)
     btn.Size = UDim2.new(0.65, 0, 1, 0) 
     btn.Text = "SET " .. name 
     ApplyStyle(btn, Color3.fromRGB(255, 255, 0))
-    
     local box = Instance.new("TextBox", row) 
     box.Size = UDim2.new(0.33, 0, 1, 0) 
     box.Position = UDim2.new(0.67, 0, 0, 0) 
     box.Text = tostring(defaultVal) 
     box.PlaceholderText = placeholder 
     ApplyStyle(box, Color3.fromRGB(255, 255, 0))
-    
     return btn, box
 end
 
@@ -251,12 +241,10 @@ local function MakeTab(name, isDefault)
     btn.Text = name
     btn.LayoutOrder = #tabBtns + 1
     ApplyStyle(btn, Color3.fromRGB(0, 150, 255), Color3.fromRGB(15, 15, 20))
-    
     local page = Instance.new("Frame", TabContainer)
     page.Size = UDim2.new(1, 0, 1, 0)
     page.BackgroundTransparency = 1
     page.Visible = isDefault
-    
     table.insert(tabs, page)
     table.insert(tabBtns, btn)
     
@@ -272,7 +260,6 @@ local function MakeTab(name, isDefault)
         btn:SetAttribute("NeonBg", Color3.fromRGB(30, 20, 40))
         UpdateInstanceTheme(btn)
     end)
-    
     if isDefault then 
         btn:SetAttribute("NeonStroke", Color3.fromRGB(255, 0, 255))
         btn:SetAttribute("NeonBg", Color3.fromRGB(30, 20, 40))
@@ -359,7 +346,7 @@ AddServiceConn(UIS.InputChanged:Connect(function(input)
 end))
 
 Title = Instance.new("TextLabel")
-Title.Text = "KIRIK HUB V49"
+Title.Text = "KIRIK HUB V50"
 Title.Size = UDim2.new(1, -60, 0, 25)
 Title.Position = UDim2.new(0, 10, 0, 0)
 Title.TextXAlignment = Enum.TextXAlignment.Left
@@ -430,15 +417,14 @@ end)
 HomeTab = MakeTab("HOME", true)
 WelcomeText = Instance.new("TextLabel", HomeTab)
 WelcomeText.Size = UDim2.new(1, 0, 1, 0)
-WelcomeText.Text = "KIRIK HUB V49\n\n[ NEW FEATURES ]\n- Aimbot (Hold RMB on PC or LOCK Button on Mobile)\n- Anti-AFK (Bypass Idle Kicks)\n- Fully Animated Themes\n- Ghost Invisibility & Chaos Lag"
+WelcomeText.Text = "KIRIK HUB V50\n\n[ V50 FEATURES ]\n- Aimbot Toggle (Smooth Tracking!)\n- Enhanced ESP with Live Stud Distance\n- Anti-AFK (Bypass Idle Kicks)\n- Stable Memory Management"
 WelcomeText.TextWrapped = true
 WelcomeText.TextYAlignment = Enum.TextYAlignment.Top
 ApplyStyle(WelcomeText, Color3.fromRGB(0, 255, 255), Color3.fromRGB(15, 15, 20))
 
 PlayersTab = MakeTab("PLAYERS", false)
-PTopLayout = Instance.new("UIListLayout", PlayersTab)
-PTopLayout.Padding = UDim.new(0, 5)
-AimbotBtn = Instance.new("TextButton", MakeRow(PlayersTab)) AimbotBtn.Size = UDim2.new(1, 0, 1, 0) AimbotBtn.Text = "AIMBOT: OFF (HOLD RMB)" ApplyStyle(AimbotBtn, Color3.fromRGB(255, 50, 50))
+PTopLayout = Instance.new("UIListLayout", PlayersTab) PTopLayout.Padding = UDim.new(0, 5)
+AimbotBtn = Instance.new("TextButton", MakeRow(PlayersTab)) AimbotBtn.Size = UDim2.new(1, 0, 1, 0) AimbotBtn.Text = "AIMBOT: OFF" ApplyStyle(AimbotBtn, Color3.fromRGB(255, 50, 50))
 EspBtn = Instance.new("TextButton", MakeRow(PlayersTab)) EspBtn.Size = UDim2.new(1, 0, 1, 0) EspBtn.Text = "ESP: OFF" ApplyStyle(EspBtn, Color3.fromRGB(0, 255, 100))
 ModeBtn = Instance.new("TextButton", MakeRow(PlayersTab)) ModeBtn.Size = UDim2.new(1, 0, 1, 0) ModeBtn.Text = "LIST MODE: TP" ApplyStyle(ModeBtn, Color3.fromRGB(255, 0, 255))
 AddTpBtn = Instance.new("TextButton", MakeRow(PlayersTab)) AddTpBtn.Size = UDim2.new(1, 0, 1, 0) AddTpBtn.Text = "ADD CUSTOM TP PART" ApplyStyle(AddTpBtn, Color3.fromRGB(0, 150, 255))
@@ -456,13 +442,11 @@ CharTab = MakeTab("CHARACTER", false)
 CharScroll, _ = MakeScrollArea(CharTab)
 InvisBtn = Instance.new("TextButton", MakeRow(CharScroll)) InvisBtn.Size = UDim2.new(1, 0, 1, 0) InvisBtn.Text = "INVISIBILITY (GHOST): OFF" ApplyStyle(InvisBtn, Color3.fromRGB(200, 0, 255))
 UndieBtn = Instance.new("TextButton", MakeRow(CharScroll)) UndieBtn.Size = UDim2.new(1, 0, 1, 0) UndieBtn.Text = "UN-DIE: OFF" ApplyStyle(UndieBtn, Color3.fromRGB(200, 50, 50))
-
 WsBtn, WsBox = MakeCharStat("SPEED", 16, "WS", CharScroll)
 JpBtn, JpBox = MakeCharStat("JUMP", 50, "JP", CharScroll)
 GravBtn, GravBox = MakeCharStat("GRAVITY", 196.2, "GR", CharScroll)
 CFrameSpeedBtn, CFrameSpeedBox = MakeCharStat("CF SPEED", 2, "Spd", CharScroll)
 SpinBtn, SpinBox = MakeCharStat("SPIN", 50, "Spd", CharScroll)
-
 UltraRunBtn = Instance.new("TextButton", MakeRow(CharScroll)) UltraRunBtn.Size = UDim2.new(1, 0, 1, 0) UltraRunBtn.Text = "ULTRA RUN: OFF" ApplyStyle(UltraRunBtn, Color3.fromRGB(255, 80, 0))
 NoclipBtn = Instance.new("TextButton", MakeRow(CharScroll)) NoclipBtn.Size = UDim2.new(1, 0, 1, 0) NoclipBtn.Text = "NOCLIP: OFF" ApplyStyle(NoclipBtn, Color3.fromRGB(0, 255, 200))
 UnviewBtn = Instance.new("TextButton", MakeRow(CharScroll)) UnviewBtn.Size = UDim2.new(1, 0, 1, 0) UnviewBtn.Text = "RESET CAMERA" ApplyStyle(UnviewBtn, Color3.fromRGB(150, 150, 255))
@@ -524,7 +508,7 @@ end
 
 ApplyOrderBtn = Instance.new("TextButton", MakeRow(SettingsScroll)) ApplyOrderBtn.Parent.LayoutOrder = 100 ApplyOrderBtn.Size = UDim2.new(1, 0, 1, 0) ApplyOrderBtn.Text = "APPLY TAB ORDER" ApplyStyle(ApplyOrderBtn, Color3.fromRGB(0, 255, 0))
 
--- ==================== FLOATING MOBILE UI (AIM & OTHERS) ====================
+-- ==================== FLOATING MOBILE UI ====================
 FlyUI = Instance.new("Frame", ScreenGui) FlyUI.Size = UDim2.new(0, 60, 0, 120) FlyUI.Position = UDim2.new(1, -70, 0.5, -60) FlyUI.BackgroundTransparency = 1 FlyUI.Visible = false
 FlyScaler = Instance.new("UIScale", FlyUI)
 FlyUpBtn = Instance.new("TextButton", FlyUI) FlyUpBtn.Size = UDim2.new(1, 0, 0.45, 0) FlyUpBtn.Text = "UP" ApplyStyle(FlyUpBtn, Color3.fromRGB(0, 255, 255)) FlyUpBtn.BackgroundTransparency = 0.5
@@ -534,31 +518,16 @@ PlatUI = Instance.new("Frame", ScreenGui) PlatUI.Size = UDim2.new(0, 60, 0, 50) 
 PlatScaler = Instance.new("UIScale", PlatUI)
 PlatDownBtn = Instance.new("TextButton", PlatUI) PlatDownBtn.Size = UDim2.new(1, 0, 1, 0) PlatDownBtn.Text = "DOWN" ApplyStyle(PlatDownBtn, Color3.fromRGB(0, 255, 255)) PlatDownBtn.BackgroundTransparency = 0.5
 
-AimUI = Instance.new("Frame", ScreenGui) AimUI.Size = UDim2.new(0, 60, 0, 50) AimUI.Position = UDim2.new(1, -70, 0.5, -120) AimUI.BackgroundTransparency = 1 AimUI.Visible = false
-AimScaler = Instance.new("UIScale", AimUI)
-AimBtnMobile = Instance.new("TextButton", AimUI) AimBtnMobile.Size = UDim2.new(1, 0, 1, 0) AimBtnMobile.Text = "LOCK" ApplyStyle(AimBtnMobile, Color3.fromRGB(255, 50, 50)) AimBtnMobile.BackgroundTransparency = 0.5
-
 HookMobileBtn(FlyUpBtn, "up") 
 HookMobileBtn(FlyDownBtn, "down") 
 HookMobileBtn(PlatDownBtn, "plat")
 
-AimBtnMobile.InputBegan:Connect(function(i)
-    if i.UserInputType == Enum.UserInputType.Touch or i.UserInputType == Enum.UserInputType.MouseButton1 then
-        aimPressed = true
-    end
-end)
-AimBtnMobile.InputEnded:Connect(function(i)
-    if i.UserInputType == Enum.UserInputType.Touch or i.UserInputType == Enum.UserInputType.MouseButton1 then
-        aimPressed = false
-    end
-end)
-
 -- ==================== STATE SETTERS LOGIC IMPLEMENTATION ====================
 SetAimbot = function(state) 
     aimbotActive = state 
+    aimTarget = nil -- Reset target when toggled
     ApplyToggleStyle(AimbotBtn, aimbotActive, Color3.fromRGB(255, 50, 50)) 
     if AimbotBtn then AimbotBtn.Text = "AIMBOT: " .. (aimbotActive and "ON" or "OFF") end
-    if AimUI then AimUI.Visible = aimbotActive end
 end
 
 SetAntiAfk = function(state) 
@@ -583,14 +552,58 @@ local function SetPing(state)
     if StatsFrame then StatsFrame.Visible = fpsActive or pingActive end
 end
 
+local function applyESPToPlayer(player)
+    if not espActive then return end
+    local char = player.Character
+    if char and char.Parent then
+        if not char:FindFirstChild("LuxuryESP") then 
+            local hl = Instance.new("Highlight", char) 
+            hl.Name = "LuxuryESP" 
+            hl.FillColor = Color3.fromRGB(0, 255, 255) 
+            hl.OutlineColor = Color3.fromRGB(255, 0, 255) 
+        end
+        local head = char:FindFirstChild("Head") or char:FindFirstChild("HumanoidRootPart")
+        if head and not head:FindFirstChild("LuxuryESP_Text") then
+            local bgui = Instance.new("BillboardGui", head)
+            bgui.Name = "LuxuryESP_Text"
+            bgui.Size = UDim2.new(0, 200, 0, 50)
+            bgui.StudsOffset = Vector3.new(0, 3, 0)
+            bgui.AlwaysOnTop = true
+            
+            local txt = Instance.new("TextLabel", bgui)
+            txt.Size = UDim2.new(1, 0, 1, 0)
+            txt.BackgroundTransparency = 1
+            txt.Text = player.DisplayName
+            txt.TextColor3 = Color3.fromRGB(0, 255, 255)
+            txt.TextStrokeTransparency = 0
+            txt.TextStrokeColor3 = Color3.fromRGB(255, 0, 255)
+            txt.Font = Enum.Font.GothamBold
+            txt.TextScaled = false
+            txt.TextSize = 14
+        end
+    end
+end
+
 SetESP = function(state)
     if espActive == state then return end
     espActive = state 
     ApplyToggleStyle(EspBtn, espActive, Color3.fromRGB(0, 255, 100)) 
     if EspBtn then EspBtn.Text = "ESP: " .. (espActive and "ON" or "OFF") end
-    if not state then 
+    if state then
         for _, p in pairs(Players:GetPlayers()) do 
-            if p.Character and p.Character:FindFirstChild("LuxuryESP") then p.Character.LuxuryESP:Destroy() end 
+            if p ~= LocalPlayer then applyESPToPlayer(p) end 
+        end 
+    else 
+        for _, p in pairs(Players:GetPlayers()) do 
+            if p.Character then
+                local hl = p.Character:FindFirstChild("LuxuryESP")
+                if hl then hl:Destroy() end
+                local head = p.Character:FindFirstChild("Head") or p.Character:FindFirstChild("HumanoidRootPart")
+                if head then
+                    local bgui = head:FindFirstChild("LuxuryESP_Text")
+                    if bgui then bgui:Destroy() end
+                end
+            end 
         end 
     end
 end
@@ -602,9 +615,7 @@ SetUltraRun = function(state)
     if UltraRunBtn then UltraRunBtn.Text = "ULTRA RUN: " .. (ultraRunActive and "ON" or "OFF") end
     if not state then 
         local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") 
-        if hum then 
-            for _, t in pairs(hum:GetPlayingAnimationTracks()) do t:AdjustSpeed(1) end 
-        end 
+        if hum then for _, t in pairs(hum:GetPlayingAnimationTracks()) do t:AdjustSpeed(1) end end 
     end 
 end
 
@@ -1064,6 +1075,25 @@ AddServiceConn(RunService.Heartbeat:Connect(function(dt)
     if undieActive and not invisActive and hum and hum.Health > 0 and hum.Health <= (hum.MaxHealth * 0.25) then ToggleInvis(true) end
     if unvoidActive and not platActive and hrp then if hrp.Position.Y < (workspace.FallenPartsDestroyHeight + 100) then TogglePlatform(true) hrp.Velocity = Vector3.new(0, 50, 0) end end
 
+    -- ESP Distance Updater
+    if espActive and hrp then
+        for _, p in pairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer and p.Character then
+                local tHead = p.Character:FindFirstChild("Head") or p.Character:FindFirstChild("HumanoidRootPart")
+                if tHead then
+                    local bgui = tHead:FindFirstChild("LuxuryESP_Text")
+                    if bgui then
+                        local txt = bgui:FindFirstChildOfClass("TextLabel")
+                        if txt then
+                            local dist = math.floor((tHead.Position - hrp.Position).Magnitude)
+                            txt.Text = string.format("%s\n[%d STUDS]", p.DisplayName, dist)
+                        end
+                    end
+                end
+            end
+        end
+    end
+
     if hrp and hum and hum.Health > 0 then
         if cfSpeedActive and hum.MoveDirection.Magnitude > 0 then 
             local mult = 2
@@ -1091,12 +1121,18 @@ AddServiceConn(RunService.Heartbeat:Connect(function(dt)
 end))
 
 AddServiceConn(RunService.RenderStepped:Connect(function()
-    if aimbotActive and (UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) or aimPressed) then
-        local targetPart = GetClosestPlayerToCursor()
-        local camera = workspace.CurrentCamera
-        if targetPart and camera then
-            camera.CFrame = CFrame.lookAt(camera.CFrame.Position, targetPart.Position)
+    -- Smooth Aimbot Camera Update Hook
+    if aimbotActive then
+        if not aimTarget or not aimTarget.Parent or not aimTarget:FindFirstChild("Humanoid") or aimTarget.Humanoid.Health <= 0 then
+            aimTarget = GetClosestPlayerToCursor()
         end
+        local camera = workspace.CurrentCamera
+        if aimTarget and camera then
+            local lookCFrame = CFrame.lookAt(camera.CFrame.Position, aimTarget.Position)
+            camera.CFrame = camera.CFrame:Lerp(lookCFrame, 0.15) -- Smooth aiming via Lerp, stops screen tearing
+        end
+    else
+        aimTarget = nil
     end
 end))
 
@@ -1121,18 +1157,19 @@ AddServiceConn(UIS.InputBegan:Connect(function(input, gpe)
     end
 end))
 
-local function applyESP(char)
-    if not espActive then return end task.wait(0.5)
-    if char and char.Parent and not char:FindFirstChild("LuxuryESP") then local hl = Instance.new("Highlight", char) hl.Name = "LuxuryESP" hl.FillColor = Color3.fromRGB(0, 255, 255) hl.OutlineColor = Color3.fromRGB(255, 0, 255) end
-end
-AddServiceConn(Players.PlayerAdded:Connect(function(p) AddServiceConn(p.CharacterAdded:Connect(applyESP)) updatePlayerList() end))
+AddServiceConn(Players.PlayerAdded:Connect(function(p) 
+    AddServiceConn(p.CharacterAdded:Connect(function(char) if espActive then task.wait(0.5) applyESPToPlayer(p) end end)) 
+    updatePlayerList() 
+end))
 AddServiceConn(Players.PlayerRemoving:Connect(updatePlayerList))
-for _, p in pairs(Players:GetPlayers()) do AddServiceConn(p.CharacterAdded:Connect(applyESP)) end
+for _, p in pairs(Players:GetPlayers()) do 
+    AddServiceConn(p.CharacterAdded:Connect(function(char) if espActive then task.wait(0.5) applyESPToPlayer(p) end end)) 
+end
 
 local lastActive = tick()
 local function checkUIInteraction(input)
     local pos = input.Position
-    for _, frame in ipairs({MainFrame, FlyUI, PlatUI, AimUI}) do
+    for _, frame in ipairs({MainFrame, FlyUI, PlatUI}) do
         if frame and frame.Visible then
             local ax, ay, sx, sy = frame.AbsolutePosition.X, frame.AbsolutePosition.Y, frame.AbsoluteSize.X, frame.AbsoluteSize.Y
             if pos.X >= ax and pos.X <= ax + sx and pos.Y >= ay and pos.Y <= ay + sy then lastActive = tick() end
@@ -1144,7 +1181,7 @@ AddServiceConn(UIS.InputChanged:Connect(function(input) if input.UserInputType =
 
 local function ForceCleanup()
     SetESP(false) SetUltraRun(false) SetNoclip(false) SetChaosLag(false) SetSpin(false) SetCFSpeed(false) SetFly(false) TogglePlatform(false) ToggleInvis(false) SetAimbot(false) SetAntiAfk(false)
-    undieActive, unvoidActive = false, false if FlyUI then FlyUI.Visible = false end if PlatUI then PlatUI.Visible = false end if AimUI then AimUI.Visible = false end
+    undieActive, unvoidActive = false, false if FlyUI then FlyUI.Visible = false end if PlatUI then PlatUI.Visible = false end
     stopInfTp() pcall(function() workspace.Gravity = 196.2 end)
     
     local char = LocalPlayer.Character local hum = char and char:FindFirstChild("Humanoid") local hrp = char and char:FindFirstChild("HumanoidRootPart")
@@ -1152,7 +1189,13 @@ local function ForceCleanup()
     if hum then hum.PlatformStand = false hum.WalkSpeed = 16 hum.UseJumpPower = true hum.JumpPower = 50 for _, track in pairs(hum:GetPlayingAnimationTracks()) do pcall(function() track:AdjustSpeed(1) end) end pcall(function() workspace.CurrentCamera.CameraSubject = hum end) end
     
     for _, conn in ipairs(ServiceConnections) do if conn.Connected then conn:Disconnect() end end
-    for _, p in pairs(Players:GetPlayers()) do if p.Character and p.Character:FindFirstChild("LuxuryESP") then p.Character.LuxuryESP:Destroy() end end
+    for _, p in pairs(Players:GetPlayers()) do 
+        if p.Character then 
+            local hl = p.Character:FindFirstChild("LuxuryESP") if hl then hl:Destroy() end 
+            local head = p.Character:FindFirstChild("Head") or p.Character:FindFirstChild("HumanoidRootPart")
+            if head then local bgui = head:FindFirstChild("LuxuryESP_Text") if bgui then bgui:Destroy() end end
+        end 
+    end
 end
 
 task.spawn(function()
