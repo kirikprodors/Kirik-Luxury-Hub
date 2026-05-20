@@ -1,23 +1,19 @@
-print("[KIRIK HUB DEBUG]: 1. Инициализация скрипта запущена.")
-
--- Wait for LocalPlayer to safely initialize
+-- Wait for LocalPlayer to safely initialize (Crucial for mobile loadstring execution)
 local Players = game:GetService("Players")
 while not Players.LocalPlayer do
     task.wait()
 end
 local LocalPlayer = Players.LocalPlayer
-print("[KIRIK HUB DEBUG]: 2. Игрок " .. tostring(LocalPlayer.Name) .. " успешно инициализирован.")
 
 local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local TS = game:GetService("TweenService")
 
--- Safe VirtualUser fetch
+-- Safe VirtualUser fetch (Some mobile executors sandbox this service)
 local VirtualUser = nil
 pcall(function()
     VirtualUser = game:GetService("VirtualUser")
 end)
-print("[KIRIK HUB DEBUG]: 3. Вспомогательные системные сервисы подключены.")
 
 -- ==================== FORWARD DECLARATIONS (SCOPE SECURITY) ====================
 -- Pre-declaring all variables to prevent any Lua scope resolution or shadowed variable crashes
@@ -37,57 +33,35 @@ local DragHandle, Title, MinBtn, CloseBtn, WelcomeText, HomeTab, PlayersTab, Npc
 local CharTab, CharScroll, FlyTab, FlyScroll, LagTab, SettingsTab, SettingsScroll
 local PTopLayout, NTopLayout, LagTopLayout
 
--- Unified upvalues and states to guarantee 100% scope alignment
-local espActive, ultraRunActive, noclipActive = false, false, false
-local invisActive, undieActive, platActive, unvoidActive = false, false, false, false
-local flying, infStabActive, cfSpeedActive, spinActive = false, false, false, false
-local fpsActive, pingActive = false, false
-local aimbotActive, antiAfkActive = false, false
-local aimPressed, upPressed, downPressed, platDownPressed = false, false, false, false
-
+local OrderBoxes = {}
+local tabs, tabBtns = {}, {}
+local ServiceConnections = {}
+local lagChain = {{anchor = 0.2, free = 0.1}}
 local listMode, npcListMode = "TP", "TP"
 local cachedNPCs, savedSpots = {}, {}
 local spotCount = 0
 local lagState, lagTimer, lagIndex = "FREE", 0, 1
 local currentInfTpTarget, infTpConn, flyConn, platConn = nil, nil, nil, nil
+local upPressed, downPressed, platDownPressed, aimPressed = false, false, false, false
 local realChar, fakeChar, isStriking, platPart, platFails, platFailTime = nil, nil, false, nil, 0, 0
-local lagChain = {{anchor = 0.2, free = 0.1}}
-
-local OrderBoxes = {}
-local tabs, tabBtns = {}, {}
-local ServiceConnections = {}
 
 local function AddServiceConn(conn)
     table.insert(ServiceConnections, conn)
     return conn
 end
 
--- Declare logical function signatures before UI references them
-local ToggleInvis, TogglePlatform, SetFly, SetUltraRun, SetNoclip, SetUndie, SetUnvoid
-local SetChaosLag, SetCFSpeed, SetSpin, SetESP, SetAimbot, SetAntiAfk
-local ApplyShrink, PerformSearch, GetClosestPlayerToCursor
-local updateLagList, updatePlayerList, updateNpcList
-
-print("[KIRIK HUB DEBUG]: 4. Область видимости и сигнатуры функций успешно подготовлены.")
-
 -- ==================== OLD THREAD CLEANUP ====================
 local function CleanOldInstances()
     pcall(function()
         local cg = game:GetService("CoreGui")
         local old = cg:FindFirstChild("KirikLuxuryHub")
-        if old then 
-            old:Destroy() 
-            print("[KIRIK HUB DEBUG]: Очищена старая копия хаба из CoreGui.")
-        end
+        if old then old:Destroy() end
     end)
     pcall(function()
         local pg = LocalPlayer:FindFirstChildOfClass("PlayerGui")
         if pg then
             local old = pg:FindFirstChild("KirikLuxuryHub")
-            if old then 
-                old:Destroy() 
-                print("[KIRIK HUB DEBUG]: Очищена старая копия хаба из PlayerGui.")
-            end
+            if old then old:Destroy() end
         end
     end)
 end
@@ -100,99 +74,135 @@ local function setClipboardSafely(text)
         local success = pcall(function() setclip(text) end)
         return success
     end
-    -- Fallback for standard studio or strict sandboxes
-    print("\n=== [KIRIK HUB SAVE CODE] ===")
-    print(text)
-    print("==============================\n")
-    return "studio"
+    return false
 end
 
--- ==================== THEME SYSTEM ====================
-local currentTheme = "NEON"
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "KirikLuxuryHub"
-ScreenGui.ResetOnSpawn = false
-
-local function UpdateInstanceTheme(inst)
-    if not inst:GetAttribute("NeonStroke") then return end
-    local targetBg = inst:GetAttribute("NeonBg")
-    local targetStroke = inst:GetAttribute("NeonStroke")
-    local targetText = inst:GetAttribute("NeonText")
-    
-    if currentTheme == "HACKER" then
-        targetBg = Color3.fromRGB(5, 10, 5)
-        targetStroke = Color3.fromRGB(0, 255, 0)
-        targetText = Color3.fromRGB(0, 255, 0)
-    elseif currentTheme == "B&W" then
-        targetBg = Color3.fromRGB(15, 15, 15)
-        targetStroke = Color3.fromRGB(255, 255, 255)
-        targetText = Color3.fromRGB(255, 255, 255)
-    end
-
-    TS:Create(inst, TweenInfo.new(0.3, Enum.EasingStyle.Sine), {BackgroundColor3 = targetBg}):Play()
-    
-    local stroke = inst:FindFirstChildWhichIsA("UIStroke")
-    if stroke then 
-        TS:Create(stroke, TweenInfo.new(0.3, Enum.EasingStyle.Sine), {Color = targetStroke}):Play() 
-    end
-    
-    if inst:IsA("TextLabel") or inst:IsA("TextButton") or inst:IsA("TextBox") then
-        TS:Create(inst, TweenInfo.new(0.3, Enum.EasingStyle.Sine), {TextColor3 = targetText}):Play()
-    end
+-- ==================== BASE64 SYSTEM ====================
+local b64chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+local function B64Encode(data)
+    return ((data:gsub('.', function(x)
+        local r, b = '', x:byte()
+        for i = 8, 1, -1 do r = r .. (b % 2^i - b % 2^(i-1) > 0 and '1' or '0') end
+        return r;
+    end)..'0000'):gsub('%d%d%d?%d?%d?%d?', function(x)
+        if (#x < 6) then return '' end
+        local c = 0
+        for i = 1, 6 do c = c + (x:sub(i,i) == '1' and 2^(6-i) or 0) end
+        return b64chars:sub(c+1, c+1)
+    end)..({ '', '==', '=' })[#data%3+1])
 end
 
-local function ApplyStyle(inst, strokeColor, bgColor, textColor)
-    inst:SetAttribute("NeonStroke", strokeColor or Color3.fromRGB(0, 255, 255))
-    inst:SetAttribute("NeonBg", bgColor or Color3.fromRGB(15, 15, 20))
-    inst:SetAttribute("NeonText", textColor or Color3.new(1, 1, 1))
-    
-    inst.BorderSizePixel = 0
-    if inst:IsA("TextButton") or inst:IsA("TextBox") or inst:IsA("TextLabel") then
-        inst.Font = Enum.Font.GothamBold
-        inst.TextScaled = true
-        if inst:IsA("TextBox") then
-            -- Safe Clean: Only erase default Roblox text, preserve set numbers or templates
-            if inst.Text == "TextBox" or inst.Text == "" then
-                inst.Text = ""
-            end
+local function B64Decode(data)
+    data = string.gsub(data, '[^'..b64chars..'=]', '')
+    return (data:gsub('.', function(x)
+        if (x == '=') then return '' end
+        local r, f = '', (b64chars:find(x)-1)
+        for i = 6, 1, -1 do r = r .. (f % 2^i - f % 2^(i-1) > 0 and '1' or '0') end
+        return r;
+    end):gsub('%d%d%d?%d?%d?%d?%d?%d?', function(x)
+        if (#x ~= 8) then return '' end
+        local c = 0
+        for i = 1, 8 do c = c + (x:sub(i,i) == '1' and 2^(8-i) or 0) end
+        return string.char(c)
+    end))
+end
+
+-- ==================== UI HELPERS ====================
+local function MakeScrollArea(parent)
+    local scroll = Instance.new("ScrollingFrame", parent)
+    scroll.Size = UDim2.new(1, 0, 1, 0)
+    scroll.BackgroundTransparency = 1
+    scroll.ScrollBarThickness = 3
+    scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    local layout = Instance.new("UIListLayout", scroll)
+    layout.Padding = UDim.new(0, 5)
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+    return scroll, layout
+end
+
+local function MakeRow(parent, height)
+    local row = Instance.new("Frame", parent)
+    row.Size = UDim2.new(1, -5, 0, height or 25)
+    row.BackgroundTransparency = 1
+    return row
+end
+
+local function HookMobileBtn(btn, stateVarName)
+    btn.InputBegan:Connect(function(i) 
+        if i.UserInputType == Enum.UserInputType.Touch or i.UserInputType == Enum.UserInputType.MouseButton1 then 
+            if stateVarName == "up" then upPressed = true 
+            elseif stateVarName == "down" then downPressed = true 
+            else platDownPressed = true end 
+        end 
+    end)
+    btn.InputEnded:Connect(function(i) 
+        if i.UserInputType == Enum.UserInputType.Touch or i.UserInputType == Enum.UserInputType.MouseButton1 then 
+            if stateVarName == "up" then upPressed = false 
+            elseif stateVarName == "down" then downPressed = false 
+            else platDownPressed = false end 
+        end 
+    end)
+end
+
+local function ShowFailsafeMessage()
+    local msg = Instance.new("TextLabel", ScreenGui)
+    msg.Size = UDim2.new(1, 0, 0, 50)
+    msg.Position = UDim2.new(0, 0, 0.5, -25)
+    msg.BackgroundTransparency = 1
+    msg.Text = "Sorry, we were trying to keep you from falling."
+    msg.TextColor3 = Color3.fromRGB(255, 50, 50)
+    msg.Font = Enum.Font.GothamBold
+    msg.TextScaled = true
+    msg.ZIndex = 1000
+    local stroke = Instance.new("UIStroke", msg)
+    stroke.Thickness = 2
+    stroke.Color = Color3.new(0, 0, 0)
+    task.spawn(function()
+        task.wait(3)
+        for i = 0, 1, 0.1 do 
+            msg.TextTransparency = i 
+            stroke.Transparency = i 
+            task.wait(0.05) 
         end
-    end
+        msg:Destroy()
+    end)
+end
+
+local function MakeTab(name, isDefault)
+    local btn = Instance.new("TextButton", Sidebar)
+    btn.Size = UDim2.new(1, 0, 0, 25)
+    btn.Text = name
+    btn.LayoutOrder = #tabBtns + 1
+    ApplyStyle(btn, Color3.fromRGB(0, 150, 255), Color3.fromRGB(15, 15, 20))
     
-    local corner = inst:FindFirstChild("UICorner") or Instance.new("UICorner", inst)
-    corner.CornerRadius = UDim.new(0, 4)
+    local page = Instance.new("Frame", TabContainer)
+    page.Size = UDim2.new(1, 0, 1, 0)
+    page.BackgroundTransparency = 1
+    page.Visible = isDefault
     
-    local stroke = inst:FindFirstChild("UIStroke") or Instance.new("UIStroke", inst)
-    stroke.Thickness = inst:IsA("TextLabel") and 1 or 1.5 
-    stroke.ApplyStrokeMode = inst:IsA("TextLabel") and Enum.ApplyStrokeMode.Contextual or Enum.ApplyStrokeMode.Border
-
-    if inst:IsA("TextButton") and not inst:GetAttribute("HoverHooked") then
-        inst:SetAttribute("HoverHooked", true)
-        inst.MouseEnter:Connect(function()
-            TS:Create(inst, TweenInfo.new(0.2), {BackgroundTransparency = 0.15}):Play()
-            TS:Create(stroke, TweenInfo.new(0.2), {Thickness = 2.5}):Play()
-        end)
-        inst.MouseLeave:Connect(function()
-            TS:Create(inst, TweenInfo.new(0.2), {BackgroundTransparency = 0}):Play()
-            TS:Create(stroke, TweenInfo.new(0.2), {Thickness = 1.5}):Play()
-        end)
+    table.insert(tabs, page)
+    table.insert(tabBtns, btn)
+    
+    btn.MouseButton1Click:Connect(function()
+        for _, t in ipairs(tabs) do t.Visible = false end
+        for _, b in ipairs(tabBtns) do 
+            b:SetAttribute("NeonStroke", Color3.fromRGB(0, 150, 255))
+            b:SetAttribute("NeonBg", Color3.fromRGB(15, 15, 20))
+            UpdateInstanceTheme(b)
+        end
+        page.Visible = true
+        btn:SetAttribute("NeonStroke", Color3.fromRGB(255, 0, 255))
+        btn:SetAttribute("NeonBg", Color3.fromRGB(30, 20, 40))
+        UpdateInstanceTheme(btn)
+    end)
+    
+    if isDefault then 
+        btn:SetAttribute("NeonStroke", Color3.fromRGB(255, 0, 255))
+        btn:SetAttribute("NeonBg", Color3.fromRGB(30, 20, 40))
+        UpdateInstanceTheme(btn)
     end
-
-    UpdateInstanceTheme(inst)
+    return page
 end
-
-local function SetTheme(themeName)
-    currentTheme = themeName
-    for _, inst in pairs(ScreenGui:GetDescendants()) do UpdateInstanceTheme(inst) end
-    UpdateInstanceTheme(ScreenGui)
-end
-
-local function ApplyToggleStyle(btn, state, defColor)
-    if not btn then return end
-    btn:SetAttribute("NeonStroke", state and Color3.fromRGB(0, 255, 0) or defColor)
-    UpdateInstanceTheme(btn)
-end
-
-print("[KIRIK HUB DEBUG]: 5. Системы визуального оформления (Темы/Стили) успешно запущены.")
 
 -- ==================== STATE SETTERS & LOGIC ====================
 SetAimbot = function(state) 
@@ -615,60 +625,6 @@ PerformSearch = function()
     end
 end
 
--- Helper functions for Mobile Hook
-local function HookMobileBtn(btn, stateVarName)
-    btn.InputBegan:Connect(function(i) 
-        if i.UserInputType == Enum.UserInputType.Touch or i.UserInputType == Enum.UserInputType.MouseButton1 then 
-            if stateVarName == "up" then upPressed = true 
-            elseif stateVarName == "down" then downPressed = true 
-            else platDownPressed = true end 
-        end 
-    end)
-    btn.InputEnded:Connect(function(i) 
-        if i.UserInputType == Enum.UserInputType.Touch or i.UserInputType == Enum.UserInputType.MouseButton1 then 
-            if stateVarName == "up" then upPressed = false 
-            elseif stateVarName == "down" then downPressed = false 
-            else platDownPressed = false end 
-        end 
-    end)
-end
-
-local function MakeTab(name, isDefault)
-    local btn = Instance.new("TextButton", Sidebar)
-    btn.Size = UDim2.new(1, 0, 0, 25)
-    btn.Text = name
-    btn.LayoutOrder = #tabBtns + 1
-    ApplyStyle(btn, Color3.fromRGB(0, 150, 255), Color3.fromRGB(15, 15, 20))
-    
-    local page = Instance.new("Frame", TabContainer)
-    page.Size = UDim2.new(1, 0, 1, 0)
-    page.BackgroundTransparency = 1
-    page.Visible = isDefault
-    
-    table.insert(tabs, page)
-    table.insert(tabBtns, btn)
-    
-    btn.MouseButton1Click:Connect(function()
-        for _, t in ipairs(tabs) do t.Visible = false end
-        for _, b in ipairs(tabBtns) do 
-            b:SetAttribute("NeonStroke", Color3.fromRGB(0, 150, 255))
-            b:SetAttribute("NeonBg", Color3.fromRGB(15, 15, 20))
-            UpdateInstanceTheme(b)
-        end
-        page.Visible = true
-        btn:SetAttribute("NeonStroke", Color3.fromRGB(255, 0, 255))
-        btn:SetAttribute("NeonBg", Color3.fromRGB(30, 20, 40))
-        UpdateInstanceTheme(btn)
-    end)
-    
-    if isDefault then 
-        btn:SetAttribute("NeonStroke", Color3.fromRGB(255, 0, 255))
-        btn:SetAttribute("NeonBg", Color3.fromRGB(30, 20, 40))
-        UpdateInstanceTheme(btn)
-    end
-    return page
-end
-
 updateLagList = function()
     if not LagList then return end
     for _, c in pairs(LagList:GetChildren()) do if c:IsA("Frame") then c:Destroy() end end
@@ -677,14 +633,13 @@ updateLagList = function()
         local aBox = Instance.new("TextBox", row) aBox.Size = UDim2.new(0.38, 0, 1, 0) aBox.Text = tostring(preset.anchor) ApplyStyle(aBox, Color3.fromRGB(255, 0, 150))
         local fBox = Instance.new("TextBox", row) fBox.Size = UDim2.new(0.38, 0, 1, 0) fBox.Position = UDim2.new(0.42, 0, 0, 0) fBox.Text = tostring(preset.free) ApplyStyle(fBox, Color3.fromRGB(0, 255, 150))
         local dBtn = Instance.new("TextButton", row) dBtn.Size = UDim2.new(0.16, 0, 1, 0) dBtn.Position = UDim2.new(0.84, 0, 0, 0) dBtn.Text = "-" ApplyStyle(dBtn, Color3.fromRGB(255, 0, 0))
+        
         aBox.FocusLost:Connect(function() preset.anchor = math.max(0, tonumber(aBox.Text) or preset.anchor) aBox.Text = tostring(preset.anchor) end)
         fBox.FocusLost:Connect(function() preset.free = math.max(0, tonumber(fBox.Text) or preset.free) fBox.Text = tostring(preset.free) end)
         dBtn.MouseButton1Click:Connect(function() table.remove(lagChain, i) updateLagList() end)
     end
     PerformSearch()
 end
-
-print("[KIRIK HUB DEBUG]: 6. Логические функции и обработчики лагов инициализированы.")
 
 -- ==================== UI CONSTRUCTION ====================
 MainFrame = Instance.new("Frame")
@@ -814,8 +769,6 @@ MinBtn.MouseButton1Click:Connect(function()
     end)
 end)
 
-print("[KIRIK HUB DEBUG]: 7. Основной контейнер UI, боковое меню и логика сворачивания созданы.")
-
 -- ==================== UI CONSTRUCTION (TABS) ====================
 HomeTab = MakeTab("HOME", true)
 WelcomeText = Instance.new("TextLabel", HomeTab)
@@ -824,7 +777,6 @@ WelcomeText.Text = "KIRIK HUB V49\n\n[ NEW FEATURES ]\n- Aimbot (Hold RMB on PC 
 WelcomeText.TextWrapped = true
 WelcomeText.TextYAlignment = Enum.TextYAlignment.Top
 ApplyStyle(WelcomeText, Color3.fromRGB(0, 255, 255), Color3.fromRGB(15, 15, 20))
-print("[KIRIK HUB DEBUG]: 8. Вкладка HOME создана.")
 
 PlayersTab = MakeTab("PLAYERS", false)
 PTopLayout = Instance.new("UIListLayout", PlayersTab)
@@ -835,7 +787,6 @@ ModeBtn = Instance.new("TextButton", MakeRow(PlayersTab)) ModeBtn.Size = UDim2.n
 AddTpBtn = Instance.new("TextButton", MakeRow(PlayersTab)) AddTpBtn.Size = UDim2.new(1, 0, 1, 0) AddTpBtn.Text = "ADD CUSTOM TP PART" ApplyStyle(AddTpBtn, Color3.fromRGB(0, 150, 255))
 PlayerListWrapper = Instance.new("Frame", PlayersTab) PlayerListWrapper.Size = UDim2.new(1, 0, 1, -125) PlayerListWrapper.BackgroundTransparency = 1
 PlayerList, _ = MakeScrollArea(PlayerListWrapper)
-print("[KIRIK HUB DEBUG]: 9. Вкладка PLAYERS создана.")
 
 NpcsTab = MakeTab("NPCs", false)
 NTopLayout = Instance.new("UIListLayout", NpcsTab) NTopLayout.Padding = UDim.new(0, 5)
@@ -843,7 +794,6 @@ NpcModeBtn = Instance.new("TextButton", MakeRow(NpcsTab)) NpcModeBtn.Size = UDim
 NpcRefreshBtn = Instance.new("TextButton", MakeRow(NpcsTab)) NpcRefreshBtn.Size = UDim2.new(1, 0, 1, 0) NpcRefreshBtn.Text = "REFRESH NPCs" ApplyStyle(NpcRefreshBtn, Color3.fromRGB(0, 255, 100))
 NpcListWrapper = Instance.new("Frame", NpcsTab) NpcListWrapper.Size = UDim2.new(1, 0, 1, -65) NpcListWrapper.BackgroundTransparency = 1
 NpcList, _ = MakeScrollArea(NpcListWrapper)
-print("[KIRIK HUB DEBUG]: 10. Вкладка NPCs создана.")
 
 CharTab = MakeTab("CHARACTER", false)
 CharScroll, _ = MakeScrollArea(CharTab)
@@ -865,7 +815,6 @@ SpinBtn, SpinBox = MakeCharStat("SPIN", 50, "Spd")
 UltraRunBtn = Instance.new("TextButton", MakeRow(CharScroll)) UltraRunBtn.Size = UDim2.new(1, 0, 1, 0) UltraRunBtn.Text = "ULTRA RUN: OFF" ApplyStyle(UltraRunBtn, Color3.fromRGB(255, 80, 0))
 NoclipBtn = Instance.new("TextButton", MakeRow(CharScroll)) NoclipBtn.Size = UDim2.new(1, 0, 1, 0) NoclipBtn.Text = "NOCLIP: OFF" ApplyStyle(NoclipBtn, Color3.fromRGB(0, 255, 200))
 UnviewBtn = Instance.new("TextButton", MakeRow(CharScroll)) UnviewBtn.Size = UDim2.new(1, 0, 1, 0) UnviewBtn.Text = "RESET CAMERA" ApplyStyle(UnviewBtn, Color3.fromRGB(150, 150, 255))
-print("[KIRIK HUB DEBUG]: 11. Вкладка CHARACTER создана.")
 
 FlyTab = MakeTab("FLIGHT", false)
 FlyScroll, _ = MakeScrollArea(FlyTab)
@@ -874,7 +823,6 @@ FlyBtn = Instance.new("TextButton", FlyRow) FlyBtn.Size = UDim2.new(0.65, 0, 1, 
 FlySpeedBox = Instance.new("TextBox", FlyRow) FlySpeedBox.Size = UDim2.new(0.33, 0, 1, 0) FlySpeedBox.Position = UDim2.new(0.67, 0, 0, 0) FlySpeedBox.Text = "50" ApplyStyle(FlySpeedBox, Color3.fromRGB(255, 0, 255))
 PlatformBtn = Instance.new("TextButton", MakeRow(FlyScroll)) PlatformBtn.Size = UDim2.new(1, 0, 1, 0) PlatformBtn.Text = "PLATFORM: OFF" ApplyStyle(PlatformBtn, Color3.fromRGB(0, 150, 255))
 UnvoidBtn = Instance.new("TextButton", MakeRow(FlyScroll)) UnvoidBtn.Size = UDim2.new(1, 0, 1, 0) UnvoidBtn.Text = "UN-VOID: OFF" ApplyStyle(UnvoidBtn, Color3.fromRGB(50, 50, 255))
-print("[KIRIK HUB DEBUG]: 12. Вкладка FLIGHT создана.")
 
 LagTab = MakeTab("LAG", false)
 LagTopLayout = Instance.new("UIListLayout", LagTab) LagTopLayout.Padding = UDim.new(0, 5)
@@ -883,7 +831,6 @@ InfStabBtn = Instance.new("TextButton", MakeRow(LagTab)) InfStabBtn.Size = UDim2
 AddLagBtn = Instance.new("TextButton", MakeRow(LagTab)) AddLagBtn.Size = UDim2.new(1, 0, 1, 0) AddLagBtn.Text = "+ ADD NEW LAG TO CHAIN" ApplyStyle(AddLagBtn, Color3.fromRGB(0, 255, 0))
 LagListWrapper = Instance.new("Frame", LagTab) LagListWrapper.Size = UDim2.new(1, 0, 1, -95) LagListWrapper.BackgroundTransparency = 1
 LagList, _ = MakeScrollArea(LagListWrapper)
-print("[KIRIK HUB DEBUG]: 13. Вкладка LAG создана.")
 
 SettingsTab = MakeTab("SETTINGS", false)
 SettingsScroll, _ = MakeScrollArea(SettingsTab)
@@ -925,7 +872,6 @@ for i, tBtn in ipairs(tabBtns) do
 end
 
 ApplyOrderBtn = Instance.new("TextButton", MakeRow(SettingsScroll)) ApplyOrderBtn.Parent.LayoutOrder = 100 ApplyOrderBtn.Size = UDim2.new(1, 0, 1, 0) ApplyOrderBtn.Text = "APPLY TAB ORDER" ApplyStyle(ApplyOrderBtn, Color3.fromRGB(0, 255, 0))
-print("[KIRIK HUB DEBUG]: 14. Вкладка SETTINGS создана.")
 
 -- ==================== FLOATING MOBILE UI (AIM & OTHERS) ====================
 FlyUI = Instance.new("Frame", ScreenGui) FlyUI.Size = UDim2.new(0, 60, 0, 120) FlyUI.Position = UDim2.new(1, -70, 0.5, -60) FlyUI.BackgroundTransparency = 1 FlyUI.Visible = false
@@ -957,8 +903,6 @@ AimBtnMobile.InputEnded:Connect(function(i)
     end
 end)
 
-print("[KIRIK HUB DEBUG]: 15. Мобильные плавающие оверлеи FLY/PLAT/AIM созданы.")
-
 -- ==================== EVENTS & CONNECTIONS ====================
 AddServiceConn(SearchBox:GetPropertyChangedSignal("Text"):Connect(function() PerformSearch() end))
 ShrinkBox.FocusLost:Connect(function() ApplyShrink() end)
@@ -981,7 +925,7 @@ CFrameSpeedBtn.MouseButton1Click:Connect(function() SetCFSpeed(not cfSpeedActive
 SpinBtn.MouseButton1Click:Connect(function() SetSpin(not spinActive) end)
 
 WsBtn.MouseButton1Click:Connect(function() applyWS() end) 
-JpBtn.MouseButton1Click:Connect(function() pcall(applyJP) end) 
+JpBtn.MouseButton1Click:Connect(function() applyJP() end) 
 GravBtn.MouseButton1Click:Connect(function() applyGrav() end)
 
 local function AssignParent()
@@ -990,25 +934,11 @@ local function AssignParent()
     
     if coreGui then
         local ok = pcall(function() ScreenGui.Parent = coreGui end)
-        if ok then
-            print("[KIRIK HUB DEBUG]: Успешно внедрено в CoreGui.")
-        else
-            local pg = LocalPlayer:WaitForChild("PlayerGui", 15)
-            if pg then
-                ScreenGui.Parent = pg
-                print("[KIRIK HUB DEBUG]: CoreGui защищен. Успешно внедрено в PlayerGui.")
-            else
-                warn("[KIRIK HUB DEBUG] ОШИБКА: PlayerGui не найден после ожидания.")
-            end
+        if not ok then
+            ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui", 15)
         end
     else
-        local pg = LocalPlayer:WaitForChild("PlayerGui", 15)
-        if pg then
-            ScreenGui.Parent = pg
-            print("[KIRIK HUB DEBUG]: CoreGui недоступен. Успешно внедрено в PlayerGui.")
-        else
-            warn("[KIRIK HUB DEBUG] ОШИБКА: PlayerGui не найден после ожидания.")
-        end
+        ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui", 15)
     end
 end
 
@@ -1037,13 +967,7 @@ GenSaveBtn.MouseButton1Click:Connect(function()
     local rawStr = string.format("%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s", currentTheme, ShrinkBox.Text, AfkBox.Text, WsBox.Text, JpBox.Text, GravBox.Text, CFrameSpeedBox.Text, SpinBox.Text, tgs, tabsOrderStr, lagStr)
     local saveCode = "HUB-Save-" .. B64Encode(rawStr)
     local success = setClipboardSafely(saveCode)
-    if success == "studio" then
-        GenSaveBtn.Text = "PRINTED TO STUDIO OUTPUT!"
-    elseif success then 
-        GenSaveBtn.Text = "COPIED TO CLIPBOARD!" 
-    else 
-        GenSaveBtn.Text = "ERROR: CLIPBOARD UNSUPPORTED" 
-    end
+    if success then GenSaveBtn.Text = "COPIED TO CLIPBOARD!" else GenSaveBtn.Text = "ERROR: CLIPBOARD UNSUPPORTED" end
     task.delay(2, function() GenSaveBtn.Text = "GENERATE SAVE CODE" end)
 end)
 
@@ -1058,18 +982,7 @@ LoadSaveBtn.MouseButton1Click:Connect(function()
             SetESP(t:sub(1,1)=="1") SetUltraRun(t:sub(2,2)=="1") SetNoclip(t:sub(3,3)=="1") ToggleInvis(t:sub(4,4)=="1") SetUndie(t:sub(5,5)=="1") SetFly(t:sub(6,6)=="1") TogglePlatform(t:sub(7,7)=="1") SetUnvoid(t:sub(8,8)=="1") SetChaosLag(t:sub(9,9)=="1") SetCFSpeed(t:sub(10,10)=="1") SetSpin(t:sub(11,11)=="1") SetFPS(t:sub(12,12)=="1") SetPing(t:sub(13,13)=="1")
             if #t >= 15 then SetAimbot(t:sub(14,14)=="1") SetAntiAfk(t:sub(15,15)=="1") end
             local tOrd = string.split(p[10], ",") for i, v in ipairs(tOrd) do if OrderBoxes[i] then OrderBoxes[i].box.Text = v end end ApplyTabOrders()
-            
-            -- FIX: Do not redeclare as 'local' inside pcall block! Re-assign top value.
-            lagChain = {} 
-            if p[11] ~= "" then 
-                for _, pr in ipairs(string.split(p[11], ",")) do 
-                    local vals = string.split(pr, ":") 
-                    table.insert(lagChain, {anchor=tonumber(vals[1]) or 0.2, free=tonumber(vals[2]) or 0.1}) 
-                end 
-            else 
-                lagChain = {{anchor=0.2, free=0.1}} 
-            end
-            
+            local lagChain = {} if p[11] ~= "" then for _, pr in ipairs(string.split(p[11], ",")) do local vals = string.split(pr, ":") table.insert(lagChain, {anchor=tonumber(vals[1]) or 0.2, free=tonumber(vals[2]) or 0.1}) end else lagChain = {{anchor=0.2, free=0.1}} end
             updateLagList() ImportBox.Text = "" ImportBox.PlaceholderText = "SUCCESSFULLY LOADED!" task.delay(2, function() ImportBox.PlaceholderText = "PASTE HUB-Save-... CODE HERE" end)
         end
     end)
@@ -1207,11 +1120,7 @@ end)
 UnviewBtn.MouseButton1Click:Connect(function() local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") if hum then workspace.CurrentCamera.CameraSubject = hum end end)
 CloseBtn.MouseButton1Click:Connect(function() ForceCleanup() ScreenGui:Destroy() end)
 
-print("[KIRIK HUB DEBUG]: 16. Все обработчики событий, бинды кнопок и циклы успешно связаны.")
-
 -- Initial UI Setup & Parenting
 AssignParent()
 updatePlayerList() 
 updateLagList()
-
-print("[KIRIK HUB DEBUG]: 17. Инициализация полностью завершена. Хаб запущен!")
