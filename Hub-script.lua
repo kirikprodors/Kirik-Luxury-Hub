@@ -1,19 +1,23 @@
--- Wait for LocalPlayer to safely initialize (Crucial for mobile loadstring execution)
+print("[KIRIK HUB DEBUG]: 1. Инициализация скрипта запущена.")
+
+-- Wait for LocalPlayer to safely initialize
 local Players = game:GetService("Players")
 while not Players.LocalPlayer do
     task.wait()
 end
 local LocalPlayer = Players.LocalPlayer
+print("[KIRIK HUB DEBUG]: 2. Игрок " .. tostring(LocalPlayer.Name) .. " успешно инициализирован.")
 
 local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local TS = game:GetService("TweenService")
 
--- Safe VirtualUser fetch (Some mobile executors sandbox this service)
+-- Safe VirtualUser fetch
 local VirtualUser = nil
 pcall(function()
     VirtualUser = game:GetService("VirtualUser")
 end)
+print("[KIRIK HUB DEBUG]: 3. Вспомогательные системные сервисы подключены.")
 
 -- ==================== FORWARD DECLARATIONS (SCOPE SECURITY) ====================
 -- Pre-declaring all variables to prevent any Lua scope resolution or shadowed variable crashes
@@ -33,6 +37,22 @@ local DragHandle, Title, MinBtn, CloseBtn, WelcomeText, HomeTab, PlayersTab, Npc
 local CharTab, CharScroll, FlyTab, FlyScroll, LagTab, SettingsTab, SettingsScroll
 local PTopLayout, NTopLayout, LagTopLayout
 
+-- Unified upvalues and states to guarantee 100% scope alignment
+local espActive, ultraRunActive, noclipActive = false, false, false
+local invisActive, undieActive, platActive, unvoidActive = false, false, false, false
+local flying, infStabActive, cfSpeedActive, spinActive = false, false, false, false
+local fpsActive, pingActive = false, false
+local aimbotActive, antiAfkActive = false, false
+local aimPressed, upPressed, downPressed, platDownPressed = false, false, false, false
+
+local listMode, npcListMode = "TP", "TP"
+local cachedNPCs, savedSpots = {}, {}
+local spotCount = 0
+local lagState, lagTimer, lagIndex = "FREE", 0, 1
+local currentInfTpTarget, infTpConn, flyConn, platConn = nil, nil, nil, nil
+local realChar, fakeChar, isStriking, platPart, platFails, platFailTime = nil, nil, false, nil, 0, 0
+local lagChain = {{anchor = 0.2, free = 0.1}}
+
 local OrderBoxes = {}
 local tabs, tabBtns = {}, {}
 local ServiceConnections = {}
@@ -42,18 +62,32 @@ local function AddServiceConn(conn)
     return conn
 end
 
+-- Declare logical function signatures before UI references them
+local ToggleInvis, TogglePlatform, SetFly, SetUltraRun, SetNoclip, SetUndie, SetUnvoid
+local SetChaosLag, SetCFSpeed, SetSpin, SetESP, SetAimbot, SetAntiAfk
+local ApplyShrink, PerformSearch, GetClosestPlayerToCursor
+local updateLagList, updatePlayerList, updateNpcList
+
+print("[KIRIK HUB DEBUG]: 4. Область видимости и сигнатуры функций успешно подготовлены.")
+
 -- ==================== OLD THREAD CLEANUP ====================
 local function CleanOldInstances()
     pcall(function()
         local cg = game:GetService("CoreGui")
         local old = cg:FindFirstChild("KirikLuxuryHub")
-        if old then old:Destroy() end
+        if old then 
+            old:Destroy() 
+            print("[KIRIK HUB DEBUG]: Очищена старая копия хаба из CoreGui.")
+        end
     end)
     pcall(function()
         local pg = LocalPlayer:FindFirstChildOfClass("PlayerGui")
         if pg then
             local old = pg:FindFirstChild("KirikLuxuryHub")
-            if old then old:Destroy() end
+            if old then 
+                old:Destroy() 
+                print("[KIRIK HUB DEBUG]: Очищена старая копия хаба из PlayerGui.")
+            end
         end
     end)
 end
@@ -66,28 +100,12 @@ local function setClipboardSafely(text)
         local success = pcall(function() setclip(text) end)
         return success
     end
-    return false
+    -- Fallback for standard studio or strict sandboxes
+    print("\n=== [KIRIK HUB SAVE CODE] ===")
+    print(text)
+    print("==============================\n")
+    return "studio"
 end
-
--- ==================== INITIALIZE STATE VARIABLES ====================
-local espActive, ultraRunActive, noclipActive = false, false, false
-local invisActive, undieActive, platActive, unvoidActive = false, false, false, false
-local flying, infStabActive, cfSpeedActive, spinActive = false, false, false, false
-local fpsActive, pingActive = false, false
-local aimbotActive, antiAfkActive = false, false
-local aimPressed = false
-
-local listMode, npcListMode = "TP", "TP"
-local cachedNPCs, savedSpots = {}, {}
-local spotCount = 0
-local lagState, lagTimer, lagIndex = "FREE", 0, 1
-local currentInfTpTarget, infTpConn, flyConn, platConn = nil, nil, nil, nil
-
--- Declare logical function signatures before UI references them
-local ToggleInvis, TogglePlatform, SetFly, SetUltraRun, SetNoclip, SetUndie, SetUnvoid
-local SetChaosLag, SetCFSpeed, SetSpin, SetESP, SetAimbot, SetAntiAfk
-local ApplyShrink, PerformSearch, GetClosestPlayerToCursor
-local updateLagList, updatePlayerList, updateNpcList
 
 -- ==================== THEME SYSTEM ====================
 local currentTheme = "NEON"
@@ -173,6 +191,8 @@ local function ApplyToggleStyle(btn, state, defColor)
     btn:SetAttribute("NeonStroke", state and Color3.fromRGB(0, 255, 0) or defColor)
     UpdateInstanceTheme(btn)
 end
+
+print("[KIRIK HUB DEBUG]: 5. Системы визуального оформления (Темы/Стили) успешно запущены.")
 
 -- ==================== STATE SETTERS & LOGIC ====================
 SetAimbot = function(state) 
@@ -319,8 +339,6 @@ local function applyGrav()
 end
 
 -- ==================== INVISIBILITY & PLATFORM & FLY ====================
-local realChar, fakeChar, isStriking, platPart, platFails, platFailTime = nil, nil, false, nil, 0, 0
-
 ToggleInvis = function(state)
     if invisActive == state then return end invisActive = state
     ApplyToggleStyle(InvisBtn, invisActive, Color3.fromRGB(200, 0, 255)) 
@@ -666,6 +684,8 @@ updateLagList = function()
     PerformSearch()
 end
 
+print("[KIRIK HUB DEBUG]: 6. Логические функции и обработчики лагов инициализированы.")
+
 -- ==================== UI CONSTRUCTION ====================
 MainFrame = Instance.new("Frame")
 MainFrame.Parent = ScreenGui
@@ -794,6 +814,8 @@ MinBtn.MouseButton1Click:Connect(function()
     end)
 end)
 
+print("[KIRIK HUB DEBUG]: 7. Основной контейнер UI, боковое меню и логика сворачивания созданы.")
+
 -- ==================== UI CONSTRUCTION (TABS) ====================
 HomeTab = MakeTab("HOME", true)
 WelcomeText = Instance.new("TextLabel", HomeTab)
@@ -802,6 +824,7 @@ WelcomeText.Text = "KIRIK HUB V49\n\n[ NEW FEATURES ]\n- Aimbot (Hold RMB on PC 
 WelcomeText.TextWrapped = true
 WelcomeText.TextYAlignment = Enum.TextYAlignment.Top
 ApplyStyle(WelcomeText, Color3.fromRGB(0, 255, 255), Color3.fromRGB(15, 15, 20))
+print("[KIRIK HUB DEBUG]: 8. Вкладка HOME создана.")
 
 PlayersTab = MakeTab("PLAYERS", false)
 PTopLayout = Instance.new("UIListLayout", PlayersTab)
@@ -812,6 +835,7 @@ ModeBtn = Instance.new("TextButton", MakeRow(PlayersTab)) ModeBtn.Size = UDim2.n
 AddTpBtn = Instance.new("TextButton", MakeRow(PlayersTab)) AddTpBtn.Size = UDim2.new(1, 0, 1, 0) AddTpBtn.Text = "ADD CUSTOM TP PART" ApplyStyle(AddTpBtn, Color3.fromRGB(0, 150, 255))
 PlayerListWrapper = Instance.new("Frame", PlayersTab) PlayerListWrapper.Size = UDim2.new(1, 0, 1, -125) PlayerListWrapper.BackgroundTransparency = 1
 PlayerList, _ = MakeScrollArea(PlayerListWrapper)
+print("[KIRIK HUB DEBUG]: 9. Вкладка PLAYERS создана.")
 
 NpcsTab = MakeTab("NPCs", false)
 NTopLayout = Instance.new("UIListLayout", NpcsTab) NTopLayout.Padding = UDim.new(0, 5)
@@ -819,6 +843,7 @@ NpcModeBtn = Instance.new("TextButton", MakeRow(NpcsTab)) NpcModeBtn.Size = UDim
 NpcRefreshBtn = Instance.new("TextButton", MakeRow(NpcsTab)) NpcRefreshBtn.Size = UDim2.new(1, 0, 1, 0) NpcRefreshBtn.Text = "REFRESH NPCs" ApplyStyle(NpcRefreshBtn, Color3.fromRGB(0, 255, 100))
 NpcListWrapper = Instance.new("Frame", NpcsTab) NpcListWrapper.Size = UDim2.new(1, 0, 1, -65) NpcListWrapper.BackgroundTransparency = 1
 NpcList, _ = MakeScrollArea(NpcListWrapper)
+print("[KIRIK HUB DEBUG]: 10. Вкладка NPCs создана.")
 
 CharTab = MakeTab("CHARACTER", false)
 CharScroll, _ = MakeScrollArea(CharTab)
@@ -840,6 +865,7 @@ SpinBtn, SpinBox = MakeCharStat("SPIN", 50, "Spd")
 UltraRunBtn = Instance.new("TextButton", MakeRow(CharScroll)) UltraRunBtn.Size = UDim2.new(1, 0, 1, 0) UltraRunBtn.Text = "ULTRA RUN: OFF" ApplyStyle(UltraRunBtn, Color3.fromRGB(255, 80, 0))
 NoclipBtn = Instance.new("TextButton", MakeRow(CharScroll)) NoclipBtn.Size = UDim2.new(1, 0, 1, 0) NoclipBtn.Text = "NOCLIP: OFF" ApplyStyle(NoclipBtn, Color3.fromRGB(0, 255, 200))
 UnviewBtn = Instance.new("TextButton", MakeRow(CharScroll)) UnviewBtn.Size = UDim2.new(1, 0, 1, 0) UnviewBtn.Text = "RESET CAMERA" ApplyStyle(UnviewBtn, Color3.fromRGB(150, 150, 255))
+print("[KIRIK HUB DEBUG]: 11. Вкладка CHARACTER создана.")
 
 FlyTab = MakeTab("FLIGHT", false)
 FlyScroll, _ = MakeScrollArea(FlyTab)
@@ -848,6 +874,7 @@ FlyBtn = Instance.new("TextButton", FlyRow) FlyBtn.Size = UDim2.new(0.65, 0, 1, 
 FlySpeedBox = Instance.new("TextBox", FlyRow) FlySpeedBox.Size = UDim2.new(0.33, 0, 1, 0) FlySpeedBox.Position = UDim2.new(0.67, 0, 0, 0) FlySpeedBox.Text = "50" ApplyStyle(FlySpeedBox, Color3.fromRGB(255, 0, 255))
 PlatformBtn = Instance.new("TextButton", MakeRow(FlyScroll)) PlatformBtn.Size = UDim2.new(1, 0, 1, 0) PlatformBtn.Text = "PLATFORM: OFF" ApplyStyle(PlatformBtn, Color3.fromRGB(0, 150, 255))
 UnvoidBtn = Instance.new("TextButton", MakeRow(FlyScroll)) UnvoidBtn.Size = UDim2.new(1, 0, 1, 0) UnvoidBtn.Text = "UN-VOID: OFF" ApplyStyle(UnvoidBtn, Color3.fromRGB(50, 50, 255))
+print("[KIRIK HUB DEBUG]: 12. Вкладка FLIGHT создана.")
 
 LagTab = MakeTab("LAG", false)
 LagTopLayout = Instance.new("UIListLayout", LagTab) LagTopLayout.Padding = UDim.new(0, 5)
@@ -856,6 +883,7 @@ InfStabBtn = Instance.new("TextButton", MakeRow(LagTab)) InfStabBtn.Size = UDim2
 AddLagBtn = Instance.new("TextButton", MakeRow(LagTab)) AddLagBtn.Size = UDim2.new(1, 0, 1, 0) AddLagBtn.Text = "+ ADD NEW LAG TO CHAIN" ApplyStyle(AddLagBtn, Color3.fromRGB(0, 255, 0))
 LagListWrapper = Instance.new("Frame", LagTab) LagListWrapper.Size = UDim2.new(1, 0, 1, -95) LagListWrapper.BackgroundTransparency = 1
 LagList, _ = MakeScrollArea(LagListWrapper)
+print("[KIRIK HUB DEBUG]: 13. Вкладка LAG создана.")
 
 SettingsTab = MakeTab("SETTINGS", false)
 SettingsScroll, _ = MakeScrollArea(SettingsTab)
@@ -865,7 +893,7 @@ ShrinkLbl = Instance.new("TextLabel", ShrinkRow) ShrinkLbl.Size = UDim2.new(0.65
 ShrinkBox = Instance.new("TextBox", ShrinkRow) ShrinkBox.Size = UDim2.new(0.33, 0, 1, 0) ShrinkBox.Position = UDim2.new(0.67, 0, 0, 0) ShrinkBox.Text = "1" ApplyStyle(ShrinkBox, Color3.fromRGB(255, 255, 0))
 
 AfkRow = MakeRow(SettingsScroll) AfkRow.LayoutOrder = 2
-AfkLbl = Instance.new("TextLabel", AfkRow) AfkLbl.Size = UDim2.new(0.65, 0, 1, 0) AfkLbl.Text = "UI AUTOCLOSE (SEC)" ApplyStyle(AfkLbl, Color3.fromRGB(150, 150, 150))
+local AfkLbl = Instance.new("TextLabel", AfkRow) AfkLbl.Size = UDim2.new(0.65, 0, 1, 0) AfkLbl.Text = "UI AUTOCLOSE (SEC)" ApplyStyle(AfkLbl, Color3.fromRGB(150, 150, 150))
 AfkBox = Instance.new("TextBox", AfkRow) AfkBox.Size = UDim2.new(0.33, 0, 1, 0) AfkBox.Position = UDim2.new(0.67, 0, 0, 0) AfkBox.Text = "9999" ApplyStyle(AfkBox, Color3.fromRGB(150, 150, 150))
 
 AntiAfkBtn = Instance.new("TextButton", MakeRow(SettingsScroll)) AntiAfkBtn.Parent.LayoutOrder = 3 AntiAfkBtn.Size = UDim2.new(1, 0, 1, 0) AntiAfkBtn.Text = "ROBLOX ANTI-AFK: OFF" ApplyStyle(AntiAfkBtn, Color3.fromRGB(0, 200, 255))
@@ -897,6 +925,7 @@ for i, tBtn in ipairs(tabBtns) do
 end
 
 ApplyOrderBtn = Instance.new("TextButton", MakeRow(SettingsScroll)) ApplyOrderBtn.Parent.LayoutOrder = 100 ApplyOrderBtn.Size = UDim2.new(1, 0, 1, 0) ApplyOrderBtn.Text = "APPLY TAB ORDER" ApplyStyle(ApplyOrderBtn, Color3.fromRGB(0, 255, 0))
+print("[KIRIK HUB DEBUG]: 14. Вкладка SETTINGS создана.")
 
 -- ==================== FLOATING MOBILE UI (AIM & OTHERS) ====================
 FlyUI = Instance.new("Frame", ScreenGui) FlyUI.Size = UDim2.new(0, 60, 0, 120) FlyUI.Position = UDim2.new(1, -70, 0.5, -60) FlyUI.BackgroundTransparency = 1 FlyUI.Visible = false
@@ -928,6 +957,8 @@ AimBtnMobile.InputEnded:Connect(function(i)
     end
 end)
 
+print("[KIRIK HUB DEBUG]: 15. Мобильные плавающие оверлеи FLY/PLAT/AIM созданы.")
+
 -- ==================== EVENTS & CONNECTIONS ====================
 AddServiceConn(SearchBox:GetPropertyChangedSignal("Text"):Connect(function() PerformSearch() end))
 ShrinkBox.FocusLost:Connect(function() ApplyShrink() end)
@@ -950,7 +981,7 @@ CFrameSpeedBtn.MouseButton1Click:Connect(function() SetCFSpeed(not cfSpeedActive
 SpinBtn.MouseButton1Click:Connect(function() SetSpin(not spinActive) end)
 
 WsBtn.MouseButton1Click:Connect(function() applyWS() end) 
-JpBtn.MouseButton1Click:Connect(function() applyJP() end) 
+JpBtn.MouseButton1Click:Connect(function() pcall(applyJP) end) 
 GravBtn.MouseButton1Click:Connect(function() applyGrav() end)
 
 local function AssignParent()
@@ -959,11 +990,25 @@ local function AssignParent()
     
     if coreGui then
         local ok = pcall(function() ScreenGui.Parent = coreGui end)
-        if not ok then
-            ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui", 15)
+        if ok then
+            print("[KIRIK HUB DEBUG]: Успешно внедрено в CoreGui.")
+        else
+            local pg = LocalPlayer:WaitForChild("PlayerGui", 15)
+            if pg then
+                ScreenGui.Parent = pg
+                print("[KIRIK HUB DEBUG]: CoreGui защищен. Успешно внедрено в PlayerGui.")
+            else
+                warn("[KIRIK HUB DEBUG] ОШИБКА: PlayerGui не найден после ожидания.")
+            end
         end
     else
-        ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui", 15)
+        local pg = LocalPlayer:WaitForChild("PlayerGui", 15)
+        if pg then
+            ScreenGui.Parent = pg
+            print("[KIRIK HUB DEBUG]: CoreGui недоступен. Успешно внедрено в PlayerGui.")
+        else
+            warn("[KIRIK HUB DEBUG] ОШИБКА: PlayerGui не найден после ожидания.")
+        end
     end
 end
 
@@ -992,7 +1037,13 @@ GenSaveBtn.MouseButton1Click:Connect(function()
     local rawStr = string.format("%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s", currentTheme, ShrinkBox.Text, AfkBox.Text, WsBox.Text, JpBox.Text, GravBox.Text, CFrameSpeedBox.Text, SpinBox.Text, tgs, tabsOrderStr, lagStr)
     local saveCode = "HUB-Save-" .. B64Encode(rawStr)
     local success = setClipboardSafely(saveCode)
-    if success then GenSaveBtn.Text = "COPIED TO CLIPBOARD!" else GenSaveBtn.Text = "ERROR: CLIPBOARD UNSUPPORTED" end
+    if success == "studio" then
+        GenSaveBtn.Text = "PRINTED TO STUDIO OUTPUT!"
+    elseif success then 
+        GenSaveBtn.Text = "COPIED TO CLIPBOARD!" 
+    else 
+        GenSaveBtn.Text = "ERROR: CLIPBOARD UNSUPPORTED" 
+    end
     task.delay(2, function() GenSaveBtn.Text = "GENERATE SAVE CODE" end)
 end)
 
@@ -1007,7 +1058,18 @@ LoadSaveBtn.MouseButton1Click:Connect(function()
             SetESP(t:sub(1,1)=="1") SetUltraRun(t:sub(2,2)=="1") SetNoclip(t:sub(3,3)=="1") ToggleInvis(t:sub(4,4)=="1") SetUndie(t:sub(5,5)=="1") SetFly(t:sub(6,6)=="1") TogglePlatform(t:sub(7,7)=="1") SetUnvoid(t:sub(8,8)=="1") SetChaosLag(t:sub(9,9)=="1") SetCFSpeed(t:sub(10,10)=="1") SetSpin(t:sub(11,11)=="1") SetFPS(t:sub(12,12)=="1") SetPing(t:sub(13,13)=="1")
             if #t >= 15 then SetAimbot(t:sub(14,14)=="1") SetAntiAfk(t:sub(15,15)=="1") end
             local tOrd = string.split(p[10], ",") for i, v in ipairs(tOrd) do if OrderBoxes[i] then OrderBoxes[i].box.Text = v end end ApplyTabOrders()
-            local lagChain = {} if p[11] ~= "" then for _, pr in ipairs(string.split(p[11], ",")) do local vals = string.split(pr, ":") table.insert(lagChain, {anchor=tonumber(vals[1]) or 0.2, free=tonumber(vals[2]) or 0.1}) end else lagChain = {{anchor=0.2, free=0.1}} end
+            
+            -- FIX: Do not redeclare as 'local' inside pcall block! Re-assign top value.
+            lagChain = {} 
+            if p[11] ~= "" then 
+                for _, pr in ipairs(string.split(p[11], ",")) do 
+                    local vals = string.split(pr, ":") 
+                    table.insert(lagChain, {anchor=tonumber(vals[1]) or 0.2, free=tonumber(vals[2]) or 0.1}) 
+                end 
+            else 
+                lagChain = {{anchor=0.2, free=0.1}} 
+            end
+            
             updateLagList() ImportBox.Text = "" ImportBox.PlaceholderText = "SUCCESSFULLY LOADED!" task.delay(2, function() ImportBox.PlaceholderText = "PASTE HUB-Save-... CODE HERE" end)
         end
     end)
@@ -1145,7 +1207,11 @@ end)
 UnviewBtn.MouseButton1Click:Connect(function() local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") if hum then workspace.CurrentCamera.CameraSubject = hum end end)
 CloseBtn.MouseButton1Click:Connect(function() ForceCleanup() ScreenGui:Destroy() end)
 
+print("[KIRIK HUB DEBUG]: 16. Все обработчики событий, бинды кнопок и циклы успешно связаны.")
+
 -- Initial UI Setup & Parenting
 AssignParent()
 updatePlayerList() 
 updateLagList()
+
+print("[KIRIK HUB DEBUG]: 17. Инициализация полностью завершена. Хаб запущен!")
