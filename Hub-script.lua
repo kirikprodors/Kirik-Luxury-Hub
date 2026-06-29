@@ -73,9 +73,14 @@ local currentInfTpTarget, infTpConn, flyConn, platConn = nil, nil, nil, nil
 local realChar, fakeChar, platPart = nil, nil, nil
 local platFails, platFailTime = 0, 0
 
+-- Variables for Auto Clicker
+local clickTargets = {}
+local waitingForClickTarget = false
+
 -- ==================== FORWARD DECLARATIONS ====================
 local AimbotBtn, EspBtn, ModeBtn, AddTpBtn, PlayerListWrapper, PlayerList
 local NpcModeBtn, NpcRefreshBtn, NpcListWrapper, NpcList
+local ClicksTab, ClicksTopLayout, ClickDelayRow, ClickDelayLbl, ClickDelayBox, AddClickBtn, ClickListWrapper, ClickList
 local InvisBtn, UndieBtn, WsBtn, WsBox, JpBtn, JpBox, GravBtn, GravBox
 local CFrameSpeedBtn, CFrameSpeedBox, SpinBtn, SpinBox, UltraRunBtn, NoclipBtn, UnviewBtn
 local FlyRow, FlyBtn, FlySpeedBox, PlatformBtn, UnvoidBtn
@@ -96,7 +101,7 @@ local tabs, tabBtns = {}, {}
 local ToggleInvis, TogglePlatform, SetFly, SetUltraRun, SetNoclip, SetUndie, SetUnvoid
 local SetChaosLag, SetCFSpeed, SetSpin, SetESP, SetAimbot, SetAntiAfk
 local ApplyShrink, PerformSearch, GetClosestPlayerToCursor
-local updateLagList, updatePlayerList, updateNpcList
+local updateLagList, updatePlayerList, updateNpcList, updateClickList
 
 -- ==================== BASE64 SYSTEM ====================
 local b64chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
@@ -420,7 +425,7 @@ end)
 HomeTab = MakeTab("HOME", true)
 WelcomeText = Instance.new("TextLabel", HomeTab)
 WelcomeText.Size = UDim2.new(1, 0, 1, 0)
-WelcomeText.Text = "KIRIK HUB V50\n\n[ V50 FEATURES ]\n- Aimbot Toggle (Smooth Tracking!)\n- Enhanced ESP with Live Stud Distance\n- Anti-AFK (Bypass Idle Kicks)\n- Stable Memory Management"
+WelcomeText.Text = "KIRIK HUB V50\n\n[ V50 FEATURES ]\n- Aimbot Toggle (Smooth Tracking!)\n- Enhanced ESP with Live Stud Distance\n- Anti-AFK (Bypass Idle Kicks)\n- UI Auto Clicker Added!"
 WelcomeText.TextWrapped = true
 WelcomeText.TextYAlignment = Enum.TextYAlignment.Top
 ApplyStyle(WelcomeText, Color3.fromRGB(0, 255, 255), Color3.fromRGB(15, 15, 20))
@@ -433,6 +438,32 @@ ModeBtn = Instance.new("TextButton", MakeRow(PlayersTab)) ModeBtn.Size = UDim2.n
 AddTpBtn = Instance.new("TextButton", MakeRow(PlayersTab)) AddTpBtn.Size = UDim2.new(1, 0, 1, 0) AddTpBtn.Text = "ADD CUSTOM TP PART" ApplyStyle(AddTpBtn, Color3.fromRGB(0, 150, 255))
 PlayerListWrapper = Instance.new("Frame", PlayersTab) PlayerListWrapper.Size = UDim2.new(1, 0, 1, -125) PlayerListWrapper.BackgroundTransparency = 1
 PlayerList, _ = MakeScrollArea(PlayerListWrapper)
+
+-- CLICKS TAB ADDED HERE
+ClicksTab = MakeTab("CLICKS", false)
+ClicksTopLayout = Instance.new("UIListLayout", ClicksTab) ClicksTopLayout.Padding = UDim.new(0, 5)
+
+ClickDelayRow = MakeRow(ClicksTab)
+ClickDelayLbl = Instance.new("TextLabel", ClickDelayRow) 
+ClickDelayLbl.Size = UDim2.new(0.65, 0, 1, 0) 
+ClickDelayLbl.Text = "CLICK DELAY (SEC)" 
+ApplyStyle(ClickDelayLbl, Color3.fromRGB(255, 255, 0))
+
+ClickDelayBox = Instance.new("TextBox", ClickDelayRow) 
+ClickDelayBox.Size = UDim2.new(0.33, 0, 1, 0) 
+ClickDelayBox.Position = UDim2.new(0.67, 0, 0, 0) 
+ClickDelayBox.Text = "0.1" 
+ApplyStyle(ClickDelayBox, Color3.fromRGB(255, 255, 0))
+
+AddClickBtn = Instance.new("TextButton", MakeRow(ClicksTab)) 
+AddClickBtn.Size = UDim2.new(1, 0, 1, 0) 
+AddClickBtn.Text = "+ ADD UI BUTTON (ДОБАВИТЬ КНОПКУ)" 
+ApplyStyle(AddClickBtn, Color3.fromRGB(0, 255, 150))
+
+ClickListWrapper = Instance.new("Frame", ClicksTab) 
+ClickListWrapper.Size = UDim2.new(1, 0, 1, -65) 
+ClickListWrapper.BackgroundTransparency = 1
+ClickList, _ = MakeScrollArea(ClickListWrapper)
 
 NpcsTab = MakeTab("NPCs", false)
 NTopLayout = Instance.new("UIListLayout", NpcsTab) NTopLayout.Padding = UDim.new(0, 5)
@@ -895,6 +926,38 @@ updateLagList = function()
     PerformSearch()
 end
 
+-- ==================== NEW CLICK TARGET LIST ====================
+updateClickList = function()
+    if not ClickList then return end
+    for _, c in pairs(ClickList:GetChildren()) do if c:IsA("Frame") then c:Destroy() end end
+    
+    for i, target in ipairs(clickTargets) do
+        local row = MakeRow(ClickList)
+        
+        local tBtn = Instance.new("TextButton", row) 
+        tBtn.Size = UDim2.new(0.8, 0, 1, 0)
+        tBtn.Text = target.name .. (target.active and " [ON]" or " [OFF]")
+        ApplyStyle(tBtn, target.active and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 100, 0))
+        
+        local dBtn = Instance.new("TextButton", row) 
+        dBtn.Size = UDim2.new(0.18, 0, 1, 0) 
+        dBtn.Position = UDim2.new(0.82, 0, 0, 0)
+        dBtn.Text = "X"
+        ApplyStyle(dBtn, Color3.fromRGB(255, 0, 0))
+        
+        tBtn.MouseButton1Click:Connect(function()
+            target.active = not target.active
+            updateClickList()
+        end)
+        
+        dBtn.MouseButton1Click:Connect(function()
+            table.remove(clickTargets, i)
+            updateClickList()
+        end)
+    end
+    PerformSearch()
+end
+
 ApplyShrink = function()
     if not ShrinkBox or not MainScaler or not FlyScaler or not PlatScaler then return end
     local factor = tonumber(ShrinkBox.Text)
@@ -998,7 +1061,21 @@ NpcRefreshBtn.MouseButton1Click:Connect(function() cachedNPCs = {} NpcRefreshBtn
 
 local waitingForClick, mouse = false, LocalPlayer:GetMouse()
 AddTpBtn.MouseButton1Click:Connect(function() waitingForClick = true AddTpBtn.Text = "CLICK SCREEN..." end)
-AddServiceConn(mouse.Button1Down:Connect(function() if waitingForClick then waitingForClick = false AddTpBtn.Text = "ADD CUSTOM TP PART" spotCount = spotCount + 1 table.insert(savedSpots, {name = mouse.Target and ("[" .. mouse.Target.Name .. "]") or ("SPOT " .. spotCount), part = mouse.Target, pos = mouse.Hit.Position}) updatePlayerList() end end))
+
+AddServiceConn(mouse.Button1Down:Connect(function() 
+    if waitingForClick then 
+        waitingForClick = false 
+        AddTpBtn.Text = "ADD CUSTOM TP PART" 
+        spotCount = spotCount + 1 
+        table.insert(savedSpots, {name = mouse.Target and ("[" .. mouse.Target.Name .. "]") or ("SPOT " .. spotCount), part = mouse.Target, pos = mouse.Hit.Position}) 
+        updatePlayerList() 
+    end 
+end))
+
+AddClickBtn.MouseButton1Click:Connect(function()
+    waitingForClickTarget = true
+    AddClickBtn.Text = "CLICK A BUTTON ON SCREEN..."
+end)
 
 AddLagBtn.MouseButton1Click:Connect(function() table.insert(lagChain, {anchor = 0.2, free = 0.1}) updateLagList() end)
 AntiFlingBtn.MouseButton1Click:Connect(function() local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") if hrp then hrp.Velocity = Vector3.zero hrp.RotVelocity = Vector3.zero hrp.Anchored = true task.wait(0.5) if hrp then hrp.Anchored = false end end end)
@@ -1127,6 +1204,33 @@ AddServiceConn(RunService.Heartbeat:Connect(function(dt)
     end
 end))
 
+-- AUTO CLICKER LOOP
+task.spawn(function()
+    while task.wait() do
+        if not ScreenGui.Parent then break end
+        local delayTime = tonumber(ClickDelayBox.Text) or 0.1
+        local firedAny = false
+        
+        for _, target in ipairs(clickTargets) do
+            if target.active and target.btn and target.btn.Parent then
+                pcall(function()
+                    if firesignal then
+                        firesignal(target.btn.MouseButton1Down)
+                        firesignal(target.btn.MouseButton1Click)
+                        firesignal(target.btn.MouseButton1Up)
+                        firesignal(target.btn.Activated)
+                    end
+                end)
+                firedAny = true
+            end
+        end
+        
+        if firedAny and delayTime > 0 then
+            task.wait(delayTime)
+        end
+    end
+end)
+
 AddServiceConn(RunService.RenderStepped:Connect(function()
     if aimbotActive then
         if not aimTarget or not aimTarget.Parent or not aimTarget:FindFirstChild("Humanoid") or aimTarget.Humanoid.Health <= 0 then
@@ -1157,13 +1261,6 @@ AddServiceConn(RunService.Stepped:Connect(function()
     end
 end))
 
-AddServiceConn(UIS.InputBegan:Connect(function(input, gpe)
-    if invisActive and realChar and fakeChar and input.UserInputType == Enum.UserInputType.MouseButton1 and not gpe then
-        isStriking = true local rHrp, fHrp = realChar:FindFirstChild("HumanoidRootPart"), fakeChar:FindFirstChild("HumanoidRootPart")
-        if rHrp and fHrp then rHrp.CFrame = fHrp.CFrame end task.delay(0.1, function() isStriking = false end)
-    end
-end))
-
 local lastActive = tick()
 local function checkUIInteraction(input)
     local pos = input.Position
@@ -1174,13 +1271,54 @@ local function checkUIInteraction(input)
         end
     end
 end
-AddServiceConn(UIS.InputBegan:Connect(checkUIInteraction))
-AddServiceConn(UIS.InputChanged:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then checkUIInteraction(input) end end))
+
+AddServiceConn(UIS.InputBegan:Connect(function(input, gpe)
+    -- GUI Picking for Auto Clicker
+    if waitingForClickTarget and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+        waitingForClickTarget = false
+        AddClickBtn.Text = "+ ADD UI BUTTON (ДОБАВИТЬ КНОПКУ)"
+        
+        local pos = input.Position
+        local guis = LocalPlayer.PlayerGui:GetGuiObjectsAtPosition(pos.X, pos.Y)
+        local foundBtn = nil
+        
+        for _, gui in ipairs(guis) do
+            if (gui:IsA("TextButton") or gui:IsA("ImageButton")) and not gui:IsDescendantOf(ScreenGui) then
+                foundBtn = gui
+                break
+            end
+        end
+        
+        if foundBtn then
+            table.insert(clickTargets, {
+                btn = foundBtn, 
+                active = false, 
+                name = (foundBtn.Name ~= "" and foundBtn.Name or "Unnamed Btn")
+            })
+            updateClickList()
+        end
+        return -- Prevent other actions from firing when selecting a button
+    end
+
+    if invisActive and realChar and fakeChar and input.UserInputType == Enum.UserInputType.MouseButton1 and not gpe then
+        isStriking = true local rHrp, fHrp = realChar:FindFirstChild("HumanoidRootPart"), fakeChar:FindFirstChild("HumanoidRootPart")
+        if rHrp and fHrp then rHrp.CFrame = fHrp.CFrame end task.delay(0.1, function() isStriking = false end)
+    end
+    checkUIInteraction(input)
+end))
+
+AddServiceConn(UIS.InputChanged:Connect(function(input) 
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then checkUIInteraction(input) end 
+end))
 
 local function ForceCleanup()
     SetESP(false) SetUltraRun(false) SetNoclip(false) SetChaosLag(false) SetSpin(false) SetCFSpeed(false) SetFly(false) TogglePlatform(false) ToggleInvis(false) SetAimbot(false) SetAntiAfk(false)
     undieActive, unvoidActive = false, false if FlyUI then FlyUI.Visible = false end if PlatUI then PlatUI.Visible = false end
     stopInfTp() pcall(function() workspace.Gravity = 196.2 end)
+    
+    -- Turn off clickers
+    for _, t in ipairs(clickTargets) do t.active = false end
+    updateClickList()
     
     local char = LocalPlayer.Character local hum = char and char:FindFirstChild("Humanoid") local hrp = char and char:FindFirstChild("HumanoidRootPart")
     if hrp then if hrp:FindFirstChild("FlyBV") then hrp.FlyBV:Destroy() end if hrp:FindFirstChild("FlyBG") then hrp.FlyBG:Destroy() end hrp.Anchored = false end
@@ -1222,3 +1360,4 @@ AssignParent()
 
 updatePlayerList() 
 updateLagList()
+updateClickList()
