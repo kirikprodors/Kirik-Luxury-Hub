@@ -1,7 +1,7 @@
 -- Wait for LocalPlayer to safely initialize (Crucial for mobile loadstring execution)
 local Players = game:GetService("Players")
 while not Players.LocalPlayer do
-    task.wait()
+    task.wait(0.1)
 end
 local LocalPlayer = Players.LocalPlayer
 
@@ -1587,52 +1587,75 @@ AddServiceConn(RunService.Heartbeat:Connect(function(dt)
     end
 end))
 
+-- ==================== БЕЗОПАСНЫЙ АВТО-КЛИКЕР ====================
 task.spawn(function()
-    while task.wait() do
-        if not ScreenGui.Parent then break end
-        local delayTime = tonumber(ClickDelayBox.Text) or 0.1
-        local firedAny = false
+    -- Даем интерфейсу 2 секунды на полную загрузку перед запуском цикла
+    task.wait(2)
+    
+    while true do
+        -- Флаг: работает ли сейчас хоть один кликер
+        local autoClickEnabled = false
+        
+        -- Проверяем, есть ли активные цели
         for _, target in ipairs(clickTargets) do
-            if target.active and target.btn and target.btn.Parent then
-                pcall(function()
-                    if getconnections then
-                        local conns = getconnections(target.btn.MouseButton1Click)
-                        if type(conns) == "table" then
-                            for _, conn in pairs(conns) do
-                                pcall(function()
-                                    if type(conn) == "table" and conn.Function then
-                                        conn.Function()
-                                    elseif type(conn) == "function" then
-                                        conn()
-                                    else
-                                        conn:Fire()
-                                    end
-                                end)
-                            end
-                        end
-                        local actConns = getconnections(target.btn.Activated)
-                        if type(actConns) == "table" then
-                            for _, conn in pairs(actConns) do
-                                pcall(function()
-                                    if type(conn) == "table" and conn.Function then
-                                        conn.Function()
-                                    elseif type(conn) == "function" then
-                                        conn()
-                                    else
-                                        conn:Fire()
-                                    end
-                                end)
-                            end
-                        end
-                    elseif firesignal then
-                        firesignal(target.btn.MouseButton1Click)
-                        firesignal(target.btn.Activated)
-                    end
-                end)
-                firedAny = true
+            if target.active then
+                autoClickEnabled = true
+                break
             end
         end
-        if firedAny and delayTime > 0 then task.wait(delayTime) end
+
+        if not autoClickEnabled then
+            -- Если кликать не нужно, отдыхаем (базовая безопасная задержка)
+            task.wait(0.1)
+        else
+            -- Если флаг включен, выполняем клики
+            local delayTime = tonumber(ClickDelayBox.Text) or 0.1
+            if delayTime < 0.03 then delayTime = 0.03 end -- Защита от нулевой задержки (чтобы не крашнуло)
+
+            for _, target in ipairs(clickTargets) do
+                if target.active and target.btn and target.btn.Parent then
+                    pcall(function()
+                        if firesignal then
+                            firesignal(target.btn.MouseButton1Click)
+                            firesignal(target.btn.Activated)
+                        elseif getconnections then
+                            -- Обертка в task.spawn для каждой функции, чтобы избежать yield-блокировок потока (wait-ов) внутри кнопок
+                            local conns1 = getconnections(target.btn.MouseButton1Click)
+                            if type(conns1) == "table" then
+                                for _, conn in pairs(conns1) do
+                                    if type(conn) == "table" and conn.Function then
+                                        task.spawn(conn.Function)
+                                    elseif type(conn) == "function" then
+                                        task.spawn(conn)
+                                    elseif type(conn) == "table" and conn.Fire then
+                                        task.spawn(function() conn:Fire() end)
+                                    end
+                                end
+                            end
+
+                            local conns2 = getconnections(target.btn.Activated)
+                            if type(conns2) == "table" then
+                                for _, conn in pairs(conns2) do
+                                    if type(conn) == "table" and conn.Function then
+                                        task.spawn(conn.Function)
+                                    elseif type(conn) == "function" then
+                                        task.spawn(conn)
+                                    elseif type(conn) == "table" and conn.Fire then
+                                        task.spawn(function() conn:Fire() end)
+                                    end
+                                end
+                            end
+                        end
+                    end)
+                end
+            end
+            
+            -- Задержка самого автокликера (зависит от настроек в хабе)
+            task.wait(delayTime)
+        end
+        
+        -- Если интерфейс удалили, убиваем поток
+        if not ScreenGui or not ScreenGui.Parent then break end
     end
 end)
 
