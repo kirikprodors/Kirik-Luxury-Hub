@@ -80,10 +80,7 @@ local waitingForClickTarget = false
 -- ==================== FORWARD DECLARATIONS ====================
 local AimbotBtn, EspBtn, ModeBtn, AddTpBtn, PlayerListWrapper, PlayerList
 local NpcModeBtn, NpcRefreshBtn, NpcListWrapper, NpcList
-
--- New Clicker declarations
 local ClicksTab, ClicksTopLayout, ClickDelayRow, ClickDelayLbl, ClickDelayBox, AddClickBtn, ClickListWrapper, ClickList
-
 local InvisBtn, UndieBtn, WsBtn, WsBox, JpBtn, JpBox, GravBtn, GravBox
 local CFrameSpeedBtn, CFrameSpeedBox, SpinBtn, SpinBox, UltraRunBtn, NoclipBtn, UnviewBtn
 local FlyRow, FlyBtn, FlySpeedBox, PlatformBtn, UnvoidBtn
@@ -146,7 +143,7 @@ local function UpdateInstanceTheme(inst)
     local targetBg = inst:GetAttribute("NeonBg")
     local targetStroke = inst:GetAttribute("NeonStroke")
     local targetText = inst:GetAttribute("NeonText")
-    
+
     if currentTheme == "HACKER" then
         targetBg = Color3.fromRGB(5, 10, 5)
         targetStroke = Color3.fromRGB(0, 255, 0)
@@ -169,7 +166,7 @@ local function ApplyStyle(inst, strokeColor, bgColor, textColor)
     inst:SetAttribute("NeonStroke", strokeColor or Color3.fromRGB(0, 255, 255))
     inst:SetAttribute("NeonBg", bgColor or Color3.fromRGB(15, 15, 20))
     inst:SetAttribute("NeonText", textColor or Color3.new(1, 1, 1))
-    
+
     inst.BorderSizePixel = 0
     if inst:IsA("TextButton") or inst:IsA("TextBox") or inst:IsA("TextLabel") then
         inst.Font = Enum.Font.GothamBold
@@ -178,7 +175,7 @@ local function ApplyStyle(inst, strokeColor, bgColor, textColor)
             if inst.Text == "TextBox" or inst.Text == "" then inst.Text = "" end
         end
     end
-    
+
     local corner = inst:FindFirstChild("UICorner") or Instance.new("UICorner", inst)
     corner.CornerRadius = UDim.new(0, 4)
     local stroke = inst:FindFirstChild("UIStroke") or Instance.new("UIStroke", inst)
@@ -338,8 +335,12 @@ DragHandle.Parent = MainFrame
 local dragging, dragInput, dragStart, startPos
 AddServiceConn(DragHandle.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true dragStart = input.Position startPos = MainFrame.Position
-        input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end)
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then dragging = false end
+        end)
     end
 end))
 AddServiceConn(DragHandle.InputChanged:Connect(function(input)
@@ -453,7 +454,7 @@ PlayerListWrapper.Size = UDim2.new(1, 0, 1, -125)
 PlayerListWrapper.BackgroundTransparency = 1
 PlayerList, _ = MakeScrollArea(PlayerListWrapper)
 
--- CLICKS TAB
+-- ==================== NEW CLICKS TAB ====================
 ClicksTab = MakeTab("CLICKS", false)
 ClicksTopLayout = Instance.new("UIListLayout", ClicksTab)
 ClicksTopLayout.Padding = UDim.new(0, 5)
@@ -472,13 +473,14 @@ ApplyStyle(ClickDelayBox, Color3.fromRGB(255, 255, 0))
 
 AddClickBtn = Instance.new("TextButton", MakeRow(ClicksTab))
 AddClickBtn.Size = UDim2.new(1, 0, 1, 0)
-AddClickBtn.Text = "+ ADD UI BUTTON (ДОБАВИТЬ КНОПКУ)"
+AddClickBtn.Text = "+ ADD UI BUTTON"
 ApplyStyle(AddClickBtn, Color3.fromRGB(0, 255, 150))
 
 ClickListWrapper = Instance.new("Frame", ClicksTab)
-ClickListWrapper.Size = UDim2.new(1, 0, 1, -65)
+ClickListWrapper.Size = UDim2.new(1, 0, 1, -95)
 ClickListWrapper.BackgroundTransparency = 1
 ClickList, _ = MakeScrollArea(ClickListWrapper)
+-- ========================================================
 
 NpcsTab = MakeTab("NPCs", false)
 NTopLayout = Instance.new("UIListLayout", NpcsTab)
@@ -597,11 +599,13 @@ AntiAfkBtn.Parent.LayoutOrder = 3
 AntiAfkBtn.Size = UDim2.new(1, 0, 1, 0)
 AntiAfkBtn.Text = "ROBLOX ANTI-AFK: OFF"
 ApplyStyle(AntiAfkBtn, Color3.fromRGB(0, 200, 255))
+
 FpsBtn = Instance.new("TextButton", MakeRow(SettingsScroll))
 FpsBtn.Parent.LayoutOrder = 4
 FpsBtn.Size = UDim2.new(1, 0, 1, 0)
 FpsBtn.Text = "FPS HUD: OFF"
 ApplyStyle(FpsBtn, Color3.fromRGB(0, 255, 100))
+
 PingBtn = Instance.new("TextButton", MakeRow(SettingsScroll))
 PingBtn.Parent.LayoutOrder = 5
 PingBtn.Size = UDim2.new(1, 0, 1, 0)
@@ -614,16 +618,19 @@ ThemeLbl = Instance.new("TextLabel", ThemeLblRow)
 ThemeLbl.Size = UDim2.new(1, 0, 1, 0)
 ThemeLbl.Text = "--- THEMES ---"
 ApplyStyle(ThemeLbl, Color3.fromRGB(0, 255, 255))
+
 NeonBtn = Instance.new("TextButton", MakeRow(SettingsScroll))
 NeonBtn.Parent.LayoutOrder = 7
 NeonBtn.Size = UDim2.new(1, 0, 1, 0)
 NeonBtn.Text = "NEON (DEFAULT)"
 ApplyStyle(NeonBtn, Color3.fromRGB(255, 0, 255))
+
 HackerBtn = Instance.new("TextButton", MakeRow(SettingsScroll))
 HackerBtn.Parent.LayoutOrder = 8
 HackerBtn.Size = UDim2.new(1, 0, 1, 0)
 HackerBtn.Text = "HACKER (GREEN)"
 ApplyStyle(HackerBtn, Color3.fromRGB(0, 255, 0))
+
 BWBtn = Instance.new("TextButton", MakeRow(SettingsScroll))
 BWBtn.Parent.LayoutOrder = 9
 BWBtn.Size = UDim2.new(1, 0, 1, 0)
@@ -636,11 +643,13 @@ SaveHeaderLbl = Instance.new("TextLabel", SaveHeaderRow)
 SaveHeaderLbl.Size = UDim2.new(1, 0, 1, 0)
 SaveHeaderLbl.Text = "--- SAVE SYSTEM ---"
 ApplyStyle(SaveHeaderLbl, Color3.fromRGB(0, 255, 150))
+
 GenSaveBtn = Instance.new("TextButton", MakeRow(SettingsScroll))
 GenSaveBtn.Parent.LayoutOrder = 11
 GenSaveBtn.Size = UDim2.new(1, 0, 1, 0)
 GenSaveBtn.Text = "GENERATE SAVE CODE"
 ApplyStyle(GenSaveBtn, Color3.fromRGB(0, 255, 0))
+
 ImportBoxRow = MakeRow(SettingsScroll)
 ImportBoxRow.LayoutOrder = 12
 ImportBox = Instance.new("TextBox", ImportBoxRow)
@@ -649,6 +658,7 @@ ImportBox.PlaceholderText = "PASTE HUB-Save-... CODE HERE"
 ImportBox.Text = ""
 ImportBox.ClearTextOnFocus = false
 ApplyStyle(ImportBox, Color3.fromRGB(255, 150, 0))
+
 LoadSaveBtn = Instance.new("TextButton", MakeRow(SettingsScroll))
 LoadSaveBtn.Parent.LayoutOrder = 13
 LoadSaveBtn.Size = UDim2.new(1, 0, 1, 0)
@@ -690,11 +700,13 @@ FlyUI.Position = UDim2.new(1, -70, 0.5, -60)
 FlyUI.BackgroundTransparency = 1
 FlyUI.Visible = false
 FlyScaler = Instance.new("UIScale", FlyUI)
+
 FlyUpBtn = Instance.new("TextButton", FlyUI)
 FlyUpBtn.Size = UDim2.new(1, 0, 0.45, 0)
 FlyUpBtn.Text = "UP"
 ApplyStyle(FlyUpBtn, Color3.fromRGB(0, 255, 255))
 FlyUpBtn.BackgroundTransparency = 0.5
+
 FlyDownBtn = Instance.new("TextButton", FlyUI)
 FlyDownBtn.Size = UDim2.new(1, 0, 0.45, 0)
 FlyDownBtn.Position = UDim2.new(0, 0, 0.55, 0)
@@ -708,6 +720,7 @@ PlatUI.Position = UDim2.new(1, -70, 0.5, 70)
 PlatUI.BackgroundTransparency = 1
 PlatUI.Visible = false
 PlatScaler = Instance.new("UIScale", PlatUI)
+
 PlatDownBtn = Instance.new("TextButton", PlatUI)
 PlatDownBtn.Size = UDim2.new(1, 0, 1, 0)
 PlatDownBtn.Text = "DOWN"
@@ -811,7 +824,9 @@ SetUltraRun = function(state)
     if UltraRunBtn then UltraRunBtn.Text = "ULTRA RUN: " .. (ultraRunActive and "ON" or "OFF") end
     if not state then
         local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
-        if hum then for _, t in pairs(hum:GetPlayingAnimationTracks()) do t:AdjustSpeed(1) end end
+        if hum then
+            for _, t in pairs(hum:GetPlayingAnimationTracks()) do t:AdjustSpeed(1) end
+        end
     end
 end
 
@@ -843,7 +858,10 @@ SetChaosLag = function(state)
     if InfStabBtn then InfStabBtn.Text = "CHAOS LAG: " .. (infStabActive and "ON" or "OFF") end
     if not state then
         local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-        if hrp then hrp.Anchored = false hrp.Velocity = Vector3.zero end
+        if hrp then
+            hrp.Anchored = false
+            hrp.Velocity = Vector3.zero
+        end
     end
 end
 
@@ -870,7 +888,10 @@ end
 local function applyJP()
     if not JpBox then return end
     local h = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
-    if h then h.UseJumpPower = true h.JumpPower = tonumber(JpBox.Text) or 50 end
+    if h then
+        h.UseJumpPower = true
+        h.JumpPower = tonumber(JpBox.Text) or 50
+    end
 end
 
 local function applyGrav()
@@ -893,14 +914,23 @@ ToggleInvis = function(state)
             LocalPlayer.Character = fakeChar
             workspace.CurrentCamera.CameraSubject = fakeChar:FindFirstChild("Humanoid")
             local fAnim = fakeChar:FindFirstChild("Animate")
-            if fAnim then fAnim.Disabled = true task.delay(0.1, function() fAnim.Disabled = false end) end
+            if fAnim then
+                fAnim.Disabled = true
+                task.delay(0.1, function() fAnim.Disabled = false end)
+            end
             local rHrp = realChar:FindFirstChild("HumanoidRootPart")
             if rHrp then rHrp.Anchored = false end
             local fHum = fakeChar:FindFirstChild("Humanoid")
             if fHum then
-                fHum.Died:Connect(function() ToggleInvis(false) LocalPlayer.Character = realChar if realChar:FindFirstChild("Humanoid") then realChar.Humanoid.Health = 0 end end)
+                fHum.Died:Connect(function()
+                    ToggleInvis(false)
+                    LocalPlayer.Character = realChar
+                    if realChar:FindFirstChild("Humanoid") then realChar.Humanoid.Health = 0 end
+                end)
             end
-        else ToggleInvis(false) end
+        else
+            ToggleInvis(false)
+        end
     else
         if fakeChar and realChar then
             isStriking = false
@@ -1192,29 +1222,27 @@ updateLagList = function()
     PerformSearch()
 end
 
--- ==================== CLICK LIST UPDATE ====================
 updateClickList = function()
     if not ClickList then return end
     for _, c in pairs(ClickList:GetChildren()) do if c:IsA("Frame") then c:Destroy() end end
-    
     for i, target in ipairs(clickTargets) do
         local row = MakeRow(ClickList)
-        local tBtn = Instance.new("TextButton", row) 
+        local tBtn = Instance.new("TextButton", row)
         tBtn.Size = UDim2.new(0.8, 0, 1, 0)
-        tBtn.Text = target.name .. (target.active and " [ON]" or " [OFF]")
-        ApplyStyle(tBtn, target.active and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 100, 0))
-        
-        local dBtn = Instance.new("TextButton", row) 
-        dBtn.Size = UDim2.new(0.18, 0, 1, 0) 
+        local act = target.active
+        tBtn.Text = target.name .. (act and " [ON]" or " [OFF]")
+        ApplyStyle(tBtn, act and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 100, 0))
+
+        local dBtn = Instance.new("TextButton", row)
+        dBtn.Size = UDim2.new(0.18, 0, 1, 0)
         dBtn.Position = UDim2.new(0.82, 0, 0, 0)
         dBtn.Text = "X"
         ApplyStyle(dBtn, Color3.fromRGB(255, 0, 0))
-        
+
         tBtn.MouseButton1Click:Connect(function()
             target.active = not target.active
             updateClickList()
         end)
-        
         dBtn.MouseButton1Click:Connect(function()
             table.remove(clickTargets, i)
             updateClickList()
@@ -1370,8 +1398,8 @@ AddServiceConn(mouse.Button1Down:Connect(function()
 end))
 
 AddClickBtn.MouseButton1Click:Connect(function()
-    waitingForClickTarget = true 
-    AddClickBtn.Text = "CLICK A BUTTON ON SCREEN..." 
+    waitingForClickTarget = true
+    AddClickBtn.Text = "CLICK SCREEN BUTTON..."
 end)
 
 AddLagBtn.MouseButton1Click:Connect(function()
@@ -1416,9 +1444,13 @@ GenSaveBtn.MouseButton1Click:Connect(function()
     local rawStr = string.format("%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s", currentTheme, ShrinkBox.Text, AfkBox.Text, WsBox.Text, JpBox.Text, GravBox.Text, CFrameSpeedBox.Text, SpinBox.Text, tgs, tabsOrderStr, lagStr)
     local saveCode = "HUB-Save-" .. B64Encode(rawStr)
     local success = setClipboardSafely(saveCode)
-    if success == "studio" then GenSaveBtn.Text = "PRINTED TO OUTPUT!"
-    elseif success == "copied" then GenSaveBtn.Text = "COPIED TO CLIPBOARD!"
-    else GenSaveBtn.Text = "ERROR: NO CLIPBOARD" end
+    if success == "studio" then
+        GenSaveBtn.Text = "PRINTED TO OUTPUT!"
+    elseif success == "copied" then
+        GenSaveBtn.Text = "COPIED TO CLIPBOARD!"
+    else
+        GenSaveBtn.Text = "ERROR: NO CLIPBOARD"
+    end
     task.delay(2.5, function() GenSaveBtn.Text = "GENERATE SAVE CODE" end)
 end)
 
@@ -1555,34 +1587,52 @@ AddServiceConn(RunService.Heartbeat:Connect(function(dt)
     end
 end))
 
--- AUTO CLICKER LOOP
 task.spawn(function()
     while task.wait() do
         if not ScreenGui.Parent then break end
         local delayTime = tonumber(ClickDelayBox.Text) or 0.1
         local firedAny = false
-        
         for _, target in ipairs(clickTargets) do
             if target.active and target.btn and target.btn.Parent then
                 pcall(function()
                     if getconnections then
-                        for _, conn in ipairs(getconnections(target.btn.MouseButton1Click)) do 
-                            if conn.Function then conn.Function() else conn:Fire() end 
+                        local conns = getconnections(target.btn.MouseButton1Click)
+                        if type(conns) == "table" then
+                            for _, conn in pairs(conns) do
+                                pcall(function()
+                                    if type(conn) == "table" and conn.Function then
+                                        conn.Function()
+                                    elseif type(conn) == "function" then
+                                        conn()
+                                    else
+                                        conn:Fire()
+                                    end
+                                end)
+                            end
                         end
-                        for _, conn in ipairs(getconnections(target.btn.Activated)) do 
-                            if conn.Function then conn.Function() else conn:Fire() end 
+                        local actConns = getconnections(target.btn.Activated)
+                        if type(actConns) == "table" then
+                            for _, conn in pairs(actConns) do
+                                pcall(function()
+                                    if type(conn) == "table" and conn.Function then
+                                        conn.Function()
+                                    elseif type(conn) == "function" then
+                                        conn()
+                                    else
+                                        conn:Fire()
+                                    end
+                                end)
+                            end
                         end
                     elseif firesignal then
                         firesignal(target.btn.MouseButton1Click)
+                        firesignal(target.btn.Activated)
                     end
                 end)
                 firedAny = true
             end
         end
-        
-        if firedAny and delayTime > 0 then
-            task.wait(delayTime)
-        end
+        if firedAny and delayTime > 0 then task.wait(delayTime) end
     end
 end)
 
@@ -1606,9 +1656,7 @@ AddServiceConn(RunService.Stepped:Connect(function()
     local char = LocalPlayer.Character
     local hum = char and char:FindFirstChildOfClass("Humanoid")
     if ultraRunActive and hum then
-        for _, t in pairs(hum:GetPlayingAnimationTracks()) do
-            pcall(function() t:AdjustSpeed(2.5) end)
-        end
+        for _, t in pairs(hum:GetPlayingAnimationTracks()) do pcall(function() t:AdjustSpeed(2.5) end) end
     end
     if noclipActive and char then
         for _, p in pairs(char:GetDescendants()) do
@@ -1639,16 +1687,17 @@ local function checkUIInteraction(input)
     for _, frame in ipairs({MainFrame, FlyUI, PlatUI}) do
         if frame and frame.Visible then
             local ax, ay, sx, sy = frame.AbsolutePosition.X, frame.AbsolutePosition.Y, frame.AbsoluteSize.X, frame.AbsoluteSize.Y
-            if pos.X >= ax and pos.X <= ax + sx and pos.Y >= ay and pos.Y <= ay + sy then lastActive = tick() end
+            if pos.X >= ax and pos.X <= ax + sx and pos.Y >= ay and pos.Y <= ay + sy then
+                lastActive = tick()
+            end
         end
     end
 end
 
 AddServiceConn(UIS.InputBegan:Connect(function(input, gpe)
-    -- GUI Picking for Auto Clicker
     if waitingForClickTarget and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
         waitingForClickTarget = false
-        AddClickBtn.Text = "+ ADD UI BUTTON (ДОБАВИТЬ КНОПКУ)"
+        AddClickBtn.Text = "+ ADD UI BUTTON"
         local pos = input.Position
         local guis = LocalPlayer.PlayerGui:GetGuiObjectsAtPosition(pos.X, pos.Y)
         local foundBtn = nil
@@ -1659,7 +1708,7 @@ AddServiceConn(UIS.InputBegan:Connect(function(input, gpe)
             end
         end
         if foundBtn then
-            table.insert(clickTargets, {btn = foundBtn, active = false, name = (foundBtn.Name ~= "" and foundBtn.Name or "Unnamed Btn")})
+            table.insert(clickTargets, {btn = foundBtn, active = false, name = (foundBtn.Name ~= "" and foundBtn.Name or "Target Button")})
             updateClickList()
         end
         return
@@ -1675,7 +1724,9 @@ AddServiceConn(UIS.InputBegan:Connect(function(input, gpe)
 end))
 
 AddServiceConn(UIS.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then checkUIInteraction(input) end
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        checkUIInteraction(input)
+    end
 end))
 
 local function ForceCleanup()
@@ -1724,7 +1775,11 @@ task.spawn(function()
     while task.wait(1) do
         if not ScreenGui.Parent then break end
         local tbox = AfkBox and tonumber(AfkBox.Text) or 9999
-        if tick() - lastActive > tbox then ForceCleanup() ScreenGui:Destroy() break end
+        if tick() - lastActive > tbox then
+            ForceCleanup()
+            ScreenGui:Destroy()
+            break
+        end
     end
 end)
 
