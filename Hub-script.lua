@@ -1903,17 +1903,28 @@ end)
 
 -- Initial UI Setup & Parenting 
 local function AssignParent() 
-    local coreGui 
-    pcall(function() coreGui = game:GetService("CoreGui") end) 
-    if coreGui then 
-        local ok = pcall(function() ScreenGui.Parent = coreGui end) 
-        if not ok then ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui", 15) end 
-    else 
-        ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui", 15) 
-    end 
+    -- 1. Пытаемся использовать gethui() (Современный стандарт защиты UI)
+    local success, safeParent = pcall(function() return gethui() end)
+    
+    -- 2. Если gethui() нет, пробуем старый добрый CoreGui
+    if not (success and safeParent) then
+        success, safeParent = pcall(function() return game:GetService("CoreGui") end)
+    end
+    
+    -- 3. Если экзекутор совсем слабый и не дает доступа ни туда, ни туда - кидаем к игроку
+    if not (success and safeParent) then
+        safeParent = LocalPlayer:WaitForChild("PlayerGui", 15)
+    end
+    
+    -- Присваиваем родителя безопасно
+    local injectSuccess = pcall(function()
+        ScreenGui.Parent = safeParent
+    end)
+    
+    -- Аварийный запасной вариант (fallback), если песочница CoreGui заблокировала Parent
+    if not injectSuccess then
+        ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui", 15)
+    end
 end 
 
 AssignParent()
-
-updatePlayerList() 
-updateLagList()
