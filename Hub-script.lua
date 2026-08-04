@@ -1901,30 +1901,48 @@ CloseBtn.MouseButton1Click:Connect(function()
     ScreenGui:Destroy() 
 end)
 
--- Initial UI Setup & Parenting 
+-- ========================================================
+-- УЛУЧШЕННЫЙ ИНЖЕКТОР ИНТЕРФЕЙСА (ДЛЯ DELTA ANDROID)
+-- ========================================================
 local function AssignParent() 
-    -- 1. Пытаемся использовать gethui() (Современный стандарт защиты UI)
-    local success, safeParent = pcall(function() return gethui() end)
+    warn("[KIRIK HUB] Начинаем инжект интерфейса...")
     
-    -- 2. Если gethui() нет, пробуем старый добрый CoreGui
-    if not (success and safeParent) then
-        success, safeParent = pcall(function() return game:GetService("CoreGui") end)
+    local targetParent = LocalPlayer:WaitForChild("PlayerGui", 5)
+    
+    -- 1. Пробуем gethui() (лучший вариант)
+    local huiSuccess, huiObj = pcall(function() return gethui() end)
+    if huiSuccess and huiObj then
+        targetParent = huiObj
+        warn("[KIRIK HUB] Найден gethui(), используем его.")
+    else
+        -- 2. Пробуем CoreGui (запасной вариант)
+        local cgSuccess, cgObj = pcall(function() return game:GetService("CoreGui") end)
+        if cgSuccess and cgObj then
+            targetParent = cgObj
+            warn("[KIRIK HUB] Найден CoreGui, используем его.")
+        end
     end
     
-    -- 3. Если экзекутор совсем слабый и не дает доступа ни туда, ни туда - кидаем к игроку
-    if not (success and safeParent) then
-        safeParent = LocalPlayer:WaitForChild("PlayerGui", 15)
-    end
-    
-    -- Присваиваем родителя безопасно
-    local injectSuccess = pcall(function()
-        ScreenGui.Parent = safeParent
+    -- Запихиваем интерфейс
+    local success, err = pcall(function()
+        ScreenGui.Parent = targetParent
     end)
     
-    -- Аварийный запасной вариант (fallback), если песочница CoreGui заблокировала Parent
-    if not injectSuccess then
-        ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui", 15)
+    if success then
+        warn("[KIRIK HUB] УСПЕШНО! Интерфейс загружен в: " .. targetParent.Name)
+    else
+        warn("[KIRIK HUB] ОШИБКА: " .. tostring(err))
+        -- 3. Аварийный вариант, если экзекутор заблокировал первые два
+        pcall(function()
+            ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+            warn("[KIRIK HUB] Интерфейс принудительно закинут в PlayerGui.")
+        end)
     end
 end 
 
 AssignParent()
+
+-- Обновляем списки после загрузки
+pcall(function() updatePlayerList() end)
+pcall(function() updateLagList() end)
+warn("[KIRIK HUB] Скрипт полностью отработал!")
