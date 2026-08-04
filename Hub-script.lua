@@ -24,13 +24,11 @@ end
 
 -- ==================== OLD THREAD CLEANUP ==================== 
 local function CleanOldInstances() 
-    -- Создаем список всех возможных мест, где мог остаться старый UI
     local parentsToCheck = {}
     pcall(function() table.insert(parentsToCheck, gethui()) end)
     pcall(function() table.insert(parentsToCheck, game:GetService("CoreGui")) end)
     pcall(function() table.insert(parentsToCheck, LocalPlayer:FindFirstChildOfClass("PlayerGui")) end)
     
-    -- Проходимся по всем и удаляем копии
     for _, parent in ipairs(parentsToCheck) do
         if parent then
             for _, child in ipairs(parent:GetChildren()) do
@@ -42,6 +40,35 @@ local function CleanOldInstances()
     end
 end 
 CleanOldInstances()
+
+-- ==================== ОСНОВНОЙ ДВИЖОК UI (ИНЖЕКТ СНАЧАЛА) ==================== 
+local currentTheme = "NEON" 
+local ScreenGui = Instance.new("ScreenGui") 
+ScreenGui.Name = "KirikLuxuryHub" 
+ScreenGui.ResetOnSpawn = false
+ScreenGui.IgnoreGuiInset = true
+
+local function AssignParentSafe() 
+    warn("[KIRIK HUB] Начинаем инжект интерфейса...")
+    local targetParent = LocalPlayer:WaitForChild("PlayerGui", 5)
+    
+    local huiSuccess, huiObj = pcall(function() return gethui() end)
+    if huiSuccess and huiObj then
+        targetParent = huiObj
+    else
+        local cgSuccess, cgObj = pcall(function() return game:GetService("CoreGui") end)
+        if cgSuccess and cgObj then targetParent = cgObj end
+    end
+    
+    local success, err = pcall(function() ScreenGui.Parent = targetParent end)
+    if success then
+        warn("[KIRIK HUB] УСПЕШНО! Интерфейс загружен в: " .. targetParent.Name)
+    else
+        warn("[KIRIK HUB] ОШИБКА: " .. tostring(err))
+        pcall(function() ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end)
+    end
+end 
+AssignParentSafe() -- СРАЗУ ВЫВОДИМ МЕНЮ НА ЭКРАН!
 
 -- ==================== POLYMORPHIC CLIPBOARD WRAPPER ==================== 
 local function setClipboardSafely(text) 
@@ -63,8 +90,8 @@ local invisActive, undieActive, platActive, unvoidActive = false, false, false, 
 local flying, infStabActive, cfSpeedActive, spinActive = false, false, false, false 
 local fpsActive, pingActive = false, false 
 local aimbotActive, antiAfkActive = false, false
-local aimbotMode = "ALL" -- "ALL", "CUSTOM", "IGNORE"
-local aimbotTargets = {} -- player -> "TRACK" | "IGNORE" | nil
+local aimbotMode = "ALL"
+local aimbotTargets = {}
 
 local upPressed, downPressed, platDownPressed = false, false, false 
 local aimTarget = nil 
@@ -143,11 +170,6 @@ local function B64Decode(data)
 end
 
 -- ==================== THEME SYSTEM ==================== 
-local currentTheme = "NEON" 
-local ScreenGui = Instance.new("ScreenGui") 
-ScreenGui.Name = "KirikLuxuryHub" 
-ScreenGui.ResetOnSpawn = false
-
 local function UpdateInstanceTheme(inst) 
     if not inst:GetAttribute("NeonStroke") then return end 
     local targetBg = inst:GetAttribute("NeonBg") 
@@ -1901,48 +1923,6 @@ CloseBtn.MouseButton1Click:Connect(function()
     ScreenGui:Destroy() 
 end)
 
--- ========================================================
--- УЛУЧШЕННЫЙ ИНЖЕКТОР ИНТЕРФЕЙСА (ДЛЯ DELTA ANDROID)
--- ========================================================
-local function AssignParent() 
-    warn("[KIRIK HUB] Начинаем инжект интерфейса...")
-    
-    local targetParent = LocalPlayer:WaitForChild("PlayerGui", 5)
-    
-    -- 1. Пробуем gethui() (лучший вариант)
-    local huiSuccess, huiObj = pcall(function() return gethui() end)
-    if huiSuccess and huiObj then
-        targetParent = huiObj
-        warn("[KIRIK HUB] Найден gethui(), используем его.")
-    else
-        -- 2. Пробуем CoreGui (запасной вариант)
-        local cgSuccess, cgObj = pcall(function() return game:GetService("CoreGui") end)
-        if cgSuccess and cgObj then
-            targetParent = cgObj
-            warn("[KIRIK HUB] Найден CoreGui, используем его.")
-        end
-    end
-    
-    -- Запихиваем интерфейс
-    local success, err = pcall(function()
-        ScreenGui.Parent = targetParent
-    end)
-    
-    if success then
-        warn("[KIRIK HUB] УСПЕШНО! Интерфейс загружен в: " .. targetParent.Name)
-    else
-        warn("[KIRIK HUB] ОШИБКА: " .. tostring(err))
-        -- 3. Аварийный вариант, если экзекутор заблокировал первые два
-        pcall(function()
-            ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-            warn("[KIRIK HUB] Интерфейс принудительно закинут в PlayerGui.")
-        end)
-    end
-end 
-
-AssignParent()
-
--- Обновляем списки после загрузки
 pcall(function() updatePlayerList() end)
 pcall(function() updateLagList() end)
 warn("[KIRIK HUB] Скрипт полностью отработал!")
