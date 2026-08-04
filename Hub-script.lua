@@ -59,6 +59,8 @@ local invisActive, undieActive, platActive, unvoidActive = false, false, false, 
 local flying, infStabActive, cfSpeedActive, spinActive = false, false, false, false 
 local fpsActive, pingActive = false, false 
 local aimbotActive, antiAfkActive = false, false
+local aimbotMode = "ALL" -- "ALL", "CUSTOM", "IGNORE"
+local aimbotTargets = {} -- player -> "TRACK" | "IGNORE" | nil
 
 local upPressed, downPressed, platDownPressed = false, false, false 
 local aimTarget = nil 
@@ -74,7 +76,7 @@ local realChar, fakeChar, platPart = nil, nil, nil
 local platFails, platFailTime = 0, 0
 
 -- ==================== FORWARD DECLARATIONS ==================== 
-local AimbotBtn, EspBtn, ModeBtn, AddTpBtn, PlayerListWrapper, PlayerList 
+local AimbotBtn, AimbotModeBtn, AimSelectAllBtn, AimClearAllBtn, EspBtn, ModeBtn, AddTpBtn, PlayerListWrapper, PlayerList  
 local NpcModeBtn, NpcRefreshBtn, NpcListWrapper, NpcList 
 local InvisBtn, UndieBtn, WsBtn, WsBox, JpBtn, JpBox, GravBtn, GravBox 
 local CFrameSpeedBtn, CFrameSpeedBox, SpinBtn, SpinBox, UltraRunBtn, NoclipBtn, UnviewBtn 
@@ -463,7 +465,24 @@ AimbotBtn.Size = UDim2.new(1, 0, 1, 0)
 AimbotBtn.Text = "AIMBOT: OFF" 
 ApplyStyle(AimbotBtn, Color3.fromRGB(255, 50, 50)) 
 
-EspBtn = Instance.new("TextButton", MakeRow(PlayersTab)) 
+AimbotModeBtn = Instance.new("TextButton", MakeRow(PlayersTab)) 
+AimbotModeBtn.Size = UDim2.new(1, 0, 1, 0) 
+AimbotModeBtn.Text = "AIM MODE: TRACK ALL" 
+ApplyStyle(AimbotModeBtn, Color3.fromRGB(255, 150, 0)) 
+
+local AimControlRow = MakeRow(PlayersTab)
+AimSelectAllBtn = Instance.new("TextButton", AimControlRow)
+AimSelectAllBtn.Size = UDim2.new(0.48, 0, 1, 0)
+AimSelectAllBtn.Text = "AIM: TRACK ALL"
+ApplyStyle(AimSelectAllBtn, Color3.fromRGB(0, 255, 100))
+
+AimClearAllBtn = Instance.new("TextButton", AimControlRow)
+AimClearAllBtn.Size = UDim2.new(0.48, 0, 1, 0)
+AimClearAllBtn.Position = UDim2.new(0.52, 0, 0, 0)
+AimClearAllBtn.Text = "AIM: CLEAR ALL"
+ApplyStyle(AimClearAllBtn, Color3.fromRGB(255, 0, 100))
+
+EspBtn = Instance.new("TextButton", MakeRow(PlayersTab))  
 EspBtn.Size = UDim2.new(1, 0, 1, 0) 
 EspBtn.Text = "ESP: OFF" 
 ApplyStyle(EspBtn, Color3.fromRGB(0, 255, 100)) 
@@ -479,7 +498,7 @@ AddTpBtn.Text = "ADD CUSTOM TP PART"
 ApplyStyle(AddTpBtn, Color3.fromRGB(0, 150, 255)) 
 
 PlayerListWrapper = Instance.new("Frame", PlayersTab) 
-PlayerListWrapper.Size = UDim2.new(1, 0, 1, -125) 
+PlayerListWrapper.Size = UDim2.new(1, 0, 1, -185)  
 PlayerListWrapper.BackgroundTransparency = 1 
 PlayerList, _ = MakeScrollArea(PlayerListWrapper)
 
@@ -1064,15 +1083,28 @@ GetClosestPlayerToCursor = function()
 
     for _, p in pairs(Players:GetPlayers()) do
         if p ~= LocalPlayer and p.Character then
-            local targetPart = p.Character:FindFirstChild("Head") or p.Character:FindFirstChild("HumanoidRootPart")
-            local hum = p.Character:FindFirstChildOfClass("Humanoid")
-            if targetPart and hum and hum.Health > 0 then
-                local screenPos, onScreen = camera:WorldToViewportPoint(targetPart.Position)
-                if onScreen then
-                    local dist = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
-                    if dist < closestDist then
-                        closestDist = dist
-                        closestPart = targetPart
+            local status = aimbotTargets[p]
+            
+            local isAllowed = false
+            if aimbotMode == "ALL" then
+                isAllowed = (status ~= "IGNORE")
+            elseif aimbotMode == "CUSTOM" then
+                isAllowed = (status == "TRACK")
+            elseif aimbotMode == "IGNORE" then
+                isAllowed = (status ~= "IGNORE")
+            end
+
+            if isAllowed then
+                local targetPart = p.Character:FindFirstChild("Head") or p.Character:FindFirstChild("HumanoidRootPart")
+                local hum = p.Character:FindFirstChildOfClass("Humanoid")
+                if targetPart and hum and hum.Health > 0 then
+                    local screenPos, onScreen = camera:WorldToViewportPoint(targetPart.Position)
+                    if onScreen then
+                        local dist = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
+                        if dist < closestDist then
+                            closestDist = dist
+                            closestPart = targetPart
+                        end
                     end
                 end
             end
@@ -1138,12 +1170,29 @@ updatePlayerList = function()
             local btn = Instance.new("TextButton", row) 
             btn.Size = UDim2.new(1, 0, 1, 0) 
             
+            local status = aimbotTargets[player]
+            local tagStr = ""
+            if status == "TRACK" then
+                tagStr = " [AIM TRACK]"
+            elseif status == "IGNORE" then
+                tagStr = " [AIM IGNORE]"
+            end
+
             if listMode == "INF TP" then 
                 local act = (currentInfTpTarget == player) 
-                btn.Text = player.DisplayName .. (act and " [ON]" or " [OFF]") 
+                btn.Text = player.DisplayName .. tagStr .. (act and " [ON]" or " [OFF]") 
                 ApplyStyle(btn, act and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)) 
+            elseif listMode == "AIM TRACK" then
+                btn.Text = player.DisplayName .. (status == "TRACK" and " [TRACK]" or (status == "IGNORE" and " [IGNORE]" or " [AUTO]"))
+                if status == "TRACK" then
+                    ApplyStyle(btn, Color3.fromRGB(0, 255, 100), Color3.fromRGB(10, 30, 15))
+                elseif status == "IGNORE" then
+                    ApplyStyle(btn, Color3.fromRGB(255, 50, 50), Color3.fromRGB(30, 10, 10))
+                else
+                    ApplyStyle(btn, Color3.fromRGB(0, 200, 255))
+                end
             else 
-                btn.Text = player.DisplayName 
+                btn.Text = player.DisplayName .. tagStr 
                 ApplyStyle(btn, Color3.fromRGB(0, 200, 255)) 
             end 
             
@@ -1162,10 +1211,19 @@ updatePlayerList = function()
                     if currentInfTpTarget == player then stopInfTp() else startInfTp(player) end 
                     updatePlayerList() 
                     updateNpcList() 
+                elseif listMode == "AIM TRACK" then
+                    if status == nil then
+                        aimbotTargets[player] = "TRACK"
+                    elseif status == "TRACK" then
+                        aimbotTargets[player] = "IGNORE"
+                    else
+                        aimbotTargets[player] = nil
+                    end
+                    updatePlayerList()
                 end 
             end) 
         end 
-    end 
+    end  
     
     if listMode == "TP" or listMode == "VIEW" or listMode == "INF TP" then 
         for i, spot in ipairs(savedSpots) do 
@@ -1388,9 +1446,35 @@ JpBtn.MouseButton1Click:Connect(function() applyJP() end)
 GravBtn.MouseButton1Click:Connect(function() applyGrav() end)
 
 ModeBtn.MouseButton1Click:Connect(function() 
-    listMode = (listMode == "TP" and "VIEW" or (listMode == "VIEW" and "INF TP" or "TP")) 
+    listMode = (listMode == "TP" and "VIEW" or (listMode == "VIEW" and "INF TP" or (listMode == "INF TP" and "AIM TRACK" or "TP"))) 
     ModeBtn.Text = "LIST MODE: " .. listMode 
     updatePlayerList() 
+end) 
+
+AimbotModeBtn.MouseButton1Click:Connect(function()
+    if aimbotMode == "ALL" then
+        aimbotMode = "CUSTOM"
+    elseif aimbotMode == "CUSTOM" then
+        aimbotMode = "IGNORE"
+    else
+        aimbotMode = "ALL"
+    end
+    AimbotModeBtn.Text = "AIM MODE: " .. (aimbotMode == "ALL" and "TRACK ALL" or (aimbotMode == "CUSTOM" and "CUSTOM ONLY" or "IGNORE LIST"))
+    updatePlayerList()
+end)
+
+AimSelectAllBtn.MouseButton1Click:Connect(function()
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer then
+            aimbotTargets[p] = "TRACK"
+        end
+    end
+    updatePlayerList()
+end)
+
+AimClearAllBtn.MouseButton1Click:Connect(function()
+    aimbotTargets = {}
+    updatePlayerList()
 end) 
 
 NpcModeBtn.MouseButton1Click:Connect(function() 
