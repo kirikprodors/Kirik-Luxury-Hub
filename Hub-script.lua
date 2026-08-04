@@ -24,18 +24,22 @@ end
 
 -- ==================== OLD THREAD CLEANUP ==================== 
 local function CleanOldInstances() 
-    pcall(function() 
-        local cg = game:GetService("CoreGui") 
-        local old = cg:FindFirstChild("KirikLuxuryHub") 
-        if old then old:Destroy() end 
-    end) 
-    pcall(function() 
-        local pg = LocalPlayer:FindFirstChildOfClass("PlayerGui") 
-        if pg then 
-            local old = pg:FindFirstChild("KirikLuxuryHub") 
-            if old then old:Destroy() end 
-        end 
-    end) 
+    -- Создаем список всех возможных мест, где мог остаться старый UI
+    local parentsToCheck = {}
+    pcall(function() table.insert(parentsToCheck, gethui()) end)
+    pcall(function() table.insert(parentsToCheck, game:GetService("CoreGui")) end)
+    pcall(function() table.insert(parentsToCheck, LocalPlayer:FindFirstChildOfClass("PlayerGui")) end)
+    
+    -- Проходимся по всем и удаляем копии
+    for _, parent in ipairs(parentsToCheck) do
+        if parent then
+            for _, child in ipairs(parent:GetChildren()) do
+                if child.Name == "KirikLuxuryHub" then
+                    child:Destroy()
+                end
+            end
+        end
+    end
 end 
 CleanOldInstances()
 
