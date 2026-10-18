@@ -8,71 +8,31 @@ local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local Lighting = game:GetService("Lighting")
 local TeleportService = game:GetService("TeleportService")
-local VirtualUser = game:GetService("VirtualUser")
 
--- Safe LocalPlayer Resolver
+-- Safe VirtualUser Fetch
+local VirtualUser
+pcall(function()
+    VirtualUser = game:GetService("VirtualUser")
+end)
+
+-- Safe LocalPlayer & Camera Loading (Prevents immediate nil crash)
 local LocalPlayer = Players.LocalPlayer
-if not LocalPlayer then
-    pcall(function()
-        LocalPlayer = Players:GetPropertyChangedSignal("LocalPlayer"):Wait()
-    end)
-    LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
+while not LocalPlayer do
+    task.wait(0.1)
+    LocalPlayer = Players.LocalPlayer
+end
+
+local Camera = workspace.CurrentCamera
+while not Camera do
+    task.wait(0.1)
+    Camera = workspace.CurrentCamera
 end
 
 local Mouse = LocalPlayer:GetMouse()
 
-local function getCamera()
-    return workspace.CurrentCamera or workspace:FindFirstChildOfClass("Camera")
-end
-
--- Safe GUI Parent Resolver (Fixes executor startup crash)
-local function getSafeGuiParent()
-    local parent = nil
-    pcall(function()
-        if typeof(gethui) == "function" then
-            parent = gethui()
-        end
-    end)
-    if not parent then
-        pcall(function()
-            parent = game:GetService("CoreGui")
-        end)
-    end
-    if not parent then
-        pcall(function()
-            parent = LocalPlayer:FindFirstChildOfClass("PlayerGui") or LocalPlayer:WaitForChild("PlayerGui", 5)
-        end)
-    end
-    return parent
-end
-
-local TargetGuiParent = getSafeGuiParent()
-if not TargetGuiParent then
-    warn("[KIRIK HUB V2.0] Failed to locate a valid GUI container.")
-    return
-end
-
--- Clean any existing hub instances safely
-pcall(function()
-    local old = TargetGuiParent:FindFirstChild("KirikHubV2")
-    if old then old:Destroy() end
-end)
-
--- ScreenGui Setup
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "KirikHubV2"
-ScreenGui.ResetOnSpawn = false
-
-pcall(function()
-    if syn and syn.protect_gui then
-        syn.protect_gui(ScreenGui)
-    end
-end)
-ScreenGui.Parent = TargetGuiParent
-
--- Base Constants
+-- Base Dimensions & Scaling
 local BASE_WIDTH = 560
-local BASE_HEIGHT = 390
+local BASE_HEIGHT = 385
 local TOPBAR_HEIGHT = 44
 local currentScale = 1.0
 local isMinimized = false
@@ -81,22 +41,12 @@ local isMinimized = false
 local defaultWalkSpeed = 16
 local defaultJumpPower = 50
 local defaultGravity = workspace.Gravity
-local defaultFOV = 70
-pcall(function() defaultFOV = getCamera().FieldOfView end)
-
-local defaultBrightness = 2
-local defaultClockTime = 14
-local defaultFogEnd = 100000
-local defaultGlobalShadows = true
-local defaultAmbient = Color3.fromRGB(128, 128, 128)
-
-pcall(function()
-    defaultBrightness = Lighting.Brightness
-    defaultClockTime = Lighting.ClockTime
-    defaultFogEnd = Lighting.FogEnd
-    defaultGlobalShadows = Lighting.GlobalShadows
-    defaultAmbient = Lighting.Ambient
-end)
+local defaultFOV = (Camera and Camera.FieldOfView) or 70
+local defaultBrightness = pcall(function() return Lighting.Brightness end) and Lighting.Brightness or 2
+local defaultClockTime = pcall(function() return Lighting.ClockTime end) and Lighting.ClockTime or 14
+local defaultFogEnd = pcall(function() return Lighting.FogEnd end) and Lighting.FogEnd or 100000
+local defaultGlobalShadows = pcall(function() return Lighting.GlobalShadows end) and Lighting.GlobalShadows or false
+local defaultAmbient = pcall(function() return Lighting.Ambient end) and Lighting.Ambient or Color3.fromRGB(128, 128, 128)
 
 -- Active Hack States
 local flyEnabled = false
@@ -166,6 +116,52 @@ local activeTweenInstance = nil
 local customTabsRegistry = {}
 local activeConnections = {}
 
+-- Safe Previous Instance Cleanup
+pcall(function()
+    if gethui then
+        local old = gethui():FindFirstChild("KirikHubV2")
+        if old then old:Destroy() end
+    end
+    if game:GetService("CoreGui"):FindFirstChild("KirikHubV2") then
+        game:GetService("CoreGui"):FindFirstChild("KirikHubV2"):Destroy()
+    end
+    if LocalPlayer:FindFirstChild("PlayerGui") and LocalPlayer.PlayerGui:FindFirstChild("KirikHubV2") then
+        LocalPlayer.PlayerGui:FindFirstChild("KirikHubV2"):Destroy()
+    end
+end)
+
+-- ScreenGui Setup with Bulletproof Fallback
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "KirikHubV2"
+ScreenGui.ResetOnSpawn = false
+
+local mounted = false
+if gethui then
+    pcall(function()
+        ScreenGui.Parent = gethui()
+        mounted = true
+    end)
+end
+
+if not mounted and syn and syn.protect_gui then
+    pcall(function()
+        syn.protect_gui(ScreenGui)
+        ScreenGui.Parent = game:GetService("CoreGui")
+        mounted = true
+    end)
+end
+
+if not mounted then
+    pcall(function()
+        ScreenGui.Parent = game:GetService("CoreGui")
+        mounted = true
+    end)
+end
+
+if not mounted or not ScreenGui.Parent then
+    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+end
+
 -- Forward Declarations
 local switchTab
 local createPage
@@ -187,10 +183,8 @@ end
 local function stopTweening()
     isTweening = false
     if activeTweenInstance then
-        pcall(function()
-            activeTweenInstance:Cancel()
-            activeTweenInstance = nil
-        end)
+        activeTweenInstance:Cancel()
+        activeTweenInstance = nil
     end
     if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
         LocalPlayer.Character.HumanoidRootPart.Anchored = false
@@ -201,7 +195,7 @@ end
 local function resetAllProcesses()
     for _, conn in pairs(activeConnections) do
         if conn and conn.Disconnect then
-            pcall(function() conn:Disconnect() end)
+            conn:Disconnect()
         end
     end
     activeConnections = {}
@@ -221,7 +215,7 @@ local function resetAllProcesses()
 
     -- Destroy Air Platform
     if platformPart then
-        pcall(function() platformPart:Destroy() end)
+        platformPart:Destroy()
         platformPart = nil
     end
     platformEnabled = false
@@ -259,16 +253,15 @@ local function resetAllProcesses()
     partSelectingMode = false
 
     if partHighlight then
-        pcall(function() partHighlight:Destroy() end)
+        partHighlight:Destroy()
         partHighlight = nil
     end
 
     -- Reset Camera
-    local cam = getCamera()
-    if cam then
-        cam.FieldOfView = defaultFOV
+    if Camera then
+        Camera.FieldOfView = defaultFOV
         if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
-            cam.CameraSubject = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            Camera.CameraSubject = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
         end
     end
 
@@ -293,17 +286,15 @@ local function resetAllProcesses()
         local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
         local root = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
         if hum then
-            pcall(function()
-                hum:SetStateEnabled(Enum.HumanoidStateType.GettingUp, true)
-                hum:SetStateEnabled(Enum.HumanoidStateType.Running, true)
-                hum:SetStateEnabled(Enum.HumanoidStateType.Climbing, true)
-                hum:SetStateEnabled(Enum.HumanoidStateType.Freefall, true)
-                hum.PlatformStand = false
-                hum.WalkSpeed = defaultWalkSpeed
-                hum.UseJumpPower = true
-                hum.JumpPower = defaultJumpPower
-                hum:ChangeState(Enum.HumanoidStateType.GettingUp)
-            end)
+            hum:SetStateEnabled(Enum.HumanoidStateType.GettingUp, true)
+            hum:SetStateEnabled(Enum.HumanoidStateType.Running, true)
+            hum:SetStateEnabled(Enum.HumanoidStateType.Climbing, true)
+            hum:SetStateEnabled(Enum.HumanoidStateType.Freefall, true)
+            hum.PlatformStand = false
+            hum.WalkSpeed = defaultWalkSpeed
+            hum.UseJumpPower = true
+            hum.JumpPower = defaultJumpPower
+            hum:ChangeState(Enum.HumanoidStateType.GettingUp)
         end
         if root then
             root.Anchored = false
@@ -558,7 +549,7 @@ local function createTabButton(name, layoutOrder, isDeletable)
     btn.TextColor3 = Color3.fromRGB(150, 150, 170)
     btn.Font = Enum.Font.GothamMedium
     btn.TextSize = 12
-    btn.TextTruncate = Enum.TextTruncate.AtEnd
+    pcall(function() btn.TextTruncate = Enum.TextTruncate.AtEnd end)
     btn.Parent = TabItemFrame
 
     local btnCorner = Instance.new("UICorner")
@@ -900,14 +891,13 @@ local function handleFly()
 
         task.spawn(function()
             while flyEnabled and char and root and hum do
-                local cam = getCamera()
                 local moveDir = hum.MoveDirection
-                if moveDir.Magnitude > 0 and cam then
-                    flyBV.Velocity = (cam.CFrame.LookVector * moveDir.Z * -1 + cam.CFrame.RightVector * moveDir.X).Unit * flySpeed
+                if moveDir.Magnitude > 0 then
+                    flyBV.Velocity = (Camera.CFrame.LookVector * moveDir.Z * -1 + Camera.CFrame.RightVector * moveDir.X).Unit * flySpeed
                 else
                     flyBV.Velocity = Vector3.zero
                 end
-                if cam then flyBG.CFrame = cam.CFrame end
+                flyBG.CFrame = Camera.CFrame
                 RunService.RenderStepped:Wait()
             end
         end)
@@ -993,7 +983,7 @@ local function toggleAirPlatform(state)
         end
     else
         if platformPart then
-            pcall(function() platformPart:Destroy() end)
+            platformPart:Destroy()
             platformPart = nil
         end
     end
@@ -1038,7 +1028,7 @@ PlatLayout.Parent = PlatControls
 local PlatUpBtn = Instance.new("TextButton")
 PlatUpBtn.Size = UDim2.new(0.35, 0, 1, 0)
 PlatUpBtn.BackgroundColor3 = Color3.fromRGB(70, 90, 220)
-PlatUpBtn.Text = "🔼 Platform UP"
+PlatUpBtn.Text = "Platform UP (+)"
 PlatUpBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 PlatUpBtn.Font = Enum.Font.GothamBold
 PlatUpBtn.TextSize = 11
@@ -1051,7 +1041,7 @@ PUBound.Parent = PlatUpBtn
 local PlatDownBtn = Instance.new("TextButton")
 PlatDownBtn.Size = UDim2.new(0.35, 0, 1, 0)
 PlatDownBtn.BackgroundColor3 = Color3.fromRGB(70, 90, 220)
-PlatDownBtn.Text = "🔽 Platform DOWN"
+PlatDownBtn.Text = "Platform DOWN (-)"
 PlatDownBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 PlatDownBtn.Font = Enum.Font.GothamBold
 PlatDownBtn.TextSize = 11
@@ -1181,7 +1171,7 @@ end, function(val)
     end
 end)
 
--- 7. Bulletproof No-Clip (Safe Collision Toggling)
+-- 7. Bulletproof No-Clip (Wall Hack)
 createSimpleToggle(HomePage, "No-Clip (Wall Hack)", false, function(state)
     noclipEnabled = state
     if noclipConn then noclipConn:Disconnect() noclipConn = nil end
@@ -1191,6 +1181,7 @@ createSimpleToggle(HomePage, "No-Clip (Wall Hack)", false, function(state)
                 for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
                     if part:IsA("BasePart") then
                         part.CanCollide = false
+                        part.CanTouch = false
                     end
                 end
             end
@@ -1215,10 +1206,9 @@ end)
 local antiVoidConn = RunService.Heartbeat:Connect(function()
     if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
         local root = LocalPlayer.Character.HumanoidRootPart
-        local voidLevel = (workspace.FallenPartsDestroyHeight or -500) + 30
-        if root.Position.Y > voidLevel then
+        if root.Position.Y > (workspace.FallenPartsDestroyHeight + 30) then
             lastSafeCFrame = root.CFrame
-        elseif antiVoidEnabled and root.Position.Y <= voidLevel then
+        elseif antiVoidEnabled and root.Position.Y <= (workspace.FallenPartsDestroyHeight + 25) then
             if lastSafeCFrame then
                 root.CFrame = lastSafeCFrame + Vector3.new(0, 10, 0)
                 root.AssemblyLinearVelocity = Vector3.zero
@@ -1291,23 +1281,23 @@ SBCorner.CornerRadius = UDim.new(0, 5)
 SBCorner.Parent = StatusBanner
 
 local function getTargetCFrame()
-    if currentTpMode == "Player" and selectedTarget and selectedTarget.Character then
+    if currentTpMode == "Player" and typeof(selectedTarget) == "Instance" and selectedTarget:IsA("Player") and selectedTarget.Character then
         local root = selectedTarget.Character:FindFirstChild("HumanoidRootPart") or selectedTarget.Character:FindFirstChild("Torso")
         return root and (root.CFrame + Vector3.new(0, 2.5, 0))
-    elseif currentTpMode == "NPC" and selectedTarget and selectedTarget.Root and selectedTarget.Root.Parent then
+    elseif currentTpMode == "NPC" and type(selectedTarget) == "table" and selectedTarget.Root and selectedTarget.Root.Parent then
         return selectedTarget.Root.CFrame + Vector3.new(0, 3, 0)
-    elseif currentTpMode == "Part" and selectedTarget and selectedTarget.Parent then
+    elseif currentTpMode == "Part" and typeof(selectedTarget) == "Instance" and selectedTarget:IsA("BasePart") and selectedTarget.Parent then
         return selectedTarget.CFrame + Vector3.new(0, 3.5, 0)
     end
     return nil
 end
 
 local function getTargetCameraSubject()
-    if currentTpMode == "Player" and selectedTarget and selectedTarget.Character then
+    if currentTpMode == "Player" and typeof(selectedTarget) == "Instance" and selectedTarget:IsA("Player") and selectedTarget.Character then
         return selectedTarget.Character:FindFirstChildOfClass("Humanoid")
-    elseif currentTpMode == "NPC" and selectedTarget and selectedTarget.Hum then
+    elseif currentTpMode == "NPC" and type(selectedTarget) == "table" and selectedTarget.Hum then
         return selectedTarget.Hum
-    elseif currentTpMode == "Part" and selectedTarget then
+    elseif currentTpMode == "Part" and typeof(selectedTarget) == "Instance" and selectedTarget:IsA("BasePart") then
         return selectedTarget
     end
     return nil
@@ -1480,7 +1470,7 @@ end
 
 RefreshNPCBtn.MouseButton1Click:Connect(scanAndRefreshNPCs)
 
--- 3. Parts Selector & Robust Waypoint Chain View
+-- 3. Parts Selector & Tween Chain View
 local PartsContainer = Instance.new("Frame")
 PartsContainer.Size = UDim2.new(1, -16, 0, 150)
 PartsContainer.Position = UDim2.new(0, 8, 0, 68)
@@ -1488,7 +1478,6 @@ PartsContainer.BackgroundTransparency = 1
 PartsContainer.Visible = false
 PartsContainer.Parent = UnifiedTPCard
 
--- Tap Part Select Button
 local SelectPartActionBtn = Instance.new("TextButton")
 SelectPartActionBtn.Size = UDim2.new(1, 0, 0, 30)
 SelectPartActionBtn.BackgroundColor3 = Color3.fromRGB(28, 28, 40)
@@ -1517,7 +1506,7 @@ local partTapConn = UserInputService.InputBegan:Connect(function(input, processe
                 selectedTargetName = target.Name .. " (" .. target.Parent.Name .. ")"
                 partSelectingMode = false
 
-                if partHighlight then pcall(function() partHighlight:Destroy() end) end
+                if partHighlight then partHighlight:Destroy() end
                 partHighlight = Instance.new("SelectionBox")
                 partHighlight.Adornee = target
                 partHighlight.Color3 = Color3.fromRGB(99, 102, 241)
@@ -1533,7 +1522,6 @@ local partTapConn = UserInputService.InputBegan:Connect(function(input, processe
 end)
 table.insert(activeConnections, partTapConn)
 
--- Waypoint Chain Controls
 local ChainControlRow = Instance.new("Frame")
 ChainControlRow.Size = UDim2.new(1, 0, 0, 30)
 ChainControlRow.Position = UDim2.new(0, 0, 0, 36)
@@ -1567,9 +1555,8 @@ local CCCorner = Instance.new("UICorner")
 CCCorner.CornerRadius = UDim.new(0, 5)
 CCCorner.Parent = ClearChainBtn
 
--- Add Waypoint with Screen-attached Billboard
 AddChainBtn.MouseButton1Click:Connect(function()
-    if selectedTarget and selectedTarget:IsA("BasePart") then
+    if typeof(selectedTarget) == "Instance" and selectedTarget:IsA("BasePart") then
         local index = #waypointChain + 1
         local targetCF = selectedTarget.CFrame + Vector3.new(0, 3, 0)
 
@@ -1591,7 +1578,7 @@ AddChainBtn.MouseButton1Click:Connect(function()
         local corner = Instance.new("UICorner")
         corner.CornerRadius = UDim.new(0, 4)
         corner.Parent = txt
-        bb.Parent = ScreenGui
+        bb.Parent = selectedTarget
 
         table.insert(waypointChain, {
             Part = selectedTarget,
@@ -1611,7 +1598,6 @@ ClearChainBtn.MouseButton1Click:Connect(function()
     AddChainBtn.Text = "+ Add to Twin Chain (0)"
 end)
 
--- Twin Runner Controls
 local TweenRunRow = Instance.new("Frame")
 TweenRunRow.Size = UDim2.new(1, 0, 0, 36)
 TweenRunRow.Position = UDim2.new(0, 0, 0, 72)
@@ -1668,7 +1654,6 @@ local RTCorner = Instance.new("UICorner")
 RTCorner.CornerRadius = UDim.new(0, 5)
 RTCorner.Parent = RunTweenBtn
 
--- Physics-Anchored Smooth Waypoint Tween Runner
 RunTweenBtn.MouseButton1Click:Connect(function()
     if isTweening then
         stopTweening()
@@ -1723,7 +1708,6 @@ end)
 
 modeViews["Part"] = PartsContainer
 
--- Mode Switcher Logic
 local function createModeBtn(name, text)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(0.32, 0, 1, 0)
@@ -1760,9 +1744,9 @@ local function createModeBtn(name, text)
     end)
 end
 
-createModeBtn("Player", "👥 Players")
-createModeBtn("NPC", "👾 NPCs")
-createModeBtn("Part", "🎯 Parts")
+createModeBtn("Player", "Players")
+createModeBtn("NPC", "NPCs")
+createModeBtn("Part", "Parts")
 
 refreshPlayersList()
 Players.PlayerAdded:Connect(refreshPlayersList)
@@ -1850,13 +1834,12 @@ Uni_ViewBtn.MouseButton1Click:Connect(function()
     Uni_ViewBtn.Text = viewActive and "View: ON" or "View: OFF"
     Uni_ViewBtn.BackgroundColor3 = viewActive and Color3.fromRGB(34, 197, 94) or Color3.fromRGB(45, 45, 58)
 
-    local cam = getCamera()
-    if viewActive and cam then
+    if viewActive then
         local subj = getTargetCameraSubject()
-        if subj then cam.CameraSubject = subj end
-    elseif cam then
+        if subj then Camera.CameraSubject = subj end
+    else
         if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
-            cam.CameraSubject = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            Camera.CameraSubject = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
         end
     end
 end)
@@ -1954,35 +1937,33 @@ table.insert(activeConnections, espPlayerConn)
 -- FullBright
 createSimpleToggle(HomePage, "FullBright / Night Vision", false, function(state)
     fullBrightEnabled = state
-    pcall(function()
-        if state then
-            Lighting.Brightness = 2
-            Lighting.ClockTime = 14
-            Lighting.FogEnd = 100000
-            Lighting.GlobalShadows = false
-            Lighting.Ambient = Color3.fromRGB(255, 255, 255)
-        else
-            Lighting.Brightness = defaultBrightness
-            Lighting.ClockTime = defaultClockTime
-            Lighting.FogEnd = defaultFogEnd
-            Lighting.GlobalShadows = defaultGlobalShadows
-            Lighting.Ambient = defaultAmbient
-        end
-    end)
+    if state then
+        Lighting.Brightness = 2
+        Lighting.ClockTime = 14
+        Lighting.FogEnd = 100000
+        Lighting.GlobalShadows = false
+        Lighting.Ambient = Color3.fromRGB(255, 255, 255)
+    else
+        Lighting.Brightness = defaultBrightness
+        Lighting.ClockTime = defaultClockTime
+        Lighting.FogEnd = defaultFogEnd
+        Lighting.GlobalShadows = defaultGlobalShadows
+        Lighting.Ambient = defaultAmbient
+    end
 end)
 
 -- Camera FOV
 createControlRow(HomePage, "Camera FOV", 70, false, function(state)
     fovEnabled = state
-    local cam = getCamera()
-    if cam then
-        cam.FieldOfView = state and customFOV or defaultFOV
+    if state then
+        Camera.FieldOfView = customFOV
+    else
+        Camera.FieldOfView = defaultFOV
     end
 end, function(val)
     customFOV = val
-    local cam = getCamera()
-    if fovEnabled and cam then
-        cam.FieldOfView = customFOV
+    if fovEnabled then
+        Camera.FieldOfView = customFOV
     end
 end)
 
@@ -2011,11 +1992,12 @@ createSimpleToggle(HomePage, "Anti-AFK (No 20m Kick)", false, function(state)
 end)
 
 local afkConn = LocalPlayer.Idled:Connect(function()
-    if antiAfkEnabled then
-        local cam = getCamera()
-        VirtualUser:Button2Down(Vector2.new(0, 0), cam and cam.CFrame or CFrame.new())
-        task.wait(1)
-        VirtualUser:Button2Up(Vector2.new(0, 0), cam and cam.CFrame or CFrame.new())
+    if antiAfkEnabled and VirtualUser then
+        pcall(function()
+            VirtualUser:Button2Down(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
+            task.wait(1)
+            VirtualUser:Button2Up(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
+        end)
     end
 end)
 table.insert(activeConnections, afkConn)
@@ -2054,7 +2036,7 @@ EARLayout.Parent = EditorActionRow
 local RunScriptBtn = Instance.new("TextButton")
 RunScriptBtn.Size = UDim2.new(0, 95, 1, 0)
 RunScriptBtn.BackgroundColor3 = Color3.fromRGB(34, 197, 94)
-RunScriptBtn.Text = "▶ Run Tab"
+RunScriptBtn.Text = "Run Tab"
 RunScriptBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 RunScriptBtn.Font = Enum.Font.GothamBold
 RunScriptBtn.TextSize = 11
@@ -2067,7 +2049,7 @@ RSBCorner.Parent = RunScriptBtn
 local PasteBtn = Instance.new("TextButton")
 PasteBtn.Size = UDim2.new(0, 65, 1, 0)
 PasteBtn.BackgroundColor3 = Color3.fromRGB(70, 90, 220)
-PasteBtn.Text = "📋 Paste"
+PasteBtn.Text = "Paste"
 PasteBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 PasteBtn.Font = Enum.Font.GothamMedium
 PasteBtn.TextSize = 11
@@ -2080,7 +2062,7 @@ PBCorner.Parent = PasteBtn
 local TemplateBtn = Instance.new("TextButton")
 TemplateBtn.Size = UDim2.new(0, 80, 1, 0)
 TemplateBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
-TemplateBtn.Text = "📄 Template"
+TemplateBtn.Text = "Template"
 TemplateBtn.TextColor3 = Color3.fromRGB(240, 240, 255)
 TemplateBtn.Font = Enum.Font.GothamMedium
 TemplateBtn.TextSize = 11
@@ -2093,7 +2075,7 @@ TmpCorner.Parent = TemplateBtn
 local ClearCodeBtn = Instance.new("TextButton")
 ClearCodeBtn.Size = UDim2.new(0, 65, 1, 0)
 ClearCodeBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
-ClearCodeBtn.Text = "🗑 Clear"
+ClearCodeBtn.Text = "Clear"
 ClearCodeBtn.TextColor3 = Color3.fromRGB(240, 240, 255)
 ClearCodeBtn.Font = Enum.Font.GothamMedium
 ClearCodeBtn.TextSize = 11
@@ -2106,7 +2088,7 @@ CCCorner.Parent = ClearCodeBtn
 local DocsToggleBtn = Instance.new("TextButton")
 DocsToggleBtn.Size = UDim2.new(0, 65, 1, 0)
 DocsToggleBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
-DocsToggleBtn.Text = "📖 Docs"
+DocsToggleBtn.Text = "Docs"
 DocsToggleBtn.TextColor3 = Color3.fromRGB(240, 240, 255)
 DocsToggleBtn.Font = Enum.Font.GothamMedium
 DocsToggleBtn.TextSize = 11
@@ -2116,6 +2098,7 @@ local DCBCorner = Instance.new("UICorner")
 DCBCorner.CornerRadius = UDim.new(0, 6)
 DCBCorner.Parent = DocsToggleBtn
 
+-- Status Console Banner
 local EditorStatus = Instance.new("TextLabel")
 EditorStatus.Size = UDim2.new(1, 0, 0, 24)
 EditorStatus.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
@@ -2134,6 +2117,7 @@ local ESPadding = Instance.new("UIPadding")
 ESPadding.PaddingLeft = UDim.new(0, 8)
 ESPadding.Parent = EditorStatus
 
+-- Interactive Docs Panel
 local DocsCard = Instance.new("Frame")
 DocsCard.Size = UDim2.new(1, 0, 0, 105)
 DocsCard.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
@@ -2153,16 +2137,16 @@ local DocsText = Instance.new("TextLabel")
 DocsText.Size = UDim2.new(1, -16, 1, -12)
 DocsText.Position = UDim2.new(0, 8, 0, 6)
 DocsText.BackgroundTransparency = 1
-DocsText.Text = [[Kirik Hub Tab Builder API:
-• local tab = Kirik:CreateTab("TabName")
-• tab:AddHeader("Header Title")
-• tab:AddButton("Label", "BtnText", function())
-• tab:AddToggle("Label", defaultBool, function(state))
-• tab:AddInput("Label", "Placeholder", defaultVal, function(val))
-• tab:Track(connection) -> Auto-cleans up on tab delete!]]
+DocsText.Text = "Kirik Hub Tab Builder API:\n" ..
+    "- local tab = Kirik:CreateTab(\"TabName\")\n" ..
+    "- tab:AddHeader(\"Header Title\")\n" ..
+    "- tab:AddButton(\"Label\", \"BtnText\", function())\n" ..
+    "- tab:AddToggle(\"Label\", defaultBool, function(state))\n" ..
+    "- tab:AddInput(\"Label\", \"Placeholder\", defaultVal, function(val))\n" ..
+    "- tab:Track(connection) -> Auto-cleans up on delete!"
 DocsText.TextColor3 = Color3.fromRGB(210, 215, 235)
 DocsText.Font = Enum.Font.Code
-DocsText.TextSize = 10.5
+DocsText.TextSize = 11
 DocsText.TextXAlignment = Enum.TextXAlignment.Left
 DocsText.TextYAlignment = Enum.TextYAlignment.Top
 DocsText.Parent = DocsCard
@@ -2171,6 +2155,7 @@ DocsToggleBtn.MouseButton1Click:Connect(function()
     DocsCard.Visible = not DocsCard.Visible
 end)
 
+-- Main Code Editor Box Container
 local CodeBoxContainer = Instance.new("Frame")
 CodeBoxContainer.Size = UDim2.new(1, 0, 0, 180)
 CodeBoxContainer.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
@@ -2202,27 +2187,23 @@ CodeBox.BackgroundTransparency = 1
 CodeBox.ClearTextOnFocus = false
 CodeBox.MultiLine = true
 CodeBox.Font = Enum.Font.Code
-CodeBox.TextSize = 11.5
+CodeBox.TextSize = 12
 CodeBox.TextColor3 = Color3.fromRGB(240, 240, 255)
 CodeBox.TextXAlignment = Enum.TextXAlignment.Left
 CodeBox.TextYAlignment = Enum.TextYAlignment.Top
 CodeBox.Parent = CodeScroll
 
-local defaultTemplateCode = [[local Tab = Kirik:CreateTab("MyCustomTab")
-
-Tab:AddHeader("--- CUSTOM CONTROLS ---")
-
-Tab:AddButton("Print Message", "Click", function()
-    print("Hello from Kirik Hub V2.0!")
-end)
-
-Tab:AddToggle("Test Toggle", false, function(state)
-    print("Toggle is: ", state)
-end)
-
-Tab:AddInput("Custom Value", "Enter text", "100", function(val)
-    print("Entered Value: ", val)
-end)]]
+local defaultTemplateCode = 'local Tab = Kirik:CreateTab("MyTab")\n\n' ..
+    'Tab:AddHeader("--- CUSTOM SCRIPT ---")\n\n' ..
+    'Tab:AddButton("Print Info", "Run", function()\n' ..
+    '    print("Kirik Hub V2.0 Custom Tab Active!")\n' ..
+    'end)\n\n' ..
+    'Tab:AddToggle("Custom Toggle", false, function(state)\n' ..
+    '    print("Toggle State: ", state)\n' ..
+    'end)\n\n' ..
+    'Tab:AddInput("Custom Value", "Type here", "100", function(val)\n' ..
+    '    print("Entered Value: ", val)\n' ..
+    'end)'
 
 CodeBox.Text = defaultTemplateCode
 
@@ -2239,21 +2220,21 @@ ClearCodeBtn.MouseButton1Click:Connect(function()
 end)
 
 PasteBtn.MouseButton1Click:Connect(function()
-    local success = false
-    pcall(function()
-        if typeof(getclipboard) == "function" then
+    local pasted = false
+    if getclipboard then
+        pcall(function()
             local clip = getclipboard()
             if clip and type(clip) == "string" and #clip > 0 then
                 CodeBox.Text = clip
-                success = true
+                pasted = true
             end
-        end
-    end)
-    if success then
+        end)
+    end
+    if pasted then
         EditorStatus.Text = "Status: Pasted from clipboard."
         EditorStatus.TextColor3 = Color3.fromRGB(130, 220, 130)
     else
-        EditorStatus.Text = "Status: Clipboard unavailable. Paste directly into the box."
+        EditorStatus.Text = "Status: Clipboard unavailable. Paste manually into the box."
         EditorStatus.TextColor3 = Color3.fromRGB(240, 180, 100)
     end
 end)
@@ -2271,11 +2252,11 @@ function KirikAPI:CreateTab(tabName)
         pcall(customTabsRegistry[tabName].Cleanup)
         customTabsRegistry[tabName] = nil
         if Pages[tabName] then
-            pcall(function() Pages[tabName]:Destroy() end)
+            Pages[tabName]:Destroy()
             Pages[tabName] = nil
         end
         if tabFrames[tabName] then
-            pcall(function() tabFrames[tabName]:Destroy() end)
+            tabFrames[tabName]:Destroy()
             tabFrames[tabName] = nil
             tabButtons[tabName] = nil
         end
@@ -2320,7 +2301,7 @@ function KirikAPI:CreateTab(tabName)
         Cleanup = function()
             for _, conn in ipairs(tabConnections) do
                 if conn and conn.Disconnect then
-                    pcall(function() conn:Disconnect() end)
+                    conn:Disconnect()
                 end
             end
             tabConnections = {}
@@ -2330,7 +2311,7 @@ function KirikAPI:CreateTab(tabName)
     return tabObject
 end
 
--- Run Code and Build Dynamic Tab Safely
+-- Run Code and Build Dynamic Tab
 RunScriptBtn.MouseButton1Click:Connect(function()
     local code = CodeBox.Text
     if not code or #code:gsub("%s+", "") == 0 then
@@ -2339,24 +2320,23 @@ RunScriptBtn.MouseButton1Click:Connect(function()
         return
     end
 
-    local env = (typeof(getgenv) == "function" and getgenv()) or _G
-    env.Kirik = KirikAPI
-    env.Hub = KirikAPI
-    pcall(function()
-        getfenv(0).Kirik = KirikAPI
-        getfenv(0).Hub = KirikAPI
-    end)
+    if getgenv then
+        getgenv().Kirik = KirikAPI
+        getgenv().Hub = KirikAPI
+    end
+    _G.Kirik = KirikAPI
+    _G.Hub = KirikAPI
 
-    if not loadstring then
-        EditorStatus.Text = "Error: Executor lacks 'loadstring' support."
+    local loadFunc = loadstring or load_string
+    if not loadFunc then
+        EditorStatus.Text = "Error: Executor missing loadstring."
         EditorStatus.TextColor3 = Color3.fromRGB(240, 80, 80)
         return
     end
 
-    local func, compileErr = loadstring(code)
+    local func, compileErr = loadFunc(code)
     if not func then
-        local cleanErr = tostring(compileErr or "Syntax Error"):gsub("\n", " ")
-        EditorStatus.Text = "Compile Error: " .. cleanErr:sub(1, 48) .. "..."
+        EditorStatus.Text = "Compile Error: " .. tostring(compileErr):sub(1, 45) .. "..."
         EditorStatus.TextColor3 = Color3.fromRGB(240, 80, 80)
         return
     end
@@ -2366,8 +2346,7 @@ RunScriptBtn.MouseButton1Click:Connect(function()
         EditorStatus.Text = "Status: Tab successfully created!"
         EditorStatus.TextColor3 = Color3.fromRGB(80, 240, 120)
     else
-        local cleanRunErr = tostring(runErr or "Runtime Error"):gsub("\n", " ")
-        EditorStatus.Text = "Runtime Error: " .. cleanRunErr:sub(1, 48) .. "..."
+        EditorStatus.Text = "Runtime Error: " .. tostring(runErr):sub(1, 45) .. "..."
         EditorStatus.TextColor3 = Color3.fromRGB(240, 80, 80)
     end
 end)
@@ -2506,8 +2485,14 @@ TopBar.InputChanged:Connect(function(input)
     end
 end)
 
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = false
+    end
+end)
+
 UserInputService.InputChanged:Connect(function(input)
-    if input == dragInput and dragging and startPos then
+    if input == dragInput and dragging then
         local delta = input.Position - dragStart
         MainFrame.Position = UDim2.new(
             startPos.X.Scale,
