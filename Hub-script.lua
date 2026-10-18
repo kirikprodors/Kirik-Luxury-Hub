@@ -8,29 +8,13 @@ local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local Lighting = game:GetService("Lighting")
 local TeleportService = game:GetService("TeleportService")
+local VirtualUser = game:GetService("VirtualUser")
 
--- Safe VirtualUser Fetch
-local VirtualUser
-pcall(function()
-    VirtualUser = game:GetService("VirtualUser")
-end)
-
--- Safe LocalPlayer & Camera Loading (Prevents immediate nil crash)
 local LocalPlayer = Players.LocalPlayer
-while not LocalPlayer do
-    task.wait(0.1)
-    LocalPlayer = Players.LocalPlayer
-end
-
 local Camera = workspace.CurrentCamera
-while not Camera do
-    task.wait(0.1)
-    Camera = workspace.CurrentCamera
-end
-
 local Mouse = LocalPlayer:GetMouse()
 
--- Base Dimensions & Scaling
+-- Base Constants
 local BASE_WIDTH = 560
 local BASE_HEIGHT = 385
 local TOPBAR_HEIGHT = 44
@@ -41,12 +25,12 @@ local isMinimized = false
 local defaultWalkSpeed = 16
 local defaultJumpPower = 50
 local defaultGravity = workspace.Gravity
-local defaultFOV = (Camera and Camera.FieldOfView) or 70
-local defaultBrightness = pcall(function() return Lighting.Brightness end) and Lighting.Brightness or 2
-local defaultClockTime = pcall(function() return Lighting.ClockTime end) and Lighting.ClockTime or 14
-local defaultFogEnd = pcall(function() return Lighting.FogEnd end) and Lighting.FogEnd or 100000
-local defaultGlobalShadows = pcall(function() return Lighting.GlobalShadows end) and Lighting.GlobalShadows or false
-local defaultAmbient = pcall(function() return Lighting.Ambient end) and Lighting.Ambient or Color3.fromRGB(128, 128, 128)
+local defaultFOV = Camera.FieldOfView
+local defaultBrightness = Lighting.Brightness
+local defaultClockTime = Lighting.ClockTime
+local defaultFogEnd = Lighting.FogEnd
+local defaultGlobalShadows = Lighting.GlobalShadows
+local defaultAmbient = Lighting.Ambient
 
 -- Active Hack States
 local flyEnabled = false
@@ -106,67 +90,32 @@ local scannedNPCs = {}
 local partSelectingMode = false
 local partHighlight = nil
 
--- Waypoint Chain State
+-- Dedicated Robust Waypoint Chain State
 local waypointChain = {}
 local tweenSpeed = 30
 local isTweening = false
 local activeTweenInstance = nil
 
--- Custom Dynamic Tabs Registry
-local customTabsRegistry = {}
 local activeConnections = {}
 
--- Safe Previous Instance Cleanup
-pcall(function()
-    if gethui then
-        local old = gethui():FindFirstChild("KirikHubV2")
-        if old then old:Destroy() end
-    end
-    if game:GetService("CoreGui"):FindFirstChild("KirikHubV2") then
-        game:GetService("CoreGui"):FindFirstChild("KirikHubV2"):Destroy()
-    end
-    if LocalPlayer:FindFirstChild("PlayerGui") and LocalPlayer.PlayerGui:FindFirstChild("KirikHubV2") then
-        LocalPlayer.PlayerGui:FindFirstChild("KirikHubV2"):Destroy()
-    end
-end)
+-- Clean up any previous instances
+if game.CoreGui:FindFirstChild("KirikHubV2") then
+    game.CoreGui:FindFirstChild("KirikHubV2"):Destroy()
+end
 
--- ScreenGui Setup with Bulletproof Fallback
+-- ScreenGui Setup
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "KirikHubV2"
 ScreenGui.ResetOnSpawn = false
 
-local mounted = false
-if gethui then
-    pcall(function()
-        ScreenGui.Parent = gethui()
-        mounted = true
-    end)
+if syn and syn.protect_gui then
+    syn.protect_gui(ScreenGui)
+    ScreenGui.Parent = game.CoreGui
+elseif gethui then
+    ScreenGui.Parent = gethui()
+else
+    ScreenGui.Parent = game.CoreGui or LocalPlayer:WaitForChild("PlayerGui")
 end
-
-if not mounted and syn and syn.protect_gui then
-    pcall(function()
-        syn.protect_gui(ScreenGui)
-        ScreenGui.Parent = game:GetService("CoreGui")
-        mounted = true
-    end)
-end
-
-if not mounted then
-    pcall(function()
-        ScreenGui.Parent = game:GetService("CoreGui")
-        mounted = true
-    end)
-end
-
-if not mounted or not ScreenGui.Parent then
-    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-end
-
--- Forward Declarations
-local switchTab
-local createPage
-local TabBar
-local PageContainer
 
 -- =======================================================
 --                  CLEANUP & RESET LOGIC
@@ -175,7 +124,7 @@ local PageContainer
 local function clearWaypointMarkers()
     for _, wp in ipairs(waypointChain) do
         if wp.Marker then
-            pcall(function() wp.Marker:Destroy() end)
+            wp.Marker:Destroy()
         end
     end
 end
@@ -204,14 +153,6 @@ local function resetAllProcesses()
     stopTweening()
     clearWaypointMarkers()
     waypointChain = {}
-
-    -- Destroy Custom Tabs
-    for tabName, tabData in pairs(customTabsRegistry) do
-        if tabData.Cleanup then
-            pcall(tabData.Cleanup)
-        end
-    end
-    customTabsRegistry = {}
 
     -- Destroy Air Platform
     if platformPart then
@@ -258,21 +199,17 @@ local function resetAllProcesses()
     end
 
     -- Reset Camera
-    if Camera then
-        Camera.FieldOfView = defaultFOV
-        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
-            Camera.CameraSubject = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-        end
+    Camera.FieldOfView = defaultFOV
+    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+        Camera.CameraSubject = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
     end
 
     -- Reset Lighting
-    pcall(function()
-        Lighting.Brightness = defaultBrightness
-        Lighting.ClockTime = defaultClockTime
-        Lighting.FogEnd = defaultFogEnd
-        Lighting.GlobalShadows = defaultGlobalShadows
-        Lighting.Ambient = defaultAmbient
-    end)
+    Lighting.Brightness = defaultBrightness
+    Lighting.ClockTime = defaultClockTime
+    Lighting.FogEnd = defaultFogEnd
+    Lighting.GlobalShadows = defaultGlobalShadows
+    Lighting.Ambient = defaultAmbient
 
     -- Reset ESP
     for _, p in ipairs(Players:GetPlayers()) do
@@ -429,17 +366,13 @@ BodyContainer.Position = UDim2.new(0, 0, 0, TOPBAR_HEIGHT)
 BodyContainer.BackgroundTransparency = 1
 BodyContainer.Parent = MainFrame
 
--- Scrollable Right-Side Tab Bar
-TabBar = Instance.new("ScrollingFrame")
+-- Tabs Bar (Right Side)
+local TabBar = Instance.new("Frame")
 TabBar.Name = "TabBar"
-TabBar.Size = UDim2.new(0, 122, 1, -16)
-TabBar.Position = UDim2.new(1, -130, 0, 8)
+TabBar.Size = UDim2.new(0, 115, 1, -16)
+TabBar.Position = UDim2.new(1, -125, 0, 8)
 TabBar.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
 TabBar.BorderSizePixel = 0
-TabBar.ScrollBarThickness = 3
-TabBar.ScrollBarImageColor3 = Color3.fromRGB(99, 102, 241)
-TabBar.AutomaticCanvasSize = Enum.AutomaticSize.Y
-TabBar.CanvasSize = UDim2.new(0, 0, 0, 0)
 TabBar.Parent = BodyContainer
 
 local TabBarCorner = Instance.new("UICorner")
@@ -459,26 +392,23 @@ TabListLayout.Parent = TabBar
 
 local TabPadding = Instance.new("UIPadding")
 TabPadding.PaddingTop = UDim.new(0, 8)
-TabPadding.PaddingBottom = UDim.new(0, 8)
 TabPadding.Parent = TabBar
 
 -- Content Page View (Left Side)
-PageContainer = Instance.new("Frame")
+local PageContainer = Instance.new("Frame")
 PageContainer.Name = "PageContainer"
-PageContainer.Size = UDim2.new(1, -150, 1, -16)
+PageContainer.Size = UDim2.new(1, -145, 1, -16)
 PageContainer.Position = UDim2.new(0, 10, 0, 8)
 PageContainer.BackgroundTransparency = 1
 PageContainer.Parent = BodyContainer
 
 -- =======================================================
---                 PAGES & TAB CONTROLLER
+--                 SCROLLABLE PAGES SETUP
 -- =======================================================
 
 local Pages = {}
-local tabButtons = {}
-local tabFrames = {}
 
-function createPage(name)
+local function createPage(name)
     local Page = Instance.new("ScrollingFrame")
     Page.Name = name .. "Page"
     Page.Size = UDim2.new(1, 0, 1, 0)
@@ -510,14 +440,31 @@ function createPage(name)
 end
 
 local HomePage = createPage("Home")
-local EditorPage = createPage("Editor")
 local SettingsPage = createPage("Settings")
 
-function switchTab(name)
-    for tabName, page in pairs(Pages) do
-        local isSelected = (tabName == name)
-        page.Visible = isSelected
-        if tabButtons[tabName] then
+local tabButtons = {}
+local function createTabButton(name, layoutOrder)
+    local btn = Instance.new("TextButton")
+    btn.Name = name .. "TabBtn"
+    btn.Size = UDim2.new(0.9, 0, 0, 36)
+    btn.BackgroundColor3 = Color3.fromRGB(28, 28, 38)
+    btn.Text = name
+    btn.TextColor3 = Color3.fromRGB(150, 150, 170)
+    btn.Font = Enum.Font.GothamMedium
+    btn.TextSize = 13
+    btn.LayoutOrder = layoutOrder
+    btn.Parent = TabBar
+
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, 6)
+    btnCorner.Parent = btn
+
+    tabButtons[name] = btn
+
+    btn.MouseButton1Click:Connect(function()
+        for tabName, page in pairs(Pages) do
+            local isSelected = (tabName == name)
+            page.Visible = isSelected
             if isSelected then
                 TweenService:Create(tabButtons[tabName], TweenInfo.new(0.2), {
                     BackgroundColor3 = Color3.fromRGB(99, 102, 241),
@@ -530,80 +477,15 @@ function switchTab(name)
                 }):Play()
             end
         end
-    end
-end
-
-local function createTabButton(name, layoutOrder, isDeletable)
-    local TabItemFrame = Instance.new("Frame")
-    TabItemFrame.Name = name .. "TabItem"
-    TabItemFrame.Size = UDim2.new(0.92, 0, 0, 36)
-    TabItemFrame.BackgroundTransparency = 1
-    TabItemFrame.LayoutOrder = layoutOrder
-    TabItemFrame.Parent = TabBar
-
-    local btn = Instance.new("TextButton")
-    btn.Name = name .. "Btn"
-    btn.Size = isDeletable and UDim2.new(1, -26, 1, 0) or UDim2.new(1, 0, 1, 0)
-    btn.BackgroundColor3 = Color3.fromRGB(28, 28, 38)
-    btn.Text = name
-    btn.TextColor3 = Color3.fromRGB(150, 150, 170)
-    btn.Font = Enum.Font.GothamMedium
-    btn.TextSize = 12
-    pcall(function() btn.TextTruncate = Enum.TextTruncate.AtEnd end)
-    btn.Parent = TabItemFrame
-
-    local btnCorner = Instance.new("UICorner")
-    btnCorner.CornerRadius = UDim.new(0, 6)
-    btnCorner.Parent = btn
-
-    tabButtons[name] = btn
-    tabFrames[name] = TabItemFrame
-
-    btn.MouseButton1Click:Connect(function()
-        switchTab(name)
     end)
-
-    if isDeletable then
-        local delBtn = Instance.new("TextButton")
-        delBtn.Name = "DeleteBtn"
-        delBtn.Size = UDim2.new(0, 22, 1, 0)
-        delBtn.Position = UDim2.new(1, -22, 0, 0)
-        delBtn.BackgroundColor3 = Color3.fromRGB(220, 50, 50)
-        delBtn.Text = "X"
-        delBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        delBtn.Font = Enum.Font.GothamBold
-        delBtn.TextSize = 10
-        delBtn.Parent = TabItemFrame
-
-        local delCorner = Instance.new("UICorner")
-        delCorner.CornerRadius = UDim.new(0, 5)
-        delCorner.Parent = delBtn
-
-        delBtn.MouseButton1Click:Connect(function()
-            if customTabsRegistry[name] then
-                pcall(customTabsRegistry[name].Cleanup)
-                customTabsRegistry[name] = nil
-            end
-
-            if Pages[name] then
-                Pages[name]:Destroy()
-                Pages[name] = nil
-            end
-
-            TabItemFrame:Destroy()
-            tabButtons[name] = nil
-            tabFrames[name] = nil
-
-            switchTab("Home")
-        end)
-    end
 end
 
-createTabButton("Home", 1, false)
-createTabButton("Editor", 2, false)
-createTabButton("Settings", 3, false)
+createTabButton("Home", 1)
+createTabButton("Settings", 2)
 
-switchTab("Home")
+Pages["Home"].Visible = true
+tabButtons["Home"].BackgroundColor3 = Color3.fromRGB(99, 102, 241)
+tabButtons["Home"].TextColor3 = Color3.fromRGB(255, 255, 255)
 
 -- =======================================================
 --              UI COMPONENT BUILDERS
@@ -808,62 +690,8 @@ local function createButtonRow(parent, titleText, btnText, onClick)
     end)
 end
 
-local function createInputRow(parent, titleText, placeholder, defaultVal, callback)
-    local Row = Instance.new("Frame")
-    Row.Size = UDim2.new(1, 0, 0, 44)
-    Row.BackgroundColor3 = Color3.fromRGB(22, 22, 30)
-    Row.Parent = parent
-
-    local RowCorner = Instance.new("UICorner")
-    RowCorner.CornerRadius = UDim.new(0, 8)
-    RowCorner.Parent = Row
-
-    local RowStroke = Instance.new("UIStroke")
-    RowStroke.Color = Color3.fromRGB(36, 36, 48)
-    RowStroke.Thickness = 1
-    RowStroke.Parent = Row
-
-    local Label = Instance.new("TextLabel")
-    Label.Size = UDim2.new(1, -110, 1, 0)
-    Label.Position = UDim2.new(0, 12, 0, 0)
-    Label.BackgroundTransparency = 1
-    Label.Text = titleText
-    Label.TextColor3 = Color3.fromRGB(235, 235, 245)
-    Label.Font = Enum.Font.GothamMedium
-    Label.TextSize = 13
-    Label.TextXAlignment = Enum.TextXAlignment.Left
-    Label.Parent = Row
-
-    local InputBox = Instance.new("TextBox")
-    InputBox.Size = UDim2.new(0, 85, 0, 26)
-    InputBox.Position = UDim2.new(1, -95, 0.5, 0)
-    InputBox.AnchorPoint = Vector2.new(0, 0.5)
-    InputBox.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
-    InputBox.Text = tostring(defaultVal or "")
-    InputBox.PlaceholderText = placeholder or "Val"
-    InputBox.TextColor3 = Color3.fromRGB(240, 240, 255)
-    InputBox.PlaceholderColor3 = Color3.fromRGB(100, 100, 120)
-    InputBox.Font = Enum.Font.GothamBold
-    InputBox.TextSize = 12
-    InputBox.ClearTextOnFocus = false
-    InputBox.Parent = Row
-
-    local InputCorner = Instance.new("UICorner")
-    InputCorner.CornerRadius = UDim.new(0, 5)
-    InputCorner.Parent = InputBox
-
-    local InputStroke = Instance.new("UIStroke")
-    InputStroke.Color = Color3.fromRGB(48, 48, 66)
-    InputStroke.Thickness = 1
-    InputStroke.Parent = InputBox
-
-    InputBox.FocusLost:Connect(function()
-        pcall(callback, InputBox.Text)
-    end)
-end
-
 -- =======================================================
---              HOME PAGE (CORE FEATURES)
+--                      HOME PAGE FEATURES
 -- =======================================================
 
 createSectionHeader(HomePage, "--- MOVEMENT & PHYSICS ---")
@@ -919,7 +747,7 @@ end, function(val)
     flySpeed = val
 end)
 
--- 2. Follow Air Platform
+-- 2. Follow Platform (Air Walk with Dedicated Height Buttons)
 local PlatformCard = Instance.new("Frame")
 PlatformCard.Size = UDim2.new(1, 0, 0, 80)
 PlatformCard.BackgroundColor3 = Color3.fromRGB(22, 22, 30)
@@ -1028,7 +856,7 @@ PlatLayout.Parent = PlatControls
 local PlatUpBtn = Instance.new("TextButton")
 PlatUpBtn.Size = UDim2.new(0.35, 0, 1, 0)
 PlatUpBtn.BackgroundColor3 = Color3.fromRGB(70, 90, 220)
-PlatUpBtn.Text = "Platform UP (+)"
+PlatUpBtn.Text = "🔼 Platform UP"
 PlatUpBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 PlatUpBtn.Font = Enum.Font.GothamBold
 PlatUpBtn.TextSize = 11
@@ -1041,7 +869,7 @@ PUBound.Parent = PlatUpBtn
 local PlatDownBtn = Instance.new("TextButton")
 PlatDownBtn.Size = UDim2.new(0.35, 0, 1, 0)
 PlatDownBtn.BackgroundColor3 = Color3.fromRGB(70, 90, 220)
-PlatDownBtn.Text = "Platform DOWN (-)"
+PlatDownBtn.Text = "🔽 Platform DOWN"
 PlatDownBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 PlatDownBtn.Font = Enum.Font.GothamBold
 PlatDownBtn.TextSize = 11
@@ -1251,6 +1079,7 @@ UTStroke.Color = Color3.fromRGB(36, 36, 48)
 UTStroke.Thickness = 1
 UTStroke.Parent = UnifiedTPCard
 
+-- Mode Tabs
 local ModeSelector = Instance.new("Frame")
 ModeSelector.Size = UDim2.new(1, -16, 0, 30)
 ModeSelector.Position = UDim2.new(0, 8, 0, 8)
@@ -1266,6 +1095,7 @@ ModeLayout.Parent = ModeSelector
 local modeButtons = {}
 local modeViews = {}
 
+-- Selected Banner
 local StatusBanner = Instance.new("TextLabel")
 StatusBanner.Size = UDim2.new(1, -16, 0, 22)
 StatusBanner.Position = UDim2.new(0, 8, 0, 42)
@@ -1281,23 +1111,23 @@ SBCorner.CornerRadius = UDim.new(0, 5)
 SBCorner.Parent = StatusBanner
 
 local function getTargetCFrame()
-    if currentTpMode == "Player" and typeof(selectedTarget) == "Instance" and selectedTarget:IsA("Player") and selectedTarget.Character then
+    if currentTpMode == "Player" and selectedTarget and selectedTarget.Character then
         local root = selectedTarget.Character:FindFirstChild("HumanoidRootPart") or selectedTarget.Character:FindFirstChild("Torso")
         return root and (root.CFrame + Vector3.new(0, 2.5, 0))
-    elseif currentTpMode == "NPC" and type(selectedTarget) == "table" and selectedTarget.Root and selectedTarget.Root.Parent then
+    elseif currentTpMode == "NPC" and selectedTarget and selectedTarget.Root and selectedTarget.Root.Parent then
         return selectedTarget.Root.CFrame + Vector3.new(0, 3, 0)
-    elseif currentTpMode == "Part" and typeof(selectedTarget) == "Instance" and selectedTarget:IsA("BasePart") and selectedTarget.Parent then
+    elseif currentTpMode == "Part" and selectedTarget and selectedTarget.Parent then
         return selectedTarget.CFrame + Vector3.new(0, 3.5, 0)
     end
     return nil
 end
 
 local function getTargetCameraSubject()
-    if currentTpMode == "Player" and typeof(selectedTarget) == "Instance" and selectedTarget:IsA("Player") and selectedTarget.Character then
+    if currentTpMode == "Player" and selectedTarget and selectedTarget.Character then
         return selectedTarget.Character:FindFirstChildOfClass("Humanoid")
-    elseif currentTpMode == "NPC" and type(selectedTarget) == "table" and selectedTarget.Hum then
+    elseif currentTpMode == "NPC" and selectedTarget and selectedTarget.Hum then
         return selectedTarget.Hum
-    elseif currentTpMode == "Part" and typeof(selectedTarget) == "Instance" and selectedTarget:IsA("BasePart") then
+    elseif currentTpMode == "Part" and selectedTarget then
         return selectedTarget
     end
     return nil
@@ -1470,7 +1300,7 @@ end
 
 RefreshNPCBtn.MouseButton1Click:Connect(scanAndRefreshNPCs)
 
--- 3. Parts Selector & Tween Chain View
+-- 3. Parts Selector & Robust Waypoint Chain View
 local PartsContainer = Instance.new("Frame")
 PartsContainer.Size = UDim2.new(1, -16, 0, 150)
 PartsContainer.Position = UDim2.new(0, 8, 0, 68)
@@ -1478,6 +1308,7 @@ PartsContainer.BackgroundTransparency = 1
 PartsContainer.Visible = false
 PartsContainer.Parent = UnifiedTPCard
 
+-- Tap Part Select Button
 local SelectPartActionBtn = Instance.new("TextButton")
 SelectPartActionBtn.Size = UDim2.new(1, 0, 0, 30)
 SelectPartActionBtn.BackgroundColor3 = Color3.fromRGB(28, 28, 40)
@@ -1522,6 +1353,7 @@ local partTapConn = UserInputService.InputBegan:Connect(function(input, processe
 end)
 table.insert(activeConnections, partTapConn)
 
+-- Waypoint Chain Controls
 local ChainControlRow = Instance.new("Frame")
 ChainControlRow.Size = UDim2.new(1, 0, 0, 30)
 ChainControlRow.Position = UDim2.new(0, 0, 0, 36)
@@ -1555,8 +1387,9 @@ local CCCorner = Instance.new("UICorner")
 CCCorner.CornerRadius = UDim.new(0, 5)
 CCCorner.Parent = ClearChainBtn
 
+-- Add Waypoint to Table
 AddChainBtn.MouseButton1Click:Connect(function()
-    if typeof(selectedTarget) == "Instance" and selectedTarget:IsA("BasePart") then
+    if selectedTarget and selectedTarget:IsA("BasePart") then
         local index = #waypointChain + 1
         local targetCF = selectedTarget.CFrame + Vector3.new(0, 3, 0)
 
@@ -1598,6 +1431,7 @@ ClearChainBtn.MouseButton1Click:Connect(function()
     AddChainBtn.Text = "+ Add to Twin Chain (0)"
 end)
 
+-- Twin Runner Controls
 local TweenRunRow = Instance.new("Frame")
 TweenRunRow.Size = UDim2.new(1, 0, 0, 36)
 TweenRunRow.Position = UDim2.new(0, 0, 0, 72)
@@ -1654,6 +1488,7 @@ local RTCorner = Instance.new("UICorner")
 RTCorner.CornerRadius = UDim.new(0, 5)
 RTCorner.Parent = RunTweenBtn
 
+-- Physics-Anchored Smooth Waypoint Tween Runner
 RunTweenBtn.MouseButton1Click:Connect(function()
     if isTweening then
         stopTweening()
@@ -1680,6 +1515,7 @@ RunTweenBtn.MouseButton1Click:Connect(function()
             local dist = (currentRoot.Position - destCF.Position).Magnitude
             local duration = math.max(dist / math.max(tweenSpeed, 1), 0.05)
 
+            -- Temporarily anchor root part so Roblox physics/gravity does NOT cause lag or rubberbanding
             currentRoot.Anchored = true
             currentRoot.AssemblyLinearVelocity = Vector3.zero
             currentRoot.AssemblyAngularVelocity = Vector3.zero
@@ -1708,6 +1544,7 @@ end)
 
 modeViews["Part"] = PartsContainer
 
+-- Mode Switcher Logic
 local function createModeBtn(name, text)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(0.32, 0, 1, 0)
@@ -1744,9 +1581,9 @@ local function createModeBtn(name, text)
     end)
 end
 
-createModeBtn("Player", "Players")
-createModeBtn("NPC", "NPCs")
-createModeBtn("Part", "Parts")
+createModeBtn("Player", "👥 Players")
+createModeBtn("NPC", "👾 NPCs")
+createModeBtn("Part", "🎯 Parts")
 
 refreshPlayersList()
 Players.PlayerAdded:Connect(refreshPlayersList)
@@ -1765,6 +1602,7 @@ UALayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 UALayout.Padding = UDim.new(0, 6)
 UALayout.Parent = UnifiedActions
 
+-- 1. Teleport
 local Uni_TpBtn = Instance.new("TextButton")
 Uni_TpBtn.Size = UDim2.new(0.32, 0, 1, 0)
 Uni_TpBtn.BackgroundColor3 = Color3.fromRGB(99, 102, 241)
@@ -1786,6 +1624,7 @@ Uni_TpBtn.MouseButton1Click:Connect(function()
     end
 end)
 
+-- 2. Loop TP
 local Uni_LoopBtn = Instance.new("TextButton")
 Uni_LoopBtn.Size = UDim2.new(0.32, 0, 1, 0)
 Uni_LoopBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 58)
@@ -1816,6 +1655,7 @@ local loopTpRunner = RunService.Heartbeat:Connect(function()
 end)
 table.insert(activeConnections, loopTpRunner)
 
+-- 3. View / Spectate
 local Uni_ViewBtn = Instance.new("TextButton")
 Uni_ViewBtn.Size = UDim2.new(0.32, 0, 1, 0)
 Uni_ViewBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 58)
@@ -1844,6 +1684,7 @@ Uni_ViewBtn.MouseButton1Click:Connect(function()
     end
 end)
 
+-- Click Teleport Tool
 createButtonRow(HomePage, "Click TP Tool", "Get Tool", function()
     local tool = Instance.new("Tool")
     tool.Name = "TP Tool"
@@ -1992,12 +1833,10 @@ createSimpleToggle(HomePage, "Anti-AFK (No 20m Kick)", false, function(state)
 end)
 
 local afkConn = LocalPlayer.Idled:Connect(function()
-    if antiAfkEnabled and VirtualUser then
-        pcall(function()
-            VirtualUser:Button2Down(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
-            task.wait(1)
-            VirtualUser:Button2Up(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
-        end)
+    if antiAfkEnabled then
+        VirtualUser:Button2Down(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
+        task.wait(1)
+        VirtualUser:Button2Up(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
     end
 end)
 table.insert(activeConnections, afkConn)
@@ -2014,341 +1853,6 @@ createButtonRow(HomePage, "Client Delete Tool (BTools)", "Get Tool", function()
         end
     end)
     btool.Parent = LocalPlayer.Backpack
-end)
-
--- =======================================================
---            EDITOR TAB (LUAU TAB BUILDER)
--- =======================================================
-
-createSectionHeader(EditorPage, "--- LUAU TAB BUILDER ---")
-
-local EditorActionRow = Instance.new("Frame")
-EditorActionRow.Size = UDim2.new(1, 0, 0, 32)
-EditorActionRow.BackgroundTransparency = 1
-EditorActionRow.Parent = EditorPage
-
-local EARLayout = Instance.new("UIListLayout")
-EARLayout.FillDirection = Enum.FillDirection.Horizontal
-EARLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
-EARLayout.Padding = UDim.new(0, 6)
-EARLayout.Parent = EditorActionRow
-
-local RunScriptBtn = Instance.new("TextButton")
-RunScriptBtn.Size = UDim2.new(0, 95, 1, 0)
-RunScriptBtn.BackgroundColor3 = Color3.fromRGB(34, 197, 94)
-RunScriptBtn.Text = "Run Tab"
-RunScriptBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-RunScriptBtn.Font = Enum.Font.GothamBold
-RunScriptBtn.TextSize = 11
-RunScriptBtn.Parent = EditorActionRow
-
-local RSBCorner = Instance.new("UICorner")
-RSBCorner.CornerRadius = UDim.new(0, 6)
-RSBCorner.Parent = RunScriptBtn
-
-local PasteBtn = Instance.new("TextButton")
-PasteBtn.Size = UDim2.new(0, 65, 1, 0)
-PasteBtn.BackgroundColor3 = Color3.fromRGB(70, 90, 220)
-PasteBtn.Text = "Paste"
-PasteBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-PasteBtn.Font = Enum.Font.GothamMedium
-PasteBtn.TextSize = 11
-PasteBtn.Parent = EditorActionRow
-
-local PBCorner = Instance.new("UICorner")
-PBCorner.CornerRadius = UDim.new(0, 6)
-PBCorner.Parent = PasteBtn
-
-local TemplateBtn = Instance.new("TextButton")
-TemplateBtn.Size = UDim2.new(0, 80, 1, 0)
-TemplateBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
-TemplateBtn.Text = "Template"
-TemplateBtn.TextColor3 = Color3.fromRGB(240, 240, 255)
-TemplateBtn.Font = Enum.Font.GothamMedium
-TemplateBtn.TextSize = 11
-TemplateBtn.Parent = EditorActionRow
-
-local TmpCorner = Instance.new("UICorner")
-TmpCorner.CornerRadius = UDim.new(0, 6)
-TmpCorner.Parent = TemplateBtn
-
-local ClearCodeBtn = Instance.new("TextButton")
-ClearCodeBtn.Size = UDim2.new(0, 65, 1, 0)
-ClearCodeBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
-ClearCodeBtn.Text = "Clear"
-ClearCodeBtn.TextColor3 = Color3.fromRGB(240, 240, 255)
-ClearCodeBtn.Font = Enum.Font.GothamMedium
-ClearCodeBtn.TextSize = 11
-ClearCodeBtn.Parent = EditorActionRow
-
-local CCBCorner = Instance.new("UICorner")
-CCBCorner.CornerRadius = UDim.new(0, 6)
-CCCorner.Parent = ClearCodeBtn
-
-local DocsToggleBtn = Instance.new("TextButton")
-DocsToggleBtn.Size = UDim2.new(0, 65, 1, 0)
-DocsToggleBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
-DocsToggleBtn.Text = "Docs"
-DocsToggleBtn.TextColor3 = Color3.fromRGB(240, 240, 255)
-DocsToggleBtn.Font = Enum.Font.GothamMedium
-DocsToggleBtn.TextSize = 11
-DocsToggleBtn.Parent = EditorActionRow
-
-local DCBCorner = Instance.new("UICorner")
-DCBCorner.CornerRadius = UDim.new(0, 6)
-DCBCorner.Parent = DocsToggleBtn
-
--- Status Console Banner
-local EditorStatus = Instance.new("TextLabel")
-EditorStatus.Size = UDim2.new(1, 0, 0, 24)
-EditorStatus.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
-EditorStatus.Text = "Status: Ready to build tab."
-EditorStatus.TextColor3 = Color3.fromRGB(150, 150, 180)
-EditorStatus.Font = Enum.Font.GothamMedium
-EditorStatus.TextSize = 11
-EditorStatus.TextXAlignment = Enum.TextXAlignment.Left
-EditorStatus.Parent = EditorPage
-
-local ESCorner = Instance.new("UICorner")
-ESCorner.CornerRadius = UDim.new(0, 5)
-ESCorner.Parent = EditorStatus
-
-local ESPadding = Instance.new("UIPadding")
-ESPadding.PaddingLeft = UDim.new(0, 8)
-ESPadding.Parent = EditorStatus
-
--- Interactive Docs Panel
-local DocsCard = Instance.new("Frame")
-DocsCard.Size = UDim2.new(1, 0, 0, 105)
-DocsCard.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
-DocsCard.Visible = false
-DocsCard.Parent = EditorPage
-
-local DCCorner = Instance.new("UICorner")
-DCCorner.CornerRadius = UDim.new(0, 8)
-DCCorner.Parent = DocsCard
-
-local DCStroke = Instance.new("UIStroke")
-DCStroke.Color = Color3.fromRGB(40, 40, 56)
-DCStroke.Thickness = 1
-DCStroke.Parent = DocsCard
-
-local DocsText = Instance.new("TextLabel")
-DocsText.Size = UDim2.new(1, -16, 1, -12)
-DocsText.Position = UDim2.new(0, 8, 0, 6)
-DocsText.BackgroundTransparency = 1
-DocsText.Text = "Kirik Hub Tab Builder API:\n" ..
-    "- local tab = Kirik:CreateTab(\"TabName\")\n" ..
-    "- tab:AddHeader(\"Header Title\")\n" ..
-    "- tab:AddButton(\"Label\", \"BtnText\", function())\n" ..
-    "- tab:AddToggle(\"Label\", defaultBool, function(state))\n" ..
-    "- tab:AddInput(\"Label\", \"Placeholder\", defaultVal, function(val))\n" ..
-    "- tab:Track(connection) -> Auto-cleans up on delete!"
-DocsText.TextColor3 = Color3.fromRGB(210, 215, 235)
-DocsText.Font = Enum.Font.Code
-DocsText.TextSize = 11
-DocsText.TextXAlignment = Enum.TextXAlignment.Left
-DocsText.TextYAlignment = Enum.TextYAlignment.Top
-DocsText.Parent = DocsCard
-
-DocsToggleBtn.MouseButton1Click:Connect(function()
-    DocsCard.Visible = not DocsCard.Visible
-end)
-
--- Main Code Editor Box Container
-local CodeBoxContainer = Instance.new("Frame")
-CodeBoxContainer.Size = UDim2.new(1, 0, 0, 180)
-CodeBoxContainer.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
-CodeBoxContainer.Parent = EditorPage
-
-local CBCorner = Instance.new("UICorner")
-CBCorner.CornerRadius = UDim.new(0, 8)
-CBCorner.Parent = CodeBoxContainer
-
-local CBStroke = Instance.new("UIStroke")
-CBStroke.Color = Color3.fromRGB(40, 40, 56)
-CBStroke.Thickness = 1
-CBStroke.Parent = CodeBoxContainer
-
-local CodeScroll = Instance.new("ScrollingFrame")
-CodeScroll.Size = UDim2.new(1, -12, 1, -12)
-CodeScroll.Position = UDim2.new(0, 6, 0, 6)
-CodeScroll.BackgroundTransparency = 1
-CodeScroll.BorderSizePixel = 0
-CodeScroll.ScrollBarThickness = 3
-CodeScroll.ScrollBarImageColor3 = Color3.fromRGB(99, 102, 241)
-CodeScroll.AutomaticCanvasSize = Enum.AutomaticSize.XY
-CodeScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-CodeScroll.Parent = CodeBoxContainer
-
-local CodeBox = Instance.new("TextBox")
-CodeBox.Size = UDim2.new(1, 0, 1, 0)
-CodeBox.BackgroundTransparency = 1
-CodeBox.ClearTextOnFocus = false
-CodeBox.MultiLine = true
-CodeBox.Font = Enum.Font.Code
-CodeBox.TextSize = 12
-CodeBox.TextColor3 = Color3.fromRGB(240, 240, 255)
-CodeBox.TextXAlignment = Enum.TextXAlignment.Left
-CodeBox.TextYAlignment = Enum.TextYAlignment.Top
-CodeBox.Parent = CodeScroll
-
-local defaultTemplateCode = 'local Tab = Kirik:CreateTab("MyTab")\n\n' ..
-    'Tab:AddHeader("--- CUSTOM SCRIPT ---")\n\n' ..
-    'Tab:AddButton("Print Info", "Run", function()\n' ..
-    '    print("Kirik Hub V2.0 Custom Tab Active!")\n' ..
-    'end)\n\n' ..
-    'Tab:AddToggle("Custom Toggle", false, function(state)\n' ..
-    '    print("Toggle State: ", state)\n' ..
-    'end)\n\n' ..
-    'Tab:AddInput("Custom Value", "Type here", "100", function(val)\n' ..
-    '    print("Entered Value: ", val)\n' ..
-    'end)'
-
-CodeBox.Text = defaultTemplateCode
-
-TemplateBtn.MouseButton1Click:Connect(function()
-    CodeBox.Text = defaultTemplateCode
-    EditorStatus.Text = "Status: Template loaded."
-    EditorStatus.TextColor3 = Color3.fromRGB(150, 150, 180)
-end)
-
-ClearCodeBtn.MouseButton1Click:Connect(function()
-    CodeBox.Text = ""
-    EditorStatus.Text = "Status: Editor cleared."
-    EditorStatus.TextColor3 = Color3.fromRGB(150, 150, 180)
-end)
-
-PasteBtn.MouseButton1Click:Connect(function()
-    local pasted = false
-    if getclipboard then
-        pcall(function()
-            local clip = getclipboard()
-            if clip and type(clip) == "string" and #clip > 0 then
-                CodeBox.Text = clip
-                pasted = true
-            end
-        end)
-    end
-    if pasted then
-        EditorStatus.Text = "Status: Pasted from clipboard."
-        EditorStatus.TextColor3 = Color3.fromRGB(130, 220, 130)
-    else
-        EditorStatus.Text = "Status: Clipboard unavailable. Paste manually into the box."
-        EditorStatus.TextColor3 = Color3.fromRGB(240, 180, 100)
-    end
-end)
-
--- =======================================================
---              KIRIK API INJECTION ENGINE
--- =======================================================
-
-local KirikAPI = {}
-
-function KirikAPI:CreateTab(tabName)
-    assert(type(tabName) == "string" and #tabName > 0, "Invalid Tab Name")
-
-    if customTabsRegistry[tabName] then
-        pcall(customTabsRegistry[tabName].Cleanup)
-        customTabsRegistry[tabName] = nil
-        if Pages[tabName] then
-            Pages[tabName]:Destroy()
-            Pages[tabName] = nil
-        end
-        if tabFrames[tabName] then
-            tabFrames[tabName]:Destroy()
-            tabFrames[tabName] = nil
-            tabButtons[tabName] = nil
-        end
-    end
-
-    local tabConnections = {}
-    local customPage = createPage(tabName)
-
-    createTabButton(tabName, 10 + #TabBar:GetChildren(), true)
-
-    local tabObject = {}
-
-    function tabObject:AddHeader(title)
-        createSectionHeader(customPage, title)
-    end
-
-    function tabObject:AddButton(title, btnText, callback)
-        createButtonRow(customPage, title, btnText, callback)
-    end
-
-    function tabObject:AddToggle(title, defaultState, callback)
-        createSimpleToggle(customPage, title, defaultState, callback)
-    end
-
-    function tabObject:AddInput(title, placeholder, defaultVal, callback)
-        createInputRow(customPage, title, placeholder, defaultVal, callback)
-    end
-
-    function tabObject:AddControl(title, defaultVal, defaultState, onToggle, onValChange)
-        createControlRow(customPage, title, defaultVal, defaultState, onToggle, onValChange)
-    end
-
-    function tabObject:Track(conn)
-        if conn and conn.Disconnect then
-            table.insert(tabConnections, conn)
-        end
-        return conn
-    end
-
-    customTabsRegistry[tabName] = {
-        Page = customPage,
-        Cleanup = function()
-            for _, conn in ipairs(tabConnections) do
-                if conn and conn.Disconnect then
-                    conn:Disconnect()
-                end
-            end
-            tabConnections = {}
-        end
-    }
-
-    return tabObject
-end
-
--- Run Code and Build Dynamic Tab
-RunScriptBtn.MouseButton1Click:Connect(function()
-    local code = CodeBox.Text
-    if not code or #code:gsub("%s+", "") == 0 then
-        EditorStatus.Text = "Status: Cannot run empty code."
-        EditorStatus.TextColor3 = Color3.fromRGB(240, 100, 100)
-        return
-    end
-
-    if getgenv then
-        getgenv().Kirik = KirikAPI
-        getgenv().Hub = KirikAPI
-    end
-    _G.Kirik = KirikAPI
-    _G.Hub = KirikAPI
-
-    local loadFunc = loadstring or load_string
-    if not loadFunc then
-        EditorStatus.Text = "Error: Executor missing loadstring."
-        EditorStatus.TextColor3 = Color3.fromRGB(240, 80, 80)
-        return
-    end
-
-    local func, compileErr = loadFunc(code)
-    if not func then
-        EditorStatus.Text = "Compile Error: " .. tostring(compileErr):sub(1, 45) .. "..."
-        EditorStatus.TextColor3 = Color3.fromRGB(240, 80, 80)
-        return
-    end
-
-    local success, runErr = pcall(func)
-    if success then
-        EditorStatus.Text = "Status: Tab successfully created!"
-        EditorStatus.TextColor3 = Color3.fromRGB(80, 240, 120)
-    else
-        EditorStatus.Text = "Runtime Error: " .. tostring(runErr):sub(1, 45) .. "..."
-        EditorStatus.TextColor3 = Color3.fromRGB(240, 80, 80)
-    end
 end)
 
 -- =======================================================
@@ -2482,12 +1986,6 @@ end)
 TopBar.InputChanged:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
         dragInput = input
-    end
-end)
-
-UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = false
     end
 end)
 
