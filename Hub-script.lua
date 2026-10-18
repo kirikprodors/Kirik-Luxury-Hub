@@ -21,7 +21,7 @@ local TOPBAR_HEIGHT = 44
 local currentScale = 1.0
 local isMinimized = false
 
--- Stored Defaults for Reset
+-- Stored Defaults for Complete Reset
 local defaultWalkSpeed = 16
 local defaultJumpPower = 50
 local defaultGravity = workspace.Gravity
@@ -58,9 +58,6 @@ local platformPart = nil
 local platformHeight = 0
 local platformStep = 3
 
--- Surface / Wall Walk State
-local surfaceWalkEnabled = false
-
 local freezeEnabled = false
 local antiVoidEnabled = false
 local lastSafeCFrame = nil
@@ -93,11 +90,10 @@ local scannedNPCs = {}
 local partSelectingMode = false
 local partHighlight = nil
 
--- Tween TP Chain State
-local partChain = {}
+-- Dedicated Robust Waypoint Chain State
+local waypointChain = {}
 local tweenSpeed = 30
 local isTweening = false
-local tweenMarkers = {}
 local activeTweenInstance = nil
 
 local activeConnections = {}
@@ -125,11 +121,24 @@ end
 --                  CLEANUP & RESET LOGIC
 -- =======================================================
 
-local function clearTweenMarkers()
-    for _, marker in ipairs(tweenMarkers) do
-        if marker then marker:Destroy() end
+local function clearWaypointMarkers()
+    for _, wp in ipairs(waypointChain) do
+        if wp.Marker then
+            wp.Marker:Destroy()
+        end
     end
-    tweenMarkers = {}
+end
+
+local function stopTweening()
+    isTweening = false
+    if activeTweenInstance then
+        activeTweenInstance:Cancel()
+        activeTweenInstance = nil
+    end
+    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        LocalPlayer.Character.HumanoidRootPart.Anchored = false
+        LocalPlayer.Character.HumanoidRootPart.AssemblyLinearVelocity = Vector3.zero
+    end
 end
 
 local function resetAllProcesses()
@@ -140,14 +149,10 @@ local function resetAllProcesses()
     end
     activeConnections = {}
 
-    -- Stop Tween Chain
-    isTweening = false
-    if activeTweenInstance then
-        activeTweenInstance:Cancel()
-        activeTweenInstance = nil
-    end
-    clearTweenMarkers()
-    partChain = {}
+    -- Stop Waypoint Tween
+    stopTweening()
+    clearWaypointMarkers()
+    waypointChain = {}
 
     -- Destroy Air Platform
     if platformPart then
@@ -160,9 +165,6 @@ local function resetAllProcesses()
     flyEnabled = false
     if flyBV then flyBV:Destroy() flyBV = nil end
     if flyBG then flyBG:Destroy() flyBG = nil end
-
-    -- Reset Surface Walk
-    surfaceWalkEnabled = false
 
     -- Reset NoClip
     noclipEnabled = false
@@ -745,7 +747,7 @@ end, function(val)
     flySpeed = val
 end)
 
--- 2. Follow Platform (Air Walk with Up/Down Controls)
+-- 2. Follow Platform (Air Walk with Dedicated Height Buttons)
 local PlatformCard = Instance.new("Frame")
 PlatformCard.Size = UDim2.new(1, 0, 0, 80)
 PlatformCard.BackgroundColor3 = Color3.fromRGB(22, 22, 30)
@@ -819,7 +821,6 @@ PlatToggleBtn.MouseButton1Click:Connect(function()
     toggleAirPlatform(not platformEnabled)
 end)
 
--- Heartbeat loop keeps platform under feet as you walk
 local platformConn = RunService.Heartbeat:Connect(function()
     if platformEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
         local root = LocalPlayer.Character.HumanoidRootPart
@@ -840,7 +841,6 @@ local platformConn = RunService.Heartbeat:Connect(function()
 end)
 table.insert(activeConnections, platformConn)
 
--- Platform UP / DOWN Controls Container
 local PlatControls = Instance.new("Frame")
 PlatControls.Size = UDim2.new(1, -24, 0, 30)
 PlatControls.Position = UDim2.new(0, 12, 0, 42)
@@ -925,89 +925,7 @@ PlatDownBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- 3. Walk on Any Surface (Completely Rebuilt Spider Walk)
-createSimpleToggle(HomePage, "Walk on Any Surface (Wall Walk)", false, function(state)
-    surfaceWalkEnabled = state
-    if not state and LocalPlayer.Character then
-        local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-        if hum then
-            hum:SetStateEnabled(Enum.HumanoidStateType.Freefall, true)
-            hum:ChangeState(Enum.HumanoidStateType.GettingUp)
-        end
-    end
-end)
-
-local surfaceConn = RunService.RenderStepped:Connect(function(delta)
-    if surfaceWalkEnabled and LocalPlayer.Character then
-        local root = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-        local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-        if root and hum then
-            local params = RaycastParams.new()
-            params.FilterDescendantsInstances = {LocalPlayer.Character}
-            params.FilterType = RaycastFilterType.Exclude
-
-            -- Multi-Directional raycast checks around character
-            local rayChecks = {
-                -root.CFrame.UpVector * 6,
-                root.CFrame.LookVector * 5.5,
-                -root.CFrame.LookVector * 5.5,
-                root.CFrame.RightVector * 5.5,
-                -root.CFrame.RightVector * 5.5,
-                root.CFrame.UpVector * 6,
-                Vector3.new(0, -6, 0)
-            }
-
-            local closestHit = nil
-            local closestDist = math.huge
-
-            for _, dir in ipairs(rayChecks) do
-                local hit = workspace:Raycast(root.Position, dir, params)
-                if hit and hit.Distance < closestDist then
-                    closestDist = hit.Distance
-                    closestHit = hit
-                end
-            end
-
-            if closestHit then
-                local normal = closestHit.Normal
-                local moveDir = hum.MoveDirection
-                local walkSpeedVal = speedEnabled and customWalkSpeed or 20
-
-                -- Cancel gravity pull
-                root.AssemblyLinearVelocity = Vector3.zero
-                hum:SetStateEnabled(Enum.HumanoidStateType.Freefall, false)
-
-                -- Calculate smooth surface orientation
-                local camLook = Camera.CFrame.LookVector
-                local surfaceForward = (camLook - (camLook:Dot(normal) * normal)).Unit
-                if surfaceForward.Magnitude < 0.01 then
-                    surfaceForward = Camera.CFrame.UpVector
-                end
-                local surfaceRight = surfaceForward:Cross(normal).Unit
-
-                -- Update root CFrame to align with surface angle
-                root.CFrame = CFrame.fromMatrix(root.Position, surfaceRight, normal, -surfaceForward)
-
-                -- Move along surface tangent
-                if moveDir.Magnitude > 0 then
-                    local moveOnPlane = (Camera.CFrame.RightVector * moveDir.X + Camera.CFrame.LookVector * (-moveDir.Z))
-                    local projectedMove = (moveOnPlane - (moveOnPlane:Dot(normal) * normal)).Unit
-                    if projectedMove.Magnitude > 0 then
-                        root.CFrame = root.CFrame + (projectedMove * walkSpeedVal * delta)
-                    end
-                end
-
-                -- Stick gently to wall
-                if closestDist > 3.0 then
-                    root.CFrame = root.CFrame - (normal * 0.1)
-                end
-            end
-        end
-    end
-end)
-table.insert(activeConnections, surfaceConn)
-
--- 4. CF Speed
+-- 3. CF Speed
 local cfConn = RunService.Heartbeat:Connect(function(delta)
     if cfSpeedEnabled and LocalPlayer.Character then
         local root = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
@@ -1025,7 +943,7 @@ end, function(val)
     cfSpeedMultiplier = val
 end)
 
--- 5. WalkSpeed
+-- 4. WalkSpeed
 local wsConn = RunService.RenderStepped:Connect(function()
     if speedEnabled and LocalPlayer.Character then
         local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
@@ -1044,7 +962,7 @@ end, function(val)
     customWalkSpeed = val
 end)
 
--- 6. Jump Power
+-- 5. Jump Power
 local jpConn = RunService.RenderStepped:Connect(function()
     if jumpEnabled and LocalPlayer.Character then
         local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
@@ -1066,7 +984,7 @@ end, function(val)
     customJumpPower = val
 end)
 
--- 7. Gravity
+-- 6. Gravity
 createControlRow(HomePage, "Gravity", 196, false, function(state)
     gravityEnabled = state
     if state then
@@ -1081,7 +999,7 @@ end, function(val)
     end
 end)
 
--- 8. Bulletproof No-Clip (Wall Hack)
+-- 7. Bulletproof No-Clip (Wall Hack)
 createSimpleToggle(HomePage, "No-Clip (Wall Hack)", false, function(state)
     noclipEnabled = state
     if noclipConn then noclipConn:Disconnect() noclipConn = nil end
@@ -1100,7 +1018,7 @@ createSimpleToggle(HomePage, "No-Clip (Wall Hack)", false, function(state)
     end
 end)
 
--- 9. Freeze Position
+-- 8. Freeze Position
 createSimpleToggle(HomePage, "Freeze / Anchor Player", false, function(state)
     freezeEnabled = state
     if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
@@ -1108,7 +1026,7 @@ createSimpleToggle(HomePage, "Freeze / Anchor Player", false, function(state)
     end
 end)
 
--- 10. Anti-Void Fall Protector
+-- 9. Anti-Void Fall Protector
 createSimpleToggle(HomePage, "Anti-Void Fall Protector", false, function(state)
     antiVoidEnabled = state
 end)
@@ -1128,7 +1046,7 @@ local antiVoidConn = RunService.Heartbeat:Connect(function()
 end)
 table.insert(activeConnections, antiVoidConn)
 
--- 11. Infinite Jump
+-- 10. Infinite Jump
 createSimpleToggle(HomePage, "Infinite Jump", false, function(state)
     infJumpEnabled = state
 end)
@@ -1382,7 +1300,7 @@ end
 
 RefreshNPCBtn.MouseButton1Click:Connect(scanAndRefreshNPCs)
 
--- 3. Parts Selector & Tween Chain TP View
+-- 3. Parts Selector & Robust Waypoint Chain View
 local PartsContainer = Instance.new("Frame")
 PartsContainer.Size = UDim2.new(1, -16, 0, 150)
 PartsContainer.Position = UDim2.new(0, 8, 0, 68)
@@ -1469,35 +1387,47 @@ local CCCorner = Instance.new("UICorner")
 CCCorner.CornerRadius = UDim.new(0, 5)
 CCCorner.Parent = ClearChainBtn
 
+-- Add Waypoint to Table
 AddChainBtn.MouseButton1Click:Connect(function()
     if selectedTarget and selectedTarget:IsA("BasePart") then
-        table.insert(partChain, selectedTarget)
+        local index = #waypointChain + 1
+        local targetCF = selectedTarget.CFrame + Vector3.new(0, 3, 0)
 
         local bb = Instance.new("BillboardGui")
+        bb.Name = "KirikWaypoint_" .. tostring(index)
         bb.Size = UDim2.new(0, 45, 0, 22)
         bb.AlwaysOnTop = true
         bb.Adornee = selectedTarget
+
         local txt = Instance.new("TextLabel")
         txt.Size = UDim2.new(1, 0, 1, 0)
         txt.BackgroundColor3 = Color3.fromRGB(99, 102, 241)
         txt.TextColor3 = Color3.fromRGB(255, 255, 255)
         txt.Font = Enum.Font.GothamBold
         txt.TextSize = 11
-        txt.Text = "#" .. tostring(#partChain)
+        txt.Text = "#" .. tostring(index)
         txt.Parent = bb
+
         local corner = Instance.new("UICorner")
         corner.CornerRadius = UDim.new(0, 4)
         corner.Parent = txt
         bb.Parent = selectedTarget
-        table.insert(tweenMarkers, bb)
 
-        AddChainBtn.Text = "+ Add to Twin Chain (" .. tostring(#partChain) .. ")"
+        table.insert(waypointChain, {
+            Part = selectedTarget,
+            CFrame = targetCF,
+            Marker = bb,
+            Index = index
+        })
+
+        AddChainBtn.Text = "+ Add to Twin Chain (" .. tostring(#waypointChain) .. ")"
     end
 end)
 
 ClearChainBtn.MouseButton1Click:Connect(function()
-    partChain = {}
-    clearTweenMarkers()
+    stopTweening()
+    clearWaypointMarkers()
+    waypointChain = {}
     AddChainBtn.Text = "+ Add to Twin Chain (0)"
 end)
 
@@ -1558,19 +1488,16 @@ local RTCorner = Instance.new("UICorner")
 RTCorner.CornerRadius = UDim.new(0, 5)
 RTCorner.Parent = RunTweenBtn
 
+-- Physics-Anchored Smooth Waypoint Tween Runner
 RunTweenBtn.MouseButton1Click:Connect(function()
     if isTweening then
-        isTweening = false
-        if activeTweenInstance then
-            activeTweenInstance:Cancel()
-            activeTweenInstance = nil
-        end
+        stopTweening()
         RunTweenBtn.Text = "Run Twin TP"
         RunTweenBtn.BackgroundColor3 = Color3.fromRGB(34, 197, 94)
         return
     end
 
-    if #partChain == 0 or not LocalPlayer.Character then return end
+    if #waypointChain == 0 or not LocalPlayer.Character then return end
     local root = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     if not root then return end
 
@@ -1579,32 +1506,37 @@ RunTweenBtn.MouseButton1Click:Connect(function()
     RunTweenBtn.BackgroundColor3 = Color3.fromRGB(220, 50, 50)
 
     task.spawn(function()
-        for i, targetPart in ipairs(partChain) do
-            if not isTweening or not targetPart or not targetPart.Parent or not LocalPlayer.Character then break end
-            local r = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-            if not r then break end
+        for _, wp in ipairs(waypointChain) do
+            if not isTweening or not LocalPlayer.Character then break end
+            local currentRoot = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if not currentRoot then break end
 
-            local targetCF = targetPart.CFrame + Vector3.new(0, 3, 0)
-            local dist = (r.Position - targetCF.Position).Magnitude
+            local destCF = (wp.Part and wp.Part.Parent) and (wp.Part.CFrame + Vector3.new(0, 3, 0)) or wp.CFrame
+            local dist = (currentRoot.Position - destCF.Position).Magnitude
             local duration = math.max(dist / math.max(tweenSpeed, 1), 0.05)
 
-            activeTweenInstance = TweenService:Create(r, TweenInfo.new(duration, Enum.EasingStyle.Linear), {
-                CFrame = targetCF
+            -- Temporarily anchor root part so Roblox physics/gravity does NOT cause lag or rubberbanding
+            currentRoot.Anchored = true
+            currentRoot.AssemblyLinearVelocity = Vector3.zero
+            currentRoot.AssemblyAngularVelocity = Vector3.zero
+
+            activeTweenInstance = TweenService:Create(currentRoot, TweenInfo.new(duration, Enum.EasingStyle.Linear), {
+                CFrame = destCF
             })
             activeTweenInstance:Play()
 
-            local completed = false
-            local c = activeTweenInstance.Completed:Connect(function()
-                completed = true
+            local done = false
+            local conn = activeTweenInstance.Completed:Connect(function()
+                done = true
             end)
 
-            while not completed and isTweening do
+            while not done and isTweening do
                 task.wait()
             end
-            c:Disconnect()
+            if conn then conn:Disconnect() end
         end
 
-        isTweening = false
+        stopTweening()
         RunTweenBtn.Text = "Run Twin TP"
         RunTweenBtn.BackgroundColor3 = Color3.fromRGB(34, 197, 94)
     end)
